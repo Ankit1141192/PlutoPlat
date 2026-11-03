@@ -61,7 +61,7 @@ const WhyChooseUs = () => {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="text-sm sm:text-base text-[#6E6D66] font-light leading-relaxed"
           >
-            Your trusted partner in discovering extraordinary properties across the UAE.
+            Your trusted partner in discovering extraordinary properties across Kanpur and premier global destinations.
           </motion.p>
         </div>
 

@@ -1,27 +1,40 @@
 const mongoose = require('mongoose');
 
 /**
- * Robust MongoDB Connection with Event Listeners
+ * Robust MongoDB Connection with Event Listeners & Serverless Reuse
  */
+let isConnecting = null;
+
 const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (isConnecting) {
+    return isConnecting;
+  }
+
   const uri = process.env.MONGO_URI;
 
   if (!uri) {
-    console.error('Fatal Error: MONGO_URI is missing in environment variables.');
-    process.exit(1);
+    const errorMsg = 'Fatal Error: MONGO_URI is missing in environment variables.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   try {
-    const conn = await mongoose.connect(uri, {
+    isConnecting = mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
       autoIndex: process.env.NODE_ENV !== 'production',
     });
 
-    // console.log(`[Database] MongoDB Connected: ${conn.connection.host}`);
+    const conn = await isConnecting;
+    isConnecting = null;
     return conn;
   } catch (error) {
+    isConnecting = null;
     console.error(`[Database Error] Failed to connect: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 

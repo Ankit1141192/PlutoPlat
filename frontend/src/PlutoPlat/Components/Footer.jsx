@@ -111,15 +111,15 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-sm text-[#A09D94] leading-relaxed mb-6 font-light">
-              PlutoPlat is the benchmark in prime real estate across the UAE and worldwide. We represent landmark architecture, luxury residences, and high-yield investments with unmatched discretion.
+              PlutoPlat is the benchmark in prime real estate across Kanpur, Uttar Pradesh, and premier destinations worldwide. We represent landmark architecture, luxury residences, and high-yield investments with unmatched discretion.
             </p>
-            <div className="flex items-center gap-4 text-xs text-[#8E8B82]">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-[#8E8B82]">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck size={16} className="text-[#B49A70]" />
                 <span>Verified Legal Integrity</span>
               </div>
               <span>&bull;</span>
-              <span>Dubai &bull; Abu Dhabi &bull; London</span>
+              <span>Kanpur &bull; Dubai &bull; Worldwide</span>
             </div>
           </div>
 

@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "my-node-backend",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-02",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "ALLOWED_ORIGIN": "http://localhost:5173,http://localhost:3000",
+    "ENFORCE_ORIGIN_CHECK": "false",
+    "JWT_EXPIRES_IN": "7d",
+    "MAX_LOGIN_ATTEMPTS": "5",
+    "LOCK_TIME_MINUTES": "30",
+    "RATE_LIMIT_WINDOW_MS": "900000",
+    "RATE_LIMIT_MAX_REQUESTS": "100"
+  }
+}

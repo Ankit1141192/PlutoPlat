@@ -103,7 +103,7 @@ const HeroSection = () => {
 
       {/* Main Hero Content */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-6 text-center text-white">
-        {/* Prestige Tag & Direct Call Pill */}
+        {/* Prestige Tag */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -114,18 +114,6 @@ const HeroSection = () => {
             <Sparkles size={13} className="text-[#B49A70]" />
             <span>Kanpur &bull; Uttar Pradesh &bull; Sovereign Collection</span>
           </motion.div>
-
-          <motion.a
-            href="tel:+919956346155"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="inline-flex items-center gap-2 bg-[#1C201C]/90 hover:bg-[#B49A70] text-[#EBE7DF] hover:text-white transition-all px-4 py-1.5 rounded-full text-xs font-semibold border border-[#B49A70]/60 shadow-xl"
-            title="Call Senior Advisory Desk"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span>Call / WhatsApp: +91 9956346155</span>
-          </motion.a>
         </div>
 
         {/* Headline */}
