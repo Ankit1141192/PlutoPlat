@@ -77,6 +77,44 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Optional Authentication Middleware
+ * If token is provided, binds user to request; otherwise proceeds as guest
+ */
+const optionalAuthenticate = async (req, res, next) => {
+  try {
+    let token = null;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer ')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    const secret = process.env.JWT_SECRET || 'PlutoPlatSecureSecretKey2026';
+    try {
+      const decoded = jwt.verify(token, secret);
+      const user = await User.findById(decoded.id);
+      if (user && user.isActive && !user.isLocked()) {
+        req.user = user;
+      } else {
+        req.user = null;
+      }
+    } catch {
+      req.user = null;
+    }
+    next();
+  } catch (err) {
+    req.user = null;
+    next();
+  }
+};
+
+/**
  * Role-Based Access Control (RBAC) Middleware
  * Restricts access based on user role (e.g., 'admin', 'super_admin')
  */
@@ -102,5 +140,6 @@ const authorize = (...roles) => {
 
 module.exports = {
   authenticate,
+  optionalAuthenticate,
   authorize,
 };

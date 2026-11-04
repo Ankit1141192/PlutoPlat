@@ -126,6 +126,12 @@ const userSchema = new mongoose.Schema(
       default: 'user',
     },
 
+    subscriptionTier: {
+      type: String,
+      enum: ['free', 'agent_pro', 'vip_concierge'],
+      default: 'free',
+    },
+
     // Security & Account Lockout
     loginAttempts: {
       type: Number,

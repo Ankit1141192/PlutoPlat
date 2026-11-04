@@ -43,7 +43,20 @@ const enforceAllowedDomain = (req, res, next) => {
 
   // If origin/referer is present, verify against allowed list
   if (requestOrigin) {
-    const isAllowed = allowedOrigins.includes(requestOrigin);
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed === requestOrigin) return true;
+      if (allowed.startsWith('*.')) {
+        const rootDomain = allowed.slice(2);
+        try {
+          const parsed = new URL(requestOrigin);
+          return parsed.hostname.endsWith(rootDomain) || parsed.hostname === rootDomain;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    });
+
     if (!isAllowed) {
       return res.status(403).json({
         success: false,

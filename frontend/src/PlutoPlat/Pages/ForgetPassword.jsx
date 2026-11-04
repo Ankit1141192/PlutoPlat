@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ShieldCheck, ArrowLeft, ArrowRight, KeyRound, Clock, Phone } from 'lucide-react';
+import { Mail, ShieldCheck, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 
 const ForgetPassword = () => {
@@ -8,17 +8,32 @@ const ForgetPassword = () => {
   const { showToast } = usePropertyStore();
 
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!email) return;
-    setSubmitted(true);
-    showToast(`Confidential recovery dispatch transmitted to ${email}.`, 'success');
+    setLoading(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      setSubmitted(true);
+      showToast(`Password reset link has been sent to ${email}.`, 'success');
+    }, 700);
   };
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen py-10 sm:py-14 bg-[#F8F6F2] flex flex-col items-center justify-center px-4 sm:px-6">
+      {/* Return to website */}
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2 text-xs font-medium text-[#6E6D66] hover:text-[#1C201C] transition-colors mb-6 self-center"
+      >
+        <ArrowLeft size={14} />
+        <span>Back to PlutoPlat Home</span>
+      </Link>
+
       <div className="w-full max-w-md bg-white border border-[#DDD8CE] rounded-sm p-8 sm:p-10 shadow-lg">
         {/* Brand Link */}
         <div className="text-center mb-8">
@@ -27,41 +42,37 @@ const ForgetPassword = () => {
               Pluto<span className="text-[#B49A70]">Plat</span>.
             </span>
           </Link>
-          <div className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-[#B49A70] bg-[#F8F6F2] px-2.5 py-1 rounded-xs mb-2 border border-[#DDD8CE]">
-            <KeyRound size={12} />
-            <span>Fiduciary Access Recovery</span>
-          </div>
           <h2 className="font-serif text-2xl text-[#1C201C] font-normal mb-1">
-            Passcode Recovery
+            Forgot Password?
           </h2>
           <p className="text-xs text-[#6E6D66] font-light">
-            Enter your authenticated personal or family office email to receive a private cryptographic recovery token.
+            Enter your registered email address and we will send you a link to reset your password.
           </p>
         </div>
 
         {submitted ? (
-          <div className="text-center py-6 space-y-4">
-            <div className="w-14 h-14 bg-[#287A50]/15 text-[#287A50] rounded-full flex items-center justify-center mx-auto mb-2">
-              <ShieldCheck size={30} />
+          <div className="text-center py-4 space-y-4">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-200">
+              <CheckCircle2 size={30} />
             </div>
-            <h3 className="font-serif text-xl text-[#1C201C]">Recovery Token Dispatched</h3>
+            <h3 className="font-serif text-xl text-[#1C201C]">Reset Link Sent Successfully</h3>
             <p className="text-xs text-[#6E6D66] leading-relaxed font-light">
-              A private cryptographic magic link has been forwarded to <strong className="text-[#1C201C] font-mono">{email}</strong>. This token remains valid for 15 minutes.
+              We have sent password reset instructions to <strong className="text-[#1C201C] font-mono">{email}</strong>. Please check your inbox.
             </p>
 
             <div className="pt-4 space-y-3">
               <Link
-                to="/reset-password?token=PLP-SEC-DEMO"
-                className="w-full block py-3 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs"
+                to="/reset-password?token=PLP-DEMO-TOKEN"
+                className="w-full block py-3 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs text-center"
               >
-                Proceed to Reset Passcode
+                Proceed to Set New Password
               </Link>
               <button
                 type="button"
                 onClick={() => setSubmitted(false)}
-                className="text-xs text-[#B49A70] hover:underline"
+                className="text-xs text-[#B49A70] hover:underline cursor-pointer"
               >
-                Did not receive? Resend dispatch
+                Didn't receive the email? Resend link
               </button>
             </div>
           </div>
@@ -69,14 +80,14 @@ const ForgetPassword = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
-                Authenticated Email Address
+                Registered Email Address
               </label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#77766E]" />
                 <input
                   type="email"
                   required
-                  placeholder="principal@familyoffice.com"
+                  placeholder="rahul.sharma@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
@@ -86,30 +97,33 @@ const ForgetPassword = () => {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
+              disabled={loading}
+              className="w-full py-3.5 bg-[#B49A70] hover:bg-[#9E865F] disabled:opacity-75 text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
-              <span>Transmit Recovery Link</span>
-              <ArrowRight size={14} />
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin text-white" />
+                  <span>Sending Link...</span>
+                </>
+              ) : (
+                <>
+                  <span>Send Reset Link</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
             </button>
           </form>
         )}
 
-        {/* Security Note */}
-        <div className="mt-8 pt-6 border-t border-[#EAE6DE] space-y-4 text-center">
-          <div className="flex items-center justify-center gap-2 text-[11px] text-[#77766E]">
-            <Phone size={13} className="text-[#B49A70]" />
-            <span>VIP Concierge Recovery Desk: <strong>+1 (800) 758-8675</strong></span>
-          </div>
-
-          <div className="text-xs">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 text-[#1C201C] font-semibold hover:text-[#B49A70] transition-colors"
-            >
-              <ArrowLeft size={13} />
-              <span>Return to Client Sign In</span>
-            </Link>
-          </div>
+        {/* Return to login link */}
+        <div className="mt-8 pt-5 border-t border-[#EAE6DE] text-center">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-1.5 text-xs text-[#1C201C] font-semibold hover:text-[#B49A70] transition-colors"
+          >
+            <ArrowLeft size={13} />
+            <span>Return to Sign In</span>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
@@ -208,8 +209,107 @@ const getMe = async (req, res, next) => {
   }
 };
 
+
+/**
+ * Request Password Reset Token
+ * POST /api/v1/auth/forgot-password
+ */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return ApiResponse.error(res, 'Email address is required.', 400);
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Return ambiguous success to avoid user enumeration
+      return ApiResponse.success(res, 'If an account exists with this email, password reset instructions have been dispatched.');
+    }
+
+    // Generate random 32-byte reset token
+    const rawResetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minutes validity
+    await user.save({ validateBeforeSave: false });
+
+    await logAudit({
+      actor: user._id,
+      actorRole: user.role,
+      action: 'UPDATE',
+      module: 'AUTH',
+      targetId: user._id,
+      targetType: 'User',
+      description: 'Password reset token requested',
+      req,
+    });
+
+    return ApiResponse.success(res, 'Password reset instructions have been dispatched to your email address.', {
+      resetToken: rawResetToken,
+      expiresInMinutes: 15,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reset Password with Token
+ * POST /api/v1/auth/reset-password
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return ApiResponse.error(res, 'Reset token and new password are required.', 400);
+    }
+
+    if (newPassword.length < 8) {
+      return ApiResponse.error(res, 'New password must contain at least 8 characters.', 400);
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return ApiResponse.error(res, 'Invalid or expired password reset token.', 400);
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+    await user.save();
+
+    await logAudit({
+      actor: user._id,
+      actorRole: user.role,
+      action: 'UPDATE',
+      module: 'AUTH',
+      targetId: user._id,
+      targetType: 'User',
+      description: 'Password reset successfully completed',
+      req,
+    });
+
+    return ApiResponse.success(res, 'Password has been reset successfully. You may now proceed to log in.');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
+  forgotPassword,
+  resetPassword,
 };

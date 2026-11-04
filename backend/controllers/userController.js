@@ -12,42 +12,35 @@ const getUserProfile = async (req, res, next) => {
     if (!user) {
       return ApiResponse.error(res, 'User not found.', 404);
     }
-    return ApiResponse.success(res, 'User profile retrieved successfully.', {
-      user,
-    });
+    return ApiResponse.success(res, 'User profile retrieved successfully.', { user });
   } catch (error) {
     next(error);
   }
 };
 
 /**
- * Update user profile
+ * Update user profile (Self or SuperAdmin)
  * PUT /api/v1/users/profile/:id
  */
 const updateUserProfile = async (req, res, next) => {
   try {
     const userId = req.params.id;
 
-    // Security check: users can only update their own profile unless they are admin/super_admin
+    // Security check: users can only update their own profile unless they are super_admin
     const isOwner = req.user._id.toString() === userId;
-    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+    const isSuperAdmin = req.user.role === 'super_admin';
 
-    if (!isOwner && !isAdmin) {
-      return ApiResponse.error(
-        res,
-        'Forbidden: You can only update your own profile.',
-        403
-      );
+    if (!isOwner && !isSuperAdmin) {
+      return ApiResponse.error(res, 'Forbidden: You can only update your own profile.', 403);
     }
 
-    const { name, phone, location, profileImage } = req.body;
+    const { name, phone, location, profileImage, savedProperties } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
       return ApiResponse.error(res, 'User not found.', 404);
     }
 
-    // Phone uniqueness check if changed
     if (phone && phone !== user.phone) {
       const phoneTaken = await User.findOne({ phone, _id: { $ne: userId } });
       if (phoneTaken) {
@@ -59,6 +52,7 @@ const updateUserProfile = async (req, res, next) => {
     if (name) user.name = name;
     if (profileImage) user.profileImage = profileImage;
     if (location) user.location = { ...user.location, ...location };
+    if (savedProperties) user.savedProperties = savedProperties;
 
     await user.save();
 
@@ -80,27 +74,41 @@ const updateUserProfile = async (req, res, next) => {
 };
 
 /**
- * List all users (Admin/Super Admin only)
+ * List all users (SuperAdmin only)
  * GET /api/v1/users
  */
 const getAllUsers = async (req, res, next) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
-    const skip = (page - 1) * limit;
+    const { role, search, page = 1, limit = 20 } = req.query;
+
+    const query = {};
+    if (role && role !== 'all') {
+      query.role = role;
+    }
+    if (search) {
+      query.$or = [
+        { name: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+        { phone: new RegExp(search, 'i') },
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const skip = (pageNum - 1) * limitNum;
 
     const [users, total] = await Promise.all([
-      User.find().skip(skip).limit(limit).sort({ createdAt: -1 }),
-      User.countDocuments(),
+      User.find(query).skip(skip).limit(limitNum).sort({ createdAt: -1 }),
+      User.countDocuments(query),
     ]);
 
     return ApiResponse.success(res, 'Users retrieved successfully.', {
       users,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {
@@ -109,15 +117,13 @@ const getAllUsers = async (req, res, next) => {
 };
 
 /**
- * Admin action: unlock account or update status
+ * SuperAdmin action: Update role, subscription, active status, or unlock account
  * PATCH /api/v1/users/:id/status
  */
 const updateUserStatus = async (req, res, next) => {
   try {
-    const { isActive, unlockAccount } = req.body;
-    const user = await User.findById(req.params.id).select(
-      '+loginAttempts +lockUntil'
-    );
+    const { isActive, unlockAccount, role, subscriptionTier } = req.body;
+    const user = await User.findById(req.params.id).select('+loginAttempts +lockUntil');
 
     if (!user) {
       return ApiResponse.error(res, 'User not found.', 404);
@@ -125,6 +131,14 @@ const updateUserStatus = async (req, res, next) => {
 
     if (typeof isActive === 'boolean') {
       user.isActive = isActive;
+    }
+
+    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
+      user.role = role;
+    }
+
+    if (subscriptionTier && ['free', 'agent_pro', 'vip_concierge'].includes(subscriptionTier)) {
+      user.subscriptionTier = subscriptionTier;
     }
 
     if (unlockAccount === true) {
@@ -141,11 +155,11 @@ const updateUserStatus = async (req, res, next) => {
       module: 'ADMIN',
       targetId: user._id,
       targetType: 'User',
-      description: `Admin updated status for user ${user._id}`,
+      description: `SuperAdmin updated privileges for user ${user._id} (Role: ${user.role}, Tier: ${user.subscriptionTier || 'free'}, Active: ${user.isActive})`,
       req,
     });
 
-    return ApiResponse.success(res, 'User status updated successfully.', {
+    return ApiResponse.success(res, 'User account status and privileges updated successfully.', {
       user,
     });
   } catch (error) {

@@ -4,7 +4,7 @@ import { PropertyProvider } from './context/PropertyContext';
 import Navbar from './PlutoPlat/Components/Navbar';
 import Footer from './PlutoPlat/Components/Footer';
 
-// Pages
+// Public & Client Pages
 import HomePage from './PlutoPlat/Pages/HomePage';
 import Property from './PlutoPlat/Pages/Property';
 import PropertyDetail from './PlutoPlat/Pages/PropertyDetail';
@@ -38,10 +38,23 @@ const ScrollToTop = () => {
   return null;
 };
 
-// Global footer helper to avoid duplicate footer on HomePage
+// Global navbar helper: hide navbar on auth pages
+const GlobalNavbar = () => {
+  const { pathname } = useLocation();
+  const authRoutes = ['/login', '/register', '/forgot-password', '/forget-password', '/reset-password'];
+  if (authRoutes.includes(pathname)) {
+    return null;
+  }
+  return <Navbar />;
+};
+
+// Global footer helper: hide on home and auth pages
 const GlobalFooter = () => {
   const { pathname } = useLocation();
-  if (pathname === '/') return null;
+  const noFooterRoutes = ['/', '/login', '/register', '/forgot-password', '/forget-password', '/reset-password'];
+  if (noFooterRoutes.includes(pathname)) {
+    return null;
+  }
   return <Footer />;
 };
 
@@ -51,7 +64,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <div className="min-h-screen flex flex-col bg-[#F8F6F2] text-[#222522]">
-          <Navbar />
+          <GlobalNavbar />
           <main className="flex-grow">
             <Routes>
               {/* Primary Public Routes */}
@@ -65,19 +78,18 @@ export default function App() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/favorites" element={<Favorites />} />
 
-              {/* Private Client & Account Routes */}
+              {/* Private Client & Account Routes (Buyer / User) */}
               <Route path="/profile" element={<Profile />} />
               <Route path="/my-enquiries" element={<MyEnquiries />} />
               <Route path="/enquiries" element={<MyEnquiries />} />
               <Route path="/notifications" element={<Notifications />} />
-              
+
               {/* Authentication & Security Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgetPassword />} />
               <Route path="/forget-password" element={<ForgetPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              
 
               {/* Legal & Compliance Routes */}
               <Route path="/privacy" element={<PrivacyPolicy />} />

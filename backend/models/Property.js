@@ -154,6 +154,19 @@ const propertySchema = new mongoose.Schema(
       default: false,
     },
 
+    status: {
+      type: String,
+      enum: ['draft', 'pending', 'active', 'rejected'],
+      default: 'pending',
+      index: true,
+    },
+
+    rejectionReason: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
     isFeatured: {
       type: Boolean,
       default: false,
@@ -190,6 +203,7 @@ propertySchema.index({
 propertySchema.index({
   isAvailable: 1,
   isVerified: 1,
+  status: 1,
 });
 
 propertySchema.index({

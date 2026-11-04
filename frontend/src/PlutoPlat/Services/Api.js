@@ -83,6 +83,24 @@ export const Api = {
   },
 
   /**
+   * Request password reset token.
+   * POST /api/v1/auth/forgot-password
+   * @param {{ email }} payload
+   */
+  async forgotPassword(payload) {
+    return request('POST', '/auth/forgot-password', { body: payload });
+  },
+
+  /**
+   * Reset password with verification token.
+   * POST /api/v1/auth/reset-password
+   * @param {{ token, newPassword }} payload
+   */
+  async resetPassword(payload) {
+    return request('POST', '/auth/reset-password', { body: payload });
+  },
+
+  /**
    * Logout — clears the stored token locally.
    */
   logout() {
@@ -114,25 +132,28 @@ export const Api = {
    * Update a user's profile. (requires auth — own profile)
    * PUT /api/v1/users/profile/:id
    * @param {string} id
-   * @param {{ name?, phone?, location?, avatar? }} payload
+   * @param {{ name?, phone?, location?, profileImage? }} payload
    */
   async updateUserProfile(id, payload) {
     return request('PUT', `/users/profile/${id}`, { body: payload, auth: true });
   },
 
   /**
-   * Get all users. (Admin / Super-Admin only)
+   * Get all users. (SuperAdmin only)
    * GET /api/v1/users
    */
-  async getAllUsers() {
-    return request('GET', '/users', { auth: true });
+  async getAllUsers(params = {}) {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
+    ).toString();
+    return request('GET', `/users${qs ? `?${qs}` : ''}`, { auth: true });
   },
 
   /**
-   * Activate, deactivate, or unlock a user account. (Admin / Super-Admin only)
+   * SuperAdmin: Update role, subscription, status, or unlock account.
    * PATCH /api/v1/users/:id/status
    * @param {string} id
-   * @param {{ isActive?: boolean, unlock?: boolean }} payload
+   * @param {{ isActive?: boolean, unlockAccount?: boolean, role?: string, subscriptionTier?: string }} payload
    */
   async updateUserStatus(id, payload) {
     return request('PATCH', `/users/${id}/status`, { body: payload, auth: true });
@@ -144,18 +165,17 @@ export const Api = {
 
   /**
    * Get all properties with optional query params.
-   * GET /api/v1/properties?type=&purpose=&query=&page=&limit=
-   * @param {{ type?, purpose?, query?, page?, limit? }} params
+   * GET /api/v1/properties
    */
   async getProperties(params = {}) {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
     ).toString();
-    return request('GET', `/properties${qs ? `?${qs}` : ''}`);
+    return request('GET', `/properties${qs ? `?${qs}` : ''}`, { auth: true });
   },
 
   /**
-   * Get a single property by ID.
+   * Get single property by ID.
    * GET /api/v1/properties/:id
    * @param {string} id
    */
@@ -164,12 +184,22 @@ export const Api = {
   },
 
   /**
-   * Create a new property listing. (requires auth)
+   * Create a new property listing. (Agents / SuperAdmin)
    * POST /api/v1/properties
    * @param {object} payload
    */
   async createProperty(payload) {
     return request('POST', '/properties', { body: payload, auth: true });
+  },
+
+  /**
+   * SuperAdmin: Approve or Reject a listing
+   * PATCH /api/v1/properties/:id/moderate
+   * @param {string} id
+   * @param {{ status: 'active'|'rejected', rejectionReason?: string }} payload
+   */
+  async moderateProperty(id, payload) {
+    return request('PATCH', `/properties/${id}/moderate`, { body: payload, auth: true });
   },
 
   /**
@@ -192,24 +222,37 @@ export const Api = {
   },
 
   // ══════════════════════════════════════════
-  // ENQUIRIES  —  /api/v1/enquiries
+  // ENQUIRIES & LEADS  —  /api/v1/enquiries
   // ══════════════════════════════════════════
 
   /**
-   * Submit a property enquiry. (requires auth)
+   * Submit a property enquiry (Buyers & SuperAdmin).
    * POST /api/v1/enquiries
-   * @param {{ propertyId, message, tourDate? }} payload
+   * @param {{ propertyId, message, name?, email?, phone?, siteVisitDate? }} payload
    */
   async createEnquiry(payload) {
     return request('POST', '/enquiries', { body: payload, auth: true });
   },
 
   /**
-   * Get all enquiries for the current user (buyer or seller). (requires auth)
+   * Get enquiries (Role-scoped: Buyer own, Admin own property leads, SuperAdmin all).
    * GET /api/v1/enquiries
    */
-  async getMyEnquiries() {
-    return request('GET', '/enquiries', { auth: true });
+  async getMyEnquiries(params = {}) {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
+    ).toString();
+    return request('GET', `/enquiries${qs ? `?${qs}` : ''}`, { auth: true });
+  },
+
+  /**
+   * Update lead stage or admin notes.
+   * PATCH /api/v1/enquiries/:id/status
+   * @param {string} id
+   * @param {{ status?: string, adminNotes?: string }} payload
+   */
+  async updateEnquiryStatus(id, payload) {
+    return request('PATCH', `/enquiries/${id}/status`, { body: payload, auth: true });
   },
 
   // ══════════════════════════════════════════
@@ -262,15 +305,26 @@ export const Api = {
   },
 
   // ══════════════════════════════════════════
-  // AUDIT LOGS  —  /api/v1/audits
+  // AUDIT LOGS & ANALYTICS  —  /api/v1/audits
   // ══════════════════════════════════════════
 
   /**
-   * Get all audit logs. (Admin / Super-Admin only)
+   * Get all audit logs. (SuperAdmin only)
    * GET /api/v1/audits
    */
-  async getAuditLogs() {
-    return request('GET', '/audits', { auth: true });
+  async getAuditLogs(params = {}) {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
+    ).toString();
+    return request('GET', `/audits${qs ? `?${qs}` : ''}`, { auth: true });
+  },
+
+  /**
+   * Get platform analytics & intelligence metrics. (SuperAdmin only)
+   * GET /api/v1/audits/analytics
+   */
+  async getPlatformAnalytics() {
+    return request('GET', '/audits/analytics', { auth: true });
   },
 };
 

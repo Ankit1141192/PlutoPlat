@@ -1,45 +1,54 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, ShieldCheck, CheckCircle2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, ShieldCheck, CheckCircle2, ArrowRight, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || 'PLP-ACTIVE-TOKEN';
+  const token = searchParams.get('token') || 'ACTIVE-TOKEN';
 
   const { showToast } = usePropertyStore();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  // Password strength check
-  const hasMinLength = password.length >= 8;
-  const hasUpper = /[A-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setErrorMsg('');
+
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      showToast('Passcodes do not match. Please verify both fields.', 'error');
+      setErrorMsg('Passwords do not match. Please verify both fields.');
       return;
     }
-    if (!hasMinLength) {
-      showToast('Passcode must contain at least 8 characters.', 'error');
-      return;
-    }
+
     setSubmitted(true);
-    showToast('Your security passcode has been updated successfully.', 'success');
+    showToast('Your new password has been updated successfully.', 'success');
     setTimeout(() => {
       navigate('/login');
-    }, 2000);
+    }, 1800);
   };
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen py-10 sm:py-14 bg-[#F8F6F2] flex flex-col items-center justify-center px-4 sm:px-6">
+      {/* Return to website */}
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2 text-xs font-medium text-[#6E6D66] hover:text-[#1C201C] transition-colors mb-6 self-center"
+      >
+        <ArrowLeft size={14} />
+        <span>Back to PlutoPlat Home</span>
+      </Link>
+
       <div className="w-full max-w-md bg-white border border-[#DDD8CE] rounded-sm p-8 sm:p-10 shadow-lg">
         {/* Header */}
         <div className="text-center mb-8">
@@ -48,98 +57,106 @@ const ResetPassword = () => {
               Pluto<span className="text-[#B49A70]">Plat</span>.
             </span>
           </Link>
-          <div className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-[#287A50] bg-[#287A50]/10 px-2.5 py-1 rounded-xs mb-2">
-            <ShieldCheck size={12} />
-            <span>Cryptographic Session Validated</span>
-          </div>
           <h2 className="font-serif text-2xl text-[#1C201C] font-normal mb-1">
-            Establish New Passcode
+            Set New Password
           </h2>
           <p className="text-xs text-[#6E6D66] font-light">
-            Token reference: <span className="font-mono text-[#1C201C]">{token}</span>
+            Please choose a secure password with at least 8 characters.
           </p>
         </div>
 
+        {errorMsg && (
+          <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2.5">
+            <AlertCircle size={16} className="shrink-0 text-red-600" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         {submitted ? (
-          <div className="text-center py-8 space-y-3">
-            <div className="w-14 h-14 bg-[#287A50]/15 text-[#287A50] rounded-full flex items-center justify-center mx-auto mb-2">
+          <div className="text-center py-6 space-y-3">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-200">
               <CheckCircle2 size={32} />
             </div>
-            <h3 className="font-serif text-xl text-[#1C201C]">Security Passcode Updated</h3>
+            <h3 className="font-serif text-xl text-[#1C201C]">Password Updated Successfully</h3>
             <p className="text-xs text-[#6E6D66] font-light">
-              Your credentials have been securely provisioned. Redirecting to client portal authentication...
+              Your password has been changed. Redirecting you to sign in...
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
-                New Security Passcode
+                New Password (Min. 8 characters)
               </label>
               <div className="relative">
                 <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#77766E]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  minLength={8}
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
+                  className="w-full pl-10 pr-11 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#77766E] hover:text-[#1C201C]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#77766E] hover:text-[#1C201C] p-1 cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
-                Confirm Security Passcode
+                Confirm New Password
               </label>
               <div className="relative">
                 <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#77766E]" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   required
+                  minLength={8}
                   placeholder="••••••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
+                  className={`w-full pl-10 pr-11 py-3 bg-[#F8F6F2] border text-xs rounded-xs focus:outline-none ${
+                    confirmPassword && password !== confirmPassword
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-[#DDD8CE] focus:border-[#B49A70]'
+                  }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#77766E] hover:text-[#1C201C] p-1 cursor-pointer"
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
-            {/* Passcode Complexity Checklist */}
-            <div className="p-3 bg-[#F8F6F2] rounded-xs border border-[#DDD8CE] text-[11px] space-y-1.5">
-              <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-[#287A50]' : 'text-[#8E8B82]'}`}>
-                <span>{hasMinLength ? '✓' : '○'}</span>
-                <span>Minimum 8 characters in length</span>
-              </div>
-              <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-[#287A50]' : 'text-[#8E8B82]'}`}>
-                <span>{hasUpper ? '✓' : '○'}</span>
-                <span>Contains uppercase letter (A-Z)</span>
-              </div>
-              <div className={`flex items-center gap-1.5 ${hasNumber && hasSpecial ? 'text-[#287A50]' : 'text-[#8E8B82]'}`}>
-                <span>{hasNumber && hasSpecial ? '✓' : '○'}</span>
-                <span>Includes numeral and special character</span>
-              </div>
-            </div>
+            {confirmPassword && password !== confirmPassword && (
+              <p className="text-[11px] text-red-600">Passwords do not match.</p>
+            )}
 
             <button
               type="submit"
               className="w-full py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
-              <span>Update Security Passcode</span>
+              <span>Save New Password</span>
               <ArrowRight size={14} className="text-[#B49A70]" />
             </button>
           </form>
         )}
 
-        <div className="mt-6 text-center text-xs text-[#6E6D66]">
+        <div className="mt-6 pt-5 border-t border-[#EAE6DE] text-center text-xs text-[#6E6D66]">
           <Link to="/login" className="text-[#B49A70] font-semibold hover:underline">
             Cancel and Return to Sign In
           </Link>

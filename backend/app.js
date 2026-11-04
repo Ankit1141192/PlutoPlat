@@ -25,7 +25,22 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl during local dev if not strict)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin.toLowerCase()) !== -1) {
+      const originLower = origin.toLowerCase().replace(/\/$/, '');
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (allowed === originLower) return true;
+        if (allowed.startsWith('*.')) {
+          const rootDomain = allowed.slice(2);
+          try {
+            const parsed = new URL(originLower);
+            return parsed.hostname.endsWith(rootDomain) || parsed.hostname === rootDomain;
+          } catch {
+            return false;
+          }
+        }
+        return false;
+      });
+
+      if (isAllowed) {
         return callback(null, true);
       }
       return callback(
