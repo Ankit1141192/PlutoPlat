@@ -10,7 +10,6 @@ import { usePropertyStore } from '../../context/PropertyContext';
 
 const HeroSection = () => {
   const navigate = useNavigate();
-  const { stats } = usePropertyStore();
 
   const [locationQuery, setLocationQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
@@ -231,8 +230,8 @@ const HeroSection = () => {
             </button>
           </form>
 
-          {/* Quick Enclaves Suggestions */}
-          <div className="mt-4 pt-3 border-t border-[#EAE6DE] flex flex-wrap items-center justify-between text-xs text-[#77766E] gap-2">
+          {/* Quick Enclaves Suggestions (Hidden on small screen / mobile / Android) */}
+          <div className="mt-4 pt-3 border-t border-[#EAE6DE] hidden sm:flex flex-wrap items-center justify-between text-xs text-[#77766E] gap-2">
             <span className="font-medium text-[#1C201C]">Trending Enclaves:</span>
             <div className="flex flex-wrap gap-2">
               {['Civil Lines Kanpur', 'Swaroop Nagar', 'Tilak Nagar', 'VIP Road & Ganga', 'Dubai Marina', 'Palm Jumeirah'].map((place) => (
@@ -247,25 +246,6 @@ const HeroSection = () => {
               ))}
             </div>
           </div>
-        </motion.div>
-
-        {/* Live Metrics Row */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.65 }}
-          className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-white/15 pt-8 text-white/90"
-        >
-          {stats.map((s, idx) => (
-            <div key={idx} className="flex flex-col items-center">
-              <span className="font-serif text-2xl sm:text-3xl font-semibold text-[#E8D9BF] tracking-tight">
-                {s.value}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-white/70 mt-1 font-light">
-                {s.label}
-              </span>
-            </div>
-          ))}
         </motion.div>
       </div>
     </section>

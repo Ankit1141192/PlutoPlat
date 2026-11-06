@@ -371,7 +371,7 @@ const Property = () => {
             <div
               className={
                 viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
+                  ? 'grid grid-cols-2 gap-3 sm:gap-6'
                   : 'space-y-6'
               }
             >

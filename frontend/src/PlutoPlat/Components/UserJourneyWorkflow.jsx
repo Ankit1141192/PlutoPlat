@@ -103,8 +103,8 @@ const UserJourneyWorkflow = ({ compact = false }) => {
           </div>
         </div>
 
-        {/* 5 Steps Interactive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* 5 Steps Interactive Grid (2 cards per row on mobile) */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
           {WORKFLOW_STEPS.map((item) => {
             const Icon = item.icon;
             const isSelected = activeStep === item.step;
@@ -113,7 +113,7 @@ const UserJourneyWorkflow = ({ compact = false }) => {
               <div
                 key={item.step}
                 onClick={() => setActiveStep(item.step)}
-                className={`relative p-5 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between ${
+                className={`relative p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between ${
                   isSelected
                     ? 'bg-gradient-to-b from-[#2A312A] to-[#1F251F] border-[#B49A70] shadow-xl scale-[1.02]'
                     : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
@@ -121,42 +121,42 @@ const UserJourneyWorkflow = ({ compact = false }) => {
               >
                 <div>
                   {/* Step Number & Tag */}
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-serif text-sm font-bold ${
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-serif text-xs sm:text-sm font-bold ${
                       isSelected ? 'bg-[#B49A70] text-[#1C201C]' : 'bg-white/10 text-white'
                     }`}>
                       0{item.step}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wider font-semibold text-[#B49A70] bg-[#B49A70]/10 px-2 py-0.5 rounded-sm">
+                    <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-[#B49A70] bg-[#B49A70]/10 px-1.5 py-0.5 rounded-sm">
                       {item.tag}
                     </span>
                   </div>
 
-                  <div className={`p-2.5 rounded-xl w-fit mb-3 ${
+                  <div className={`p-2 sm:p-2.5 rounded-xl w-fit mb-2 sm:mb-3 ${
                     isSelected ? 'bg-[#B49A70]/20 text-[#E8D9BF]' : 'bg-white/5 text-[#A09D94]'
                   }`}>
-                    <Icon size={22} />
+                    <Icon size={18} className="sm:w-[22px] sm:h-[22px]" />
                   </div>
 
-                  <h3 className="font-serif text-base text-white font-medium mb-1">
+                  <h3 className="font-serif text-sm sm:text-base text-white font-medium mb-0.5 sm:mb-1">
                     {item.title}
                   </h3>
-                  <p className="text-[11px] text-[#B49A70] font-sans font-medium mb-2">
+                  <p className="text-[10px] sm:text-[11px] text-[#B49A70] font-sans font-medium mb-1.5 sm:mb-2 line-clamp-1">
                     {item.subtitle}
                   </p>
-                  <p className="text-[11px] text-[#A09D94] font-light leading-relaxed">
+                  <p className="text-[10px] sm:text-[11px] text-[#A09D94] font-light leading-relaxed line-clamp-3">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
+                <div className="mt-3 sm:mt-5 pt-2 sm:pt-3 border-t border-white/10 flex items-center justify-between">
                   <Link
                     to={item.link}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-[11px] uppercase font-semibold text-[#E8D9BF] hover:text-white inline-flex items-center gap-1 group"
+                    className="text-[10px] sm:text-[11px] uppercase font-semibold text-[#E8D9BF] hover:text-white inline-flex items-center gap-1 group"
                   >
                     <span>{item.linkText}</span>
-                    <ChevronRight size={13} className="transition-transform group-hover:translate-x-1 text-[#B49A70]" />
+                    <ChevronRight size={12} className="transition-transform group-hover:translate-x-1 text-[#B49A70]" />
                   </Link>
                 </div>
               </div>

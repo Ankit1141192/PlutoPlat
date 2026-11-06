@@ -43,7 +43,7 @@ const CategorySection = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {categories.map((cat, idx) => (
           <motion.div
             key={cat.id}
@@ -53,7 +53,7 @@ const CategorySection = () => {
             transition={{ duration: 0.6, delay: idx * 0.1 }}
             whileHover={{ y: -6 }}
             onClick={() => handleCategoryClick(cat)}
-            className="group relative h-96 rounded-sm overflow-hidden cursor-pointer shadow-sm hover:shadow-2xl transition-all duration-500"
+            className="group relative h-64 sm:h-80 md:h-96 rounded-xl sm:rounded-sm overflow-hidden cursor-pointer shadow-sm hover:shadow-2xl transition-all duration-500"
           >
             {/* Background Image */}
             <img
@@ -65,34 +65,34 @@ const CategorySection = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-[#1C201C] via-[#1C201C]/40 to-transparent opacity-85 group-hover:opacity-90 transition-opacity" />
 
             {/* Top Pill */}
-            <div className="absolute top-4 left-4 z-10">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-[#B49A70] bg-[#1C201C]/80 backdrop-blur-md px-2.5 py-1 rounded-xs border border-[#B49A70]/30">
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-[#B49A70] bg-[#1C201C]/80 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xs border border-[#B49A70]/30">
                 {cat.tag}
               </span>
             </div>
 
             {/* Bottom Content */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white z-10 flex flex-col justify-end h-full">
-              <div className="mb-4 text-[#B49A70] group-hover:scale-110 transition-transform origin-left">
+            <div className="absolute bottom-0 left-0 right-0 p-3.5 sm:p-6 text-white z-10 flex flex-col justify-end h-full">
+              <div className="mb-2 sm:mb-4 text-[#B49A70] group-hover:scale-110 transition-transform origin-left">
                 {getIcon(cat.type)}
               </div>
 
-              <div className="flex items-baseline justify-between mb-1.5">
-                <h3 className="font-serif text-2xl font-normal group-hover:text-[#E8D9BF] transition-colors">
+              <div className="flex items-baseline justify-between mb-1 sm:mb-1.5">
+                <h3 className="font-serif text-base sm:text-2xl font-normal group-hover:text-[#E8D9BF] transition-colors truncate">
                   {cat.plural}
                 </h3>
-                <span className="text-xs font-mono text-[#B49A70]">
+                <span className="text-[10px] sm:text-xs font-mono text-[#B49A70] shrink-0 ml-1">
                   {cat.count} listings
                 </span>
               </div>
 
-              <p className="text-xs text-[#D8D4CA] line-clamp-2 mb-4 font-light leading-relaxed">
+              <p className="hidden sm:block text-xs text-[#D8D4CA] line-clamp-2 mb-4 font-light leading-relaxed">
                 {cat.description}
               </p>
 
-              <div className="text-xs uppercase tracking-wider font-semibold text-[#B49A70] flex items-center gap-1.5 opacity-90 group-hover:translate-x-1 transition-transform">
+              <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-[#B49A70] flex items-center gap-1 sm:gap-1.5 opacity-90 group-hover:translate-x-1 transition-transform">
                 <span>View Collection</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </div>
             </div>
           </motion.div>

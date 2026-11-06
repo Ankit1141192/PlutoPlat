@@ -1,5 +1,6 @@
 import React from 'react';
 import HeroSection from '../Components/HeroSection';
+import RentOrPropertyBanner from '../Components/RentOrPropertyBanner';
 import CategorySection from '../Components/CategorySection';
 import LocationFilterSection from '../Components/LocationFilterSection';
 import FeaturedSection from '../Components/FeaturedSection';
@@ -28,6 +29,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-[#F8F6F2]">
       <HeroSection />
+      <RentOrPropertyBanner />
       <CategorySection />
       <LocationFilterSection />
       <FeaturedSection />

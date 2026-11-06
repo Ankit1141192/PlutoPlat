@@ -7,7 +7,7 @@
  * stored in localStorage under the key "pluto_token".
  */
 
-const BASE_URL = 'https://my-node-backend.ankit2914978.workers.dev/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://my-node-backend.ankit2914978.workers.dev/api/v1';
 
 // ─────────────────────────────────────────────
 // Internal helpers
