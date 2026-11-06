@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Heart, Search, Bell, User, Globe, ShieldCheck, 
-  ArrowUpRight, LogOut, FileText, ChevronDown, Sparkles 
+  ArrowUpRight, LogOut, FileText, ChevronDown, Sparkles,
+  Calendar, Clock, Users, KeyRound, CheckCircle2, TrendingUp
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 
@@ -204,47 +205,132 @@ const Navbar = () => {
 
                 {/* Dropdown Menu */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DDD8CE] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn">
-                    <div className="px-3 py-2.5 border-b border-[#EAE6DE] mb-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#B49A70] flex items-center gap-1">
-                        <Sparkles size={11} />
-                        <span>{user.tier || 'Private Member'}</span>
+                  <div className="absolute right-0 mt-2 w-72 bg-white border border-[#DDD8CE] rounded-2xl shadow-2xl p-2.5 z-50 animate-fadeIn">
+                    <div className="px-3 py-2.5 border-b border-[#EAE6DE] mb-1.5 bg-[#FAF8F5] rounded-xl">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#B49A70] flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Sparkles size={11} />
+                          {user.tier || 'Private Client'}
+                        </span>
+                        <span className="text-[9px] bg-[#10B981]/15 text-[#10B981] px-1.5 py-0.5 rounded font-mono font-semibold">Active</span>
                       </div>
-                      <div className="font-serif text-sm font-semibold text-[#1C201C] truncate">
+                      <div className="font-serif text-sm font-semibold text-[#1C201C] truncate mt-0.5">
                         {user.name}
                       </div>
                       <div className="text-[11px] text-[#77766E] truncate">{user.email}</div>
                     </div>
 
-                    <Link
-                      to="/profile"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                    >
-                      <User size={15} className="text-[#B49A70]" />
-                      <span>Profile & Dossier</span>
-                    </Link>
+                    <div className="space-y-0.5">
+                      {/* 1. My Profile */}
+                      <Link
+                        to="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <User size={15} className="text-[#B49A70]" />
+                        <span>My Profile</span>
+                      </Link>
 
-                    <Link
-                      to="/my-enquiries"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                    >
-                      <FileText size={15} className="text-[#B49A70]" />
-                      <span>My Enquiries</span>
-                    </Link>
+                      {/* 2. Enquiries */}
+                      <Link
+                        to="/my-enquiries"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <FileText size={15} className="text-[#B49A70]" />
+                          <span>Enquiries</span>
+                        </div>
+                        <span className="text-[10px] bg-[#10B981]/15 text-[#10B981] px-1.5 py-0.5 rounded font-semibold">Track</span>
+                      </Link>
 
-                    <Link
-                      to="/favorites"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                    >
-                      <Heart size={15} className="text-[#B49A70]" />
-                      <span>Saved Properties ({favorites.length})</span>
-                    </Link>
+                      {/* 3. Saved Property */}
+                      <Link
+                        to="/favorites"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Heart size={15} className="text-[#B49A70]" />
+                          <span>Saved Property</span>
+                        </div>
+                        {favorites.length > 0 && (
+                          <span className="text-[10px] bg-[#C74747] text-white px-1.5 py-0.5 rounded-full font-bold">
+                            {favorites.length}
+                          </span>
+                        )}
+                      </Link>
 
-                    <div className="border-t border-[#EAE6DE] my-1" />
+                      {/* 4. Schedule Property Visits */}
+                      <Link
+                        to="/scheduled-visits"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <Calendar size={15} className="text-[#B49A70]" />
+                        <span>Schedule Property Visits</span>
+                      </Link>
 
+                      {/* 5. My Notifications */}
+                      <Link
+                        to="/notifications"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Bell size={15} className="text-[#B49A70]" />
+                          <span>My Notifications</span>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-[#B49A70] animate-pulse" />
+                      </Link>
+
+                      {/* 6. Recently Property */}
+                      <Link
+                        to="/recently-viewed"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <Clock size={15} className="text-[#B49A70]" />
+                        <span>Recently Property</span>
+                      </Link>
+
+                      {/* 7. Contact Agents */}
+                      <Link
+                        to="/contact-agents"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <Users size={15} className="text-[#B49A70]" />
+                        <span>Contact Agents</span>
+                      </Link>
+
+                      {/* Deal Process (User Workflow Step 5) */}
+                      <Link
+                        to="/deals"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <TrendingUp size={15} className="text-[#10B981]" />
+                          <span>Deal Process Tracker</span>
+                        </div>
+                        <span className="text-[10px] bg-[#B49A70]/15 text-[#8C7146] px-1.5 py-0.5 rounded font-semibold">7 Steps</span>
+                      </Link>
+
+                      {/* 8. Change Password */}
+                      <Link
+                        to="/change-password"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                      >
+                        <KeyRound size={15} className="text-[#B49A70]" />
+                        <span>Change Password</span>
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-[#EAE6DE] my-1.5" />
+
+                    {/* 9. Logout */}
                     <button
                       type="button"
                       onClick={() => {
@@ -255,7 +341,7 @@ const Navbar = () => {
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#C74747] hover:bg-[#FDF2F2] rounded-xl transition-colors text-left cursor-pointer"
                     >
                       <LogOut size={15} />
-                      <span>Sign Out / Disconnect</span>
+                      <span>Logout / Disconnect</span>
                     </button>
                   </div>
                 )}
@@ -389,12 +475,55 @@ const Navbar = () => {
                   <span className="text-xs text-[#287A50] font-sans font-semibold">Active</span>
                 </NavLink>
 
-                <NavLink
-                  to="/profile"
-                  className="text-base font-serif text-[#1C201C] hover:text-[#B49A70] py-1 border-b border-[#EAE6DE]"
-                >
-                  Client Dossier & Profile
-                </NavLink>
+                {user && (
+                  <div className="pt-2 border-t border-[#EAE6DE] space-y-2">
+                    <div className="text-[10px] uppercase font-bold text-[#B49A70] tracking-wider px-1">
+                      Client Workstation
+                    </div>
+                    <NavLink
+                      to="/scheduled-visits"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <Calendar size={15} className="text-[#B49A70]" />
+                      <span>Schedule Property Visits</span>
+                    </NavLink>
+                    <NavLink
+                      to="/notifications"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <Bell size={15} className="text-[#B49A70]" />
+                      <span>My Notifications</span>
+                    </NavLink>
+                    <NavLink
+                      to="/recently-viewed"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <Clock size={15} className="text-[#B49A70]" />
+                      <span>Recently Property</span>
+                    </NavLink>
+                    <NavLink
+                      to="/contact-agents"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <Users size={15} className="text-[#B49A70]" />
+                      <span>Contact Agents</span>
+                    </NavLink>
+                    <NavLink
+                      to="/deals"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <TrendingUp size={15} className="text-[#10B981]" />
+                      <span>Deal Process Tracker</span>
+                    </NavLink>
+                    <NavLink
+                      to="/change-password"
+                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
+                    >
+                      <KeyRound size={15} className="text-[#B49A70]" />
+                      <span>Change Password</span>
+                    </NavLink>
+                  </div>
+                )}
               </div>
             </div>
 

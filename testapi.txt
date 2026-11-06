@@ -1,0 +1,439 @@
+================================================================================
+PLUTOPLAT BACKEND API COMPLETE TESTING & INTEGRATION SPECIFICATION
+================================================================================
+Base Production URL: https://my-node-backend.ankit2914978.workers.dev
+Base Localhost URL:  http://localhost:5000
+Environment:         Cloudflare Workers Edge (nodejs_compat) + MongoDB Atlas
+Platform Architecture:
+  - V1: Consumer / Buyer User Panel Workflow
+  - V2: Broker / Partner Agent Desk
+  - V3: Platform Owner / SuperAdmin HQ
+
+================================================================================
+1. SYSTEM & HEALTH CHECK ENDPOINTS
+================================================================================
+
+1.1 Root Greeting
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/
+  Access:   Public
+  Curl:
+    curl -X GET https://my-node-backend.ankit2914978.workers.dev/
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "message": "Welcome to PlutoPlat Enterprise API",
+      "version": "1.0.0",
+      "documentation": "/api/v1"
+    }
+
+1.2 System Health & MongoDB Atlas Connectivity
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/health
+  Access:   Public
+  Curl:
+    curl -X GET https://my-node-backend.ankit2914978.workers.dev/health
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "status": "Healthy",
+      "uptime": "...",
+      "timestamp": "2026-11-04T17:50:13.099Z",
+      "database": "Connected"
+    }
+
+================================================================================
+2. V1: USER PANEL WORKFLOW ENDPOINTS (BUYER / CLIENT)
+================================================================================
+
+User Panel Workflow:
+  Step 1: Open Website & Browse Verified Properties
+  Step 2: Find Property & Inspect Details (Records into Recently Viewed)
+  Step 3: Contact Seller / Partner Agents & Submit Acquisition Enquiry
+  Step 4: Agents Contact Buyer & Schedule Property Visit (Chauffeured / 4K Virtual)
+  Step 5: 7-Stage Deal Process Tracker (Escrow, Title Search, Sub-Registrar Handover)
+
+--------------------------------------------------------------------------------
+2.1 Client Registration (User Signup)
+--------------------------------------------------------------------------------
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/register
+  Access:   Public
+  Headers:
+    Content-Type: application/json
+  Body:
+    {
+      "name": "Vikramaditya Singhania",
+      "email": "buyer.test@heritageholdings.in",
+      "phone": "+919811044521",
+      "password": "Password123!",
+      "role": "user",
+      "location": {
+        "city": "Kanpur",
+        "state": "Uttar Pradesh",
+        "country": "India"
+      }
+    }
+  Curl:
+    curl -X POST https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/register \
+      -H "Content-Type: application/json" \
+      -d "{\"name\":\"Vikramaditya Singhania\",\"email\":\"buyer.test@heritageholdings.in\",\"phone\":\"+919811044521\",\"password\":\"Password123!\"}"
+  Expected Response (201 Created):
+    {
+      "success": true,
+      "message": "User registered successfully.",
+      "data": {
+        "user": {
+          "_id": "6727c9d74910243d57a2c001",
+          "name": "Vikramaditya Singhania",
+          "email": "buyer.test@heritageholdings.in",
+          "role": "user"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    }
+
+--------------------------------------------------------------------------------
+2.2 Client Authentication (Sign In)
+--------------------------------------------------------------------------------
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/login
+  Access:   Public
+  Headers:
+    Content-Type: application/json
+  Body:
+    {
+      "email": "buyer.test@heritageholdings.in",
+      "password": "Password123!"
+    }
+  Curl:
+    curl -X POST https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/login \
+      -H "Content-Type: application/json" \
+      -d "{\"email\":\"buyer.test@heritageholdings.in\",\"password\":\"Password123!\"}"
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "message": "Login successful.",
+      "data": {
+        "user": {
+          "_id": "6727c9d74910243d57a2c001",
+          "name": "Vikramaditya Singhania",
+          "email": "buyer.test@heritageholdings.in",
+          "role": "user"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    }
+
+--------------------------------------------------------------------------------
+2.3 Current Session Profile (Me)
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/me
+  Access:   Authenticated (Bearer JWT)
+  Headers:
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+  Curl:
+    curl -X GET https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/me \
+      -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+
+--------------------------------------------------------------------------------
+2.4 Change Password
+--------------------------------------------------------------------------------
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/change-password
+  Access:   Authenticated (Bearer JWT)
+  Headers:
+    Content-Type: application/json
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+  Body:
+    {
+      "currentPassword": "Password123!",
+      "newPassword": "NewSecurePassword2026!"
+    }
+  Curl:
+    curl -X POST https://my-node-backend.ankit2914978.workers.dev/api/v1/auth/change-password \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+      -d "{\"currentPassword\":\"Password123!\",\"newPassword\":\"NewSecurePassword2026!\"}"
+
+--------------------------------------------------------------------------------
+2.5 Browse Properties (Public Catalog)
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/properties
+  Query Params (Optional):
+    ?page=1&limit=12&city=Kanpur&propertyType=villa&minPrice=50000000
+  Access:   Public
+  Curl:
+    curl -X GET "https://my-node-backend.ankit2914978.workers.dev/api/v1/properties?page=1&limit=12"
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "message": "Properties fetched successfully.",
+      "data": {
+        "properties": [...],
+        "pagination": { "page": 1, "limit": 12, "total": 24, "totalPages": 2 }
+      }
+    }
+
+--------------------------------------------------------------------------------
+2.6 Partner Agents & Senior Advisors Directory
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/agents
+  Access:   Public
+  Curl:
+    curl -X GET https://my-node-backend.ankit2914978.workers.dev/api/v1/agents
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "message": "Verified partner agents retrieved successfully.",
+      "data": {
+        "agents": [
+          {
+            "name": "Michael Sharma",
+            "title": "Senior Real Estate Advisor",
+            "specialty": "Civil Lines & Prime Corridors",
+            "phone": "+91 98210 33445",
+            "rating": 4.98
+          }
+        ]
+      }
+    }
+
+--------------------------------------------------------------------------------
+2.7 Submit Property Enquiry (Buyer Request)
+--------------------------------------------------------------------------------
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/enquiries
+  Access:   Authenticated (role: user)
+  Headers:
+    Content-Type: application/json
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+  Body:
+    {
+      "propertyId": "<PROPERTY_OBJECT_ID>",
+      "message": "Requesting confidential prospectus and floor layout CAD files.",
+      "name": "Vikramaditya Singhania",
+      "email": "buyer.test@heritageholdings.in",
+      "phone": "+919811044521"
+    }
+  Curl:
+    curl -X POST https://my-node-backend.ankit2914978.workers.dev/api/v1/enquiries \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+      -d "{\"propertyId\":\"<PROPERTY_ID>\",\"message\":\"Confidential prospectus request\"}"
+
+--------------------------------------------------------------------------------
+2.8 Get Buyer's Active Enquiries
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/enquiries
+  Access:   Authenticated (role: user)
+  Headers:
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+
+--------------------------------------------------------------------------------
+2.9 Schedule Property Visit (Chauffeured On-Site / 4K Virtual)
+--------------------------------------------------------------------------------
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/visits
+  Access:   Authenticated (role: user)
+  Headers:
+    Content-Type: application/json
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+  Body:
+    {
+      "propertyId": "<PROPERTY_OBJECT_ID>",
+      "visitType": "Chauffeured On-Site",
+      "date": "2026-11-10",
+      "timeSlot": "11:00 AM Mid-day Window",
+      "notes": "Chauffeur pickup requested at Ganges Club Kanpur."
+    }
+  Curl:
+    curl -X POST https://my-node-backend.ankit2914978.workers.dev/api/v1/visits \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+      -d "{\"propertyId\":\"<ID>\",\"visitType\":\"Chauffeured On-Site\",\"date\":\"2026-11-10\",\"timeSlot\":\"11:00 AM\"}"
+
+--------------------------------------------------------------------------------
+2.10 Get Buyer Scheduled Visits
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/visits
+  Access:   Authenticated (role: user)
+  Headers:
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+
+--------------------------------------------------------------------------------
+2.11 Cancel Scheduled Visit
+--------------------------------------------------------------------------------
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/visits/<VISIT_ID>/cancel
+  Access:   Authenticated (role: user)
+  Headers:
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+
+--------------------------------------------------------------------------------
+2.12 Active Deal Process Tracker (7-Stage Workflow)
+--------------------------------------------------------------------------------
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v1/deals
+  Access:   Authenticated (role: user)
+  Headers:
+    Authorization: Bearer <YOUR_JWT_TOKEN>
+  Expected Response (200 OK):
+    {
+      "success": true,
+      "message": "Active deals pipeline retrieved successfully.",
+      "data": {
+        "deals": [
+          {
+            "id": "DEAL-7701",
+            "propertyTitle": "The Imperial Villa, Civil Lines",
+            "propertyPrice": "₹8.50 Cr",
+            "currentStage": 3,
+            "stageLabel": "Site Visit Completed",
+            "stages": [
+              { "step": 1, "name": "Enquiry Submitted", "status": "completed" },
+              { "step": 2, "name": "Agent Advisory & Consultation", "status": "completed" },
+              { "step": 3, "name": "Site Visit Completed", "status": "current" },
+              { "step": 4, "name": "Offer & Terms Negotiation", "status": "pending" },
+              { "step": 5, "name": "Token & Booking Advance", "status": "pending" },
+              { "step": 6, "name": "Legal Due Diligence & Cadastre", "status": "pending" },
+              { "step": 7, "name": "Deed Registration & Handover", "status": "pending" }
+            ],
+            "nextAction": "Senior Advisor Michael Sharma is finalizing the formal offer draft.",
+            "escrowEstimate": "₹85,00,000 (10% Token on acceptance)"
+          }
+        ]
+      }
+    }
+
+--------------------------------------------------------------------------------
+2.13 Saved Properties (Wishlist)
+--------------------------------------------------------------------------------
+  - Get Saved:
+    GET https://my-node-backend.ankit2914978.workers.dev/api/v1/users/saved-properties
+  - Toggle Save/Remove:
+    POST https://my-node-backend.ankit2914978.workers.dev/api/v1/users/saved-properties/<PROPERTY_ID>/toggle
+
+--------------------------------------------------------------------------------
+2.14 Client Intelligence Notifications
+--------------------------------------------------------------------------------
+  - Get Notifications:
+    GET https://my-node-backend.ankit2914978.workers.dev/api/v1/users/notifications
+  - Mark Read:
+    PATCH https://my-node-backend.ankit2914978.workers.dev/api/v1/users/notifications/<NOTIF_ID>/read
+
+================================================================================
+3. V2: ADMIN PANEL WORKFLOW ENDPOINTS (BROKER / AGENT DESK)
+================================================================================
+
+All V2 routes require: Authorization: Bearer <TOKEN_OF_ADMIN_ROLE>
+
+3.1 Agent's Own Submitted Properties
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v2/properties
+
+3.2 Agent Submits Listing (Sent to SuperAdmin for Verification)
+  Method:   POST
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v2/properties
+  Body:
+    {
+      "title": "The Riviera Palm Villa",
+      "propertyType": "villa",
+      "listingType": "sale",
+      "price": 95000000,
+      "location": {
+        "address": "Palm Jumeirah Frond G",
+        "city": "Dubai",
+        "coordinates": { "type": "Point", "coordinates": [55.1328, 25.1124] }
+      },
+      "images": ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"]
+    }
+  Note: Automatically assigned isVerified: false, status: 'pending'.
+
+3.3 Leads Received on Agent's Own Listings
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v2/leads
+
+3.4 Update Lead Stage (CRM Pipeline)
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v2/leads/<LEAD_ID>/status
+  Body:
+    {
+      "status": "interested",
+      "adminNotes": "Client requested bank pre-approval and draft registry agreement."
+    }
+
+3.5 Site Visits Assigned to Agent
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v2/visits
+
+================================================================================
+4. V3: SUPERADMIN PANEL WORKFLOW ENDPOINTS (MASTER PLATFORM HQ)
+================================================================================
+
+All V3 routes require: Authorization: Bearer <TOKEN_OF_SUPER_ADMIN_ROLE>
+
+4.1 Moderation Queue (List Pending Review Listings)
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/properties/moderation-queue
+
+4.2 1-Click Approve Property Listing
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/properties/<PROPERTY_ID>/approve
+  Note: Sets isVerified: true, status: 'approved'. Immediately visible on public catalog.
+
+4.3 Reject Property Listing with Audit Reason
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/properties/<PROPERTY_ID>/reject
+  Body:
+    {
+      "reason": "RERA Title verification certificate missing municipal seal."
+    }
+
+4.4 Master Platform User Directory (All Roles)
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/users
+
+4.5 User Role Escalation / Demotion
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/users/<USER_ID>/role
+  Body:
+    {
+      "role": "admin"  // options: 'user' | 'admin' | 'super_admin'
+    }
+
+4.6 Release 5-Attempt Security Lockout
+  Method:   PATCH
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/users/<USER_ID>/unlock
+  Note: Resets loginAttempts to 0 and lockUntil to null.
+
+4.7 Global Panoramic Leads Matrix
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/leads
+
+4.8 Immutable Audit Telemetry Ledger
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/audits
+
+4.9 Platform Executive Analytics
+  Method:   GET
+  URL:      https://my-node-backend.ankit2914978.workers.dev/api/v3/analytics
+
+================================================================================
+5. FRONTEND TEST HARNESS
+================================================================================
+
+An interactive UI test runner is also available directly in the frontend application:
+  - Route:  http://localhost:5173/testapi
+  - File:   a:\git\PlutoPlat\frontend\src\PlutoPlat\Pages\testapi.tsx
+  - Capability:
+    * 1-Click "Run All Battery Tests"
+    * Real-time HTTP Status code, headers, and latency (ms) display
+    * Visual JSON payload editor and output viewer
+    * Live toggle between Public, Buyer, Agent, and SuperAdmin tokens
+================================================================================

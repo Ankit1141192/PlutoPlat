@@ -3,6 +3,7 @@ import HeroSection from '../Components/HeroSection';
 import CategorySection from '../Components/CategorySection';
 import LocationFilterSection from '../Components/LocationFilterSection';
 import FeaturedSection from '../Components/FeaturedSection';
+import UserJourneyWorkflow from '../Components/UserJourneyWorkflow';
 import WhyChooseUs from '../Components/WhyChooseUs';
 import TestimonialsSection from '../Components/TestimonialsSection';
 import FinalCTA from '../Components/FinalCTA';
@@ -15,10 +16,11 @@ import Footer from '../Components/Footer';
  * 2. Category      — browse by type (Villas, Apartments…)
  * 3. Location      — auto-scrolling location carousel
  * 4. Featured      — 4 cards per page with ‹ › pagination
- * 5. Why Us        — 5 trust pillars
- * 6. Testimonials  — client reviews
- * 7. Final CTA     — action banner
- * 8. Footer
+ * 5. Workflow      — 5-step user journey interactive pipeline
+ * 6. Why Us        — 5 trust pillars
+ * 7. Testimonials  — client reviews
+ * 8. Final CTA     — action banner
+ * 9. Footer
  *
  * NOTE: <Navbar /> is rendered globally in App.jsx — not here.
  */
@@ -29,6 +31,9 @@ const HomePage = () => {
       <CategorySection />
       <LocationFilterSection />
       <FeaturedSection />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <UserJourneyWorkflow />
+      </div>
       <WhyChooseUs />
       <TestimonialsSection />
       <FinalCTA />

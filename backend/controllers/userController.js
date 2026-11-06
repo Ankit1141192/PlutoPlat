@@ -167,9 +167,100 @@ const updateUserStatus = async (req, res, next) => {
   }
 };
 
+/**
+ * Get Saved Properties for current user
+ * GET /api/v1/users/saved-properties
+ */
+const getSavedProperties = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate('savedProperties');
+    return ApiResponse.success(res, 'Saved properties retrieved successfully.', {
+      savedProperties: user?.savedProperties || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Toggle Saved Property (Save or Remove)
+ * POST /api/v1/users/saved-properties/:propertyId/toggle
+ */
+const toggleSavedProperty = async (req, res, next) => {
+  try {
+    const { propertyId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return ApiResponse.error(res, 'User not found.', 404);
+    }
+
+    const index = user.savedProperties.findIndex(
+      (id) => id.toString() === propertyId.toString()
+    );
+
+    let isSaved = false;
+    if (index > -1) {
+      user.savedProperties.splice(index, 1);
+      isSaved = false;
+    } else {
+      user.savedProperties.push(propertyId);
+      isSaved = true;
+    }
+
+    await user.save();
+
+    return ApiResponse.success(res, isSaved ? 'Property saved to favorites.' : 'Property removed from favorites.', {
+      isSaved,
+      savedCount: user.savedProperties.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get Notifications for current user
+ * GET /api/v1/users/notifications
+ */
+const getNotifications = async (req, res, next) => {
+  try {
+    const Notification = require('../models/Notifications');
+    const notifications = await Notification.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    return ApiResponse.success(res, 'Notifications retrieved successfully.', { notifications });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Mark Notification as Read
+ * PATCH /api/v1/users/notifications/:id/read
+ */
+const markNotificationRead = async (req, res, next) => {
+  try {
+    const Notification = require('../models/Notifications');
+    const notif = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { read: true },
+      { new: true }
+    );
+    if (!notif) {
+      return ApiResponse.error(res, 'Notification not found.', 404);
+    }
+    return ApiResponse.success(res, 'Notification marked as read.', { notification: notif });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getAllUsers,
   updateUserStatus,
+  getSavedProperties,
+  toggleSavedProperty,
+  getNotifications,
+  markNotificationRead,
 };

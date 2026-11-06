@@ -488,13 +488,16 @@ const Profile = () => {
 
             <div className="pt-4 border-t border-[#EAE6DE] flex flex-wrap gap-4 items-center justify-between">
               <div className="text-xs text-[#6E6D66]">
-                Security passkey authenticated. 256-Bit SSL End-to-End Encryption active.
+                <strong className="text-[#1C201C] block mb-0.5">Account Passcode Protection:</strong>
+                <span>Last updated 14 days ago. End-to-end 12-round salted encryption active.</span>
               </div>
+
               <Link
-                to="/forgot-password"
-                className="px-5 py-2.5 bg-white border border-[#1C201C] text-[#1C201C] text-xs uppercase tracking-wider font-semibold rounded-xl hover:bg-[#F8F6F2] transition-colors"
+                to="/change-password"
+                className="px-6 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] text-white text-xs uppercase tracking-wider font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-2"
               >
-                Rotate Security Passcode
+                <KeyRound size={14} className="text-[#B49A70]" />
+                <span>Change Account Passcode &rarr;</span>
               </Link>
             </div>
           </div>

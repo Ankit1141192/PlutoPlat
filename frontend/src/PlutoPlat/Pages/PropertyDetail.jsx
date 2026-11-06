@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   MapPin, BedDouble, Bath, Square, Calendar, Car, ShieldCheck, 
@@ -13,13 +13,22 @@ import PlutoMapExplorer from '../Components/PlutoMapExplorer';
 const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getPropertyById, properties, isFavorite, toggleFavorite, formatPrice, showToast } = usePropertyStore();
+  const { 
+    getPropertyById, properties, isFavorite, toggleFavorite, 
+    formatPrice, showToast, recordRecentlyViewed 
+  } = usePropertyStore();
 
   const property = getPropertyById(id);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isTourModalOpen, setIsTourModalOpen] = useState(false);
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (property?.id && recordRecentlyViewed) {
+      recordRecentlyViewed(property.id);
+    }
+  }, [property?.id, recordRecentlyViewed]);
 
   if (!property) {
     return (

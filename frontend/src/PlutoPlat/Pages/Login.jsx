@@ -172,8 +172,71 @@ const Login = () => {
           </button>
         </form>
 
+        {/* 1-Click Quick Demo Sign In */}
+        <div className="mt-6 pt-5 border-t border-[#EAE6DE]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8B82] block text-center mb-2.5">
+            Quick 1-Click Demo Profiles
+          </span>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                login({
+                  id: 'USR-004',
+                  name: 'Vikramaditya (Buyer)',
+                  email: 'v.singhania@heritageholdings.in',
+                  phone: '+91 98110 44521',
+                  role: 'user',
+                  tier: 'Private Client',
+                  city: 'Civil Lines, Kanpur'
+                });
+                navigate('/profile');
+              }}
+              className="px-2 py-2 bg-[#F8F6F2] hover:bg-[#EFECE4] text-[#1C201C] text-[11px] font-semibold rounded-xs border border-[#DDD8CE] transition-colors cursor-pointer text-center"
+            >
+              Buyer (User)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                login({
+                  id: 'USR-002',
+                  name: 'Michael Sharma (Agent)',
+                  email: 'm.sharma@plutoplat.com',
+                  phone: '+91 98210 33445',
+                  role: 'admin',
+                  tier: 'Partner Agent',
+                  city: 'Civil Lines, Kanpur'
+                });
+                navigate('/profile');
+              }}
+              className="px-2 py-2 bg-[#F8F6F2] hover:bg-[#EFECE4] text-[#1C201C] text-[11px] font-semibold rounded-xs border border-[#DDD8CE] transition-colors cursor-pointer text-center"
+            >
+              Agent (Admin)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                login({
+                  id: 'USR-001',
+                  name: 'Julian Beaumont',
+                  email: 'owner@plutoplat.com',
+                  phone: '+91 99563 46155',
+                  role: 'super_admin',
+                  tier: 'Website Owner',
+                  city: 'Kanpur, UP'
+                });
+                navigate('/profile');
+              }}
+              className="px-2 py-2 bg-[#F8F6F2] hover:bg-[#EFECE4] text-[#1C201C] text-[11px] font-semibold rounded-xs border border-[#DDD8CE] transition-colors cursor-pointer text-center"
+            >
+              SuperAdmin
+            </button>
+          </div>
+        </div>
+
         {/* Footer Link to Register */}
-        <div className="mt-6 pt-5 border-t border-[#EAE6DE] text-center text-xs text-[#6E6D66]">
+        <div className="mt-5 text-center text-xs text-[#6E6D66]">
           <span>New to PlutoPlat? </span>
           <Link to="/register" className="text-[#B49A70] font-semibold hover:underline">
             Register Here

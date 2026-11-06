@@ -101,6 +101,15 @@ export const Api = {
   },
 
   /**
+   * Change password for authenticated user.
+   * POST /api/v1/auth/change-password
+   * @param {{ currentPassword, newPassword }} payload
+   */
+  async changePassword(payload) {
+    return request('POST', '/auth/change-password', { body: payload, auth: true });
+  },
+
+  /**
    * Logout — clears the stored token locally.
    */
   logout() {
@@ -157,6 +166,40 @@ export const Api = {
    */
   async updateUserStatus(id, payload) {
     return request('PATCH', `/users/${id}/status`, { body: payload, auth: true });
+  },
+
+  /**
+   * Get user's saved properties (favorites).
+   * GET /api/v1/users/saved-properties
+   */
+  async getSavedProperties() {
+    return request('GET', '/users/saved-properties', { auth: true });
+  },
+
+  /**
+   * Toggle save/remove property from favorites.
+   * POST /api/v1/users/saved-properties/:propertyId/toggle
+   * @param {string} propertyId
+   */
+  async toggleSavedProperty(propertyId) {
+    return request('POST', `/users/saved-properties/${propertyId}/toggle`, { auth: true });
+  },
+
+  /**
+   * Get user's notifications.
+   * GET /api/v1/users/notifications
+   */
+  async getNotifications() {
+    return request('GET', '/users/notifications', { auth: true });
+  },
+
+  /**
+   * Mark a notification as read.
+   * PATCH /api/v1/users/notifications/:id/read
+   * @param {string} id
+   */
+  async markNotificationRead(id) {
+    return request('PATCH', `/users/notifications/${id}/read`, { auth: true });
   },
 
   // ══════════════════════════════════════════
@@ -253,6 +296,60 @@ export const Api = {
    */
   async updateEnquiryStatus(id, payload) {
     return request('PATCH', `/enquiries/${id}/status`, { body: payload, auth: true });
+  },
+
+  // ══════════════════════════════════════════
+  // SCHEDULED VISITS  —  /api/v1/visits
+  // ══════════════════════════════════════════
+
+  /**
+   * Schedule a new property visit.
+   * POST /api/v1/visits
+   * @param {{ propertyId, visitType, date, timeSlot, notes }} payload
+   */
+  async createVisit(payload) {
+    return request('POST', '/visits', { body: payload, auth: true });
+  },
+
+  /**
+   * Get all scheduled visits for authenticated buyer.
+   * GET /api/v1/visits
+   */
+  async getVisits() {
+    return request('GET', '/visits', { auth: true });
+  },
+
+  /**
+   * Cancel a scheduled visit.
+   * PATCH /api/v1/visits/:id/cancel
+   * @param {string} id
+   */
+  async cancelVisit(id) {
+    return request('PATCH', `/visits/${id}/cancel`, { auth: true });
+  },
+
+  // ══════════════════════════════════════════
+  // DEAL PROCESS  —  /api/v1/deals
+  // ══════════════════════════════════════════
+
+  /**
+   * Get active deals pipeline for authenticated buyer.
+   * GET /api/v1/deals
+   */
+  async getDeals() {
+    return request('GET', '/deals', { auth: true });
+  },
+
+  // ══════════════════════════════════════════
+  // AGENTS DIRECTORY  —  /api/v1/agents
+  // ══════════════════════════════════════════
+
+  /**
+   * Get verified partner agents and senior advisors.
+   * GET /api/v1/agents
+   */
+  async getAgents() {
+    return request('GET', '/agents');
   },
 
   // ══════════════════════════════════════════

@@ -103,21 +103,40 @@ const MyEnquiries = () => {
             </p>
           </div>
 
-          <div className="mt-6 md:mt-0 flex gap-2">
-            {['All', 'Tour Scheduled', 'Active Review', 'Prospectus Dispatched'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
-                  filterStatus === status
-                    ? 'bg-[#1C201C] text-white shadow-2xs'
-                    : 'bg-white text-[#6E6D66] border border-[#DDD8CE] hover:text-[#1C201C]'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+          <div className="mt-6 md:mt-0 flex flex-wrap gap-2">
+            <Link
+              to="/scheduled-visits"
+              className="px-4 py-2 bg-white text-[#1C201C] border border-[#DDD8CE] hover:bg-[#F8F6F2] text-xs uppercase tracking-wider font-semibold rounded-xs shadow-2xs transition-colors flex items-center gap-1.5"
+            >
+              <Calendar size={13} className="text-[#B49A70]" />
+              <span>Scheduled Visits</span>
+            </Link>
+
+            <Link
+              to="/deals"
+              className="px-4 py-2 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors flex items-center gap-1.5"
+            >
+              <Sparkles size={13} className="text-[#B49A70]" />
+              <span>Track 7-Stage Deal Process &rarr;</span>
+            </Link>
           </div>
+        </div>
+
+        {/* Status Filter Buttons */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {['All', 'Tour Scheduled', 'Active Review', 'Prospectus Dispatched'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
+                filterStatus === status
+                  ? 'bg-[#B49A70] text-white shadow-xs'
+                  : 'bg-white text-[#6E6D66] border border-[#DDD8CE] hover:text-[#1C201C]'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
         </div>
 
         {/* Inquiries List */}

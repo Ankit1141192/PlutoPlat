@@ -1,5 +1,14 @@
 const rateLimit = require('express-rate-limit');
 
+const getKey = (req) => {
+  return (
+    req.headers['cf-connecting-ip'] ||
+    req.headers['x-forwarded-for'] ||
+    req.ip ||
+    '127.0.0.1'
+  );
+};
+
 /**
  * General API Rate Limiter
  * Protects against DDoS and repeated rapid API flooding.
@@ -7,8 +16,10 @@ const rateLimit = require('express-rate-limit');
 const apiLimiter = rateLimit({
   windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per window
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: getKey,
+  validate: false,
   message: {
     success: false,
     message: 'Too many requests from this IP. Please try again later.',
@@ -21,9 +32,11 @@ const apiLimiter = rateLimit({
  */
 const loginRateLimiter = rateLimit({
   windowMs: 30 * 60 * 1000, // 30 minutes
-  max: 10, // Max 10 attempts per IP in 30 minutes
+  max: 20, // Max 20 attempts per IP in 30 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getKey,
+  validate: false,
   message: {
     success: false,
     message: 'Too many login attempts from this network. Please try again after 30 minutes.',
@@ -35,9 +48,11 @@ const loginRateLimiter = rateLimit({
  */
 const authRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 15, // Max 15 attempts per hour per IP
+  max: 30, // Max 30 attempts per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getKey,
+  validate: false,
   message: {
     success: false,
     message: 'Too many account operations from this IP. Please try again later.',

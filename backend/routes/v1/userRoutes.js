@@ -3,6 +3,14 @@ const router = express.Router();
 const userController = require('../../controllers/userController');
 const { authenticate, authorize } = require('../../middlewares/auth');
 
+// Saved Properties
+router.get('/saved-properties', authenticate, userController.getSavedProperties);
+router.post('/saved-properties/:propertyId/toggle', authenticate, userController.toggleSavedProperty);
+
+// Notifications
+router.get('/notifications', authenticate, userController.getNotifications);
+router.patch('/notifications/:id/read', authenticate, userController.markNotificationRead);
+
 // Public/Authenticated: Get user profile by ID
 router.get('/profile/:id', userController.getUserProfile);
 

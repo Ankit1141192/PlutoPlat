@@ -22,6 +22,12 @@ import Notifications from './PlutoPlat/Pages/Notifications';
 import SearchResults from './PlutoPlat/Pages/SearchResults';
 import ForgetPassword from './PlutoPlat/Pages/ForgetPassword';
 import ResetPassword from './PlutoPlat/Pages/ResetPassword';
+import ScheduledVisits from './PlutoPlat/Pages/ScheduledVisits';
+import RecentlyViewed from './PlutoPlat/Pages/RecentlyViewed';
+import ContactAgents from './PlutoPlat/Pages/ContactAgents';
+import ChangePassword from './PlutoPlat/Pages/ChangePassword';
+import DealProcess from './PlutoPlat/Pages/DealProcess';
+// import TestApiPage from './PlutoPlat/Pages/testapi';
 
 // Scroll to top on route change helper
 const ScrollToTop = () => {
@@ -83,6 +89,13 @@ export default function App() {
               <Route path="/my-enquiries" element={<MyEnquiries />} />
               <Route path="/enquiries" element={<MyEnquiries />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/scheduled-visits" element={<ScheduledVisits />} />
+              <Route path="/recently-viewed" element={<RecentlyViewed />} />
+              <Route path="/contact-agents" element={<ContactAgents />} />
+              <Route path="/change-password" element={<ChangePassword />} />
+              <Route path="/deals" element={<DealProcess />} />
+              <Route path="/deal-process" element={<DealProcess />} />
+              
 
               {/* Authentication & Security Routes */}
               <Route path="/login" element={<Login />} />

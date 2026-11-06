@@ -17,4 +17,7 @@ router.get('/me', authenticate, authController.getMe);
 router.post('/forgot-password', authRateLimiter, authController.forgotPassword);
 router.post('/reset-password', authRateLimiter, authController.resetPassword);
 
+// Password change endpoint (Authenticated user)
+router.post('/change-password', authenticate, authController.changePassword);
+
 module.exports = router;

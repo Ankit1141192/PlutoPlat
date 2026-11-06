@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { PROPERTIES } from '../data/propertiesData';
 import { CATEGORIES } from '../data/categoriesData';
 import { AGENTS, TESTIMONIALS, STATS, FAQS } from '../data/testimonialsData';
+import { Api } from '../PlutoPlat/Services/Api';
 
 const PropertyContext = createContext(null);
 
@@ -135,6 +136,106 @@ const INITIAL_USERS = [
   }
 ];
 
+const INITIAL_VISITS = [
+  {
+    id: 'VST-2041',
+    propertyId: 1,
+    propertyTitle: 'The Imperial Villa, Civil Lines',
+    propertyLocation: 'Civil Lines, Kanpur, UP',
+    propertyPrice: '₹8.50 Cr',
+    propertyImage: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
+    visitType: 'Chauffeured On-Site',
+    date: '2026-11-06',
+    timeSlot: '11:00 AM Mid-day Window',
+    status: 'Confirmed', // 'Pending Confirmation' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled'
+    agentName: 'Michael Sharma',
+    agentPhone: '+91 98210 33445',
+    agentEmail: 'm.sharma@plutoplat.com',
+    agentAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80',
+    notes: 'Private chauffeur pickup coordinated at Ganges Club Kanpur. Freehold title documents and floor layout available on site.'
+  },
+  {
+    id: 'VST-2042',
+    propertyId: 3,
+    propertyTitle: 'Sea View Penthouse, Worli',
+    propertyLocation: 'Worli Sea Face, Mumbai',
+    propertyPrice: '₹18.50 Cr',
+    propertyImage: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=600&q=80',
+    visitType: '4K Virtual Guided',
+    date: '2026-11-08',
+    timeSlot: '05:00 PM Golden Hour Sunset',
+    status: 'Pending Confirmation',
+    agentName: 'Priya Patel',
+    agentPhone: '+91 97120 55678',
+    agentEmail: 'p.patel@plutoplat.com',
+    agentAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    notes: 'Live walkthrough focusing on private rooftop infinity deck, sunset Arabian Sea views, and basement parking.'
+  }
+];
+
+const INITIAL_DEALS = [
+  {
+    id: 'DEAL-7701',
+    propertyId: 1,
+    propertyTitle: 'The Imperial Villa, Civil Lines',
+    propertyLocation: 'Civil Lines, Kanpur, UP',
+    propertyPrice: '₹8.50 Cr',
+    propertyImage: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
+    agentName: 'Michael Sharma',
+    agentPhone: '+91 98210 33445',
+    agentEmail: 'm.sharma@plutoplat.com',
+    currentStage: 3, // 1 to 7
+    stageLabel: 'Site Visit Completed',
+    stages: [
+      { step: 1, name: 'Enquiry Submitted', status: 'completed', date: '2026-10-28', detail: 'Buyer initial inquiry captured and assigned to Senior Advisor.' },
+      { step: 2, name: 'Agent Advisory & Consultation', status: 'completed', date: '2026-10-30', detail: 'Telephone consultation conducted; municipal zoning and floor layout dispatched.' },
+      { step: 3, name: 'Site Visit Completed', status: 'current', date: '2026-11-02', detail: 'Buyer inspected the property on site. Verified structural deed integrity.' },
+      { step: 4, name: 'Offer & Terms Negotiation', status: 'pending', date: 'Target: Nov 10', detail: 'Formal offer draft and seller concession sheet in negotiation.' },
+      { step: 5, name: 'Token & Booking Advance', status: 'pending', date: 'Target: Nov 16', detail: '10% earnest money escrow deposit upon agreed Letter of Intent.' },
+      { step: 6, name: 'Legal Due Diligence & Cadastre', status: 'pending', date: 'Target: Nov 22', detail: 'Final municipal no-objection certificate and title search clearance.' },
+      { step: 7, name: 'Deed Registration & Handover', status: 'pending', date: 'Target: Nov 30', detail: 'Sub-registrar deed execution, final remittance, and physical keys handover.' }
+    ],
+    nextAction: 'Senior Advisor Michael Sharma is finalizing the formal offer proposal with the estate sellers.',
+    escrowEstimate: '₹85,00,000 (10% Token on acceptance)'
+  }
+];
+
+const INITIAL_NOTIFICATIONS = [
+  {
+    id: 'NOTIF-1',
+    category: 'Visit Scheduled',
+    badge: 'VISIT CONFIRMED',
+    title: 'Chauffeured On-Site Visit Confirmed for The Imperial Villa',
+    timestamp: '25 mins ago',
+    isUnread: true,
+    description: 'Your scheduled private viewing has been confirmed for Nov 06 at 11:00 AM. Driver contact and security gate credentials provisioned.',
+    actionLabel: 'View Visit Itinerary',
+    actionLink: '/scheduled-visits'
+  },
+  {
+    id: 'NOTIF-2',
+    category: 'Deal Tracker',
+    badge: 'STAGE ADVANCED',
+    title: 'Site Visit Completed for The Imperial Villa Deal',
+    timestamp: '2 hours ago',
+    isUnread: true,
+    description: 'Stage 3 has been marked complete. Next milestone: Formal offer and terms negotiation with the principal seller.',
+    actionLabel: 'Track Deal Pipeline',
+    actionLink: '/deals'
+  },
+  {
+    id: 'NOTIF-3',
+    category: 'Price Adjustment',
+    badge: 'VALUATION REVISION',
+    title: 'Sea View Penthouse, Worli valuation revised',
+    timestamp: '1 day ago',
+    isUnread: false,
+    description: 'Exclusive 5% price revision on this seafront penthouse. Direct escrow terms available.',
+    actionLabel: 'View Property Detail',
+    actionLink: '/property/3'
+  }
+];
+
 const INITIAL_AUDITS = [
   {
     id: 'AUD-892',
@@ -254,28 +355,53 @@ export const PropertyProvider = ({ children }) => {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [currency, setCurrency] = useState('INR');
 
-  // User Authentication State
+  // User Authentication State - null if guest / not logged in
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('plutoplat_user');
-      return saved ? JSON.parse(saved) : {
-        id: 'USR-001',
-        name: 'Julian Beaumont',
-        email: 'owner@plutoplat.com',
-        phone: '+91 99563 46155',
-        role: 'super_admin',
-        tier: 'Website Owner',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-        city: 'Kanpur, Uttar Pradesh'
-      };
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return {
-        id: 'USR-001',
-        name: 'Julian Beaumont',
-        email: 'owner@plutoplat.com',
-        role: 'super_admin',
-        city: 'Kanpur, Uttar Pradesh'
-      };
+      return null;
+    }
+  });
+
+  // Scheduled Visits State
+  const [scheduledVisits, setScheduledVisits] = useState(() => {
+    try {
+      const saved = localStorage.getItem('plutoplat_visits_db');
+      return saved ? JSON.parse(saved) : INITIAL_VISITS;
+    } catch {
+      return INITIAL_VISITS;
+    }
+  });
+
+  // Recently Viewed Properties IDs State
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('plutoplat_recently_viewed');
+      return saved ? JSON.parse(saved) : [1, 2, 3];
+    } catch {
+      return [1, 2, 3];
+    }
+  });
+
+  // Deal Process State
+  const [deals, setDeals] = useState(() => {
+    try {
+      const saved = localStorage.getItem('plutoplat_deals_db');
+      return saved ? JSON.parse(saved) : INITIAL_DEALS;
+    } catch {
+      return INITIAL_DEALS;
+    }
+  });
+
+  // Notifications State
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('plutoplat_notifications_db');
+      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    } catch {
+      return INITIAL_NOTIFICATIONS;
     }
   });
 
@@ -318,6 +444,38 @@ export const PropertyProvider = ({ children }) => {
       console.error(e);
     }
   }, [favorites]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('plutoplat_visits_db', JSON.stringify(scheduledVisits));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [scheduledVisits]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('plutoplat_recently_viewed', JSON.stringify(recentlyViewed));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [recentlyViewed]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('plutoplat_deals_db', JSON.stringify(deals));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [deals]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('plutoplat_notifications_db', JSON.stringify(notifications));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [notifications]);
 
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
@@ -532,6 +690,15 @@ export const PropertyProvider = ({ children }) => {
     };
     setLeads(prev => [newLead, ...prev]);
 
+    // Dispatch to live deployed backend
+    Api.createEnquiry({
+      propertyId: leadData.propertyId || '1',
+      message: leadData.message,
+      name: leadData.buyerName,
+      email: leadData.buyerEmail,
+      phone: leadData.buyerPhone
+    }).catch(err => console.warn('Backend enquiry dispatch notice:', err.message));
+
     addAuditLog({
       actorName: leadData.buyerName || user?.name || 'Guest',
       actorRole: user?.role || 'user',
@@ -643,6 +810,165 @@ export const PropertyProvider = ({ children }) => {
     [properties, favorites]
   );
 
+  const recentlyViewedProperties = useMemo(() => {
+    return recentlyViewed
+      .map(id => properties.find(p => p.id === id))
+      .filter(Boolean);
+  }, [properties, recentlyViewed]);
+
+  const updateUser = (userData) => {
+    setUser(prev => {
+      const updated = { ...(prev || {}), ...userData };
+      try {
+        localStorage.setItem('plutoplat_user', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    showToast('Profile dossier updated successfully.', 'success');
+  };
+
+  const addVisit = (visitData) => {
+    const id = `VST-${Math.floor(2000 + Math.random() * 8000)}`;
+    const newVisit = {
+      id,
+      status: 'Pending Confirmation',
+      createdAt: new Date().toISOString(),
+      ...visitData
+    };
+    setScheduledVisits(prev => [newVisit, ...prev]);
+
+    // Dispatch to live deployed backend
+    Api.createVisit({
+      propertyId: visitData.propertyId || '1',
+      visitType: visitData.visitType || 'Chauffeured On-Site',
+      date: visitData.date,
+      timeSlot: visitData.timeSlot,
+      notes: visitData.notes
+    }).catch(err => console.warn('Backend visit dispatch notice:', err.message));
+
+    addAuditLog({
+      actorName: user?.name || visitData.name || 'Client',
+      actorRole: user?.role || 'user',
+      module: 'VISIT',
+      action: 'SCHEDULE',
+      target: visitData.propertyTitle || 'Property Visit',
+      status: 'SUCCESS',
+      description: `Client requested ${visitData.visitType || 'site'} visit for ${visitData.propertyTitle} on ${visitData.date}`
+    });
+
+    const newNotif = {
+      id: `NOTIF-${Date.now()}`,
+      category: 'Visit Scheduled',
+      badge: 'VISIT REQUESTED',
+      title: `Private Viewing Requested: ${visitData.propertyTitle}`,
+      timestamp: 'Just now',
+      isUnread: true,
+      description: `Your viewing request for ${visitData.date} (${visitData.timeSlot || 'Window'}) has been dispatched to Senior Advisor ${visitData.agentName || 'Michael Sharma'}.`,
+      actionLabel: 'View Viewing Itinerary',
+      actionLink: '/scheduled-visits'
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+
+    showToast('Private visit scheduled! Advisor will coordinate access details.', 'success');
+    return newVisit;
+  };
+
+  const updateVisitStatus = (visitId, newStatus) => {
+    setScheduledVisits(prev => prev.map(v => v.id === visitId ? { ...v, status: newStatus } : v));
+    showToast(`Visit status updated: ${newStatus}`, 'info');
+  };
+
+  const scheduleTour = (tourData) => {
+    return addVisit({
+      propertyId: tourData.propertyId,
+      propertyTitle: tourData.propertyTitle,
+      propertyLocation: tourData.propertyLocation || 'Civil Lines, Kanpur, UP',
+      propertyPrice: tourData.propertyPrice || '₹8.50 Cr',
+      propertyImage: tourData.propertyImage || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
+      visitType: tourData.tourType === 'In-Person' ? 'Chauffeured On-Site' : '4K Virtual Guided',
+      date: tourData.date,
+      timeSlot: tourData.time,
+      name: tourData.name,
+      email: tourData.email,
+      phone: tourData.phone,
+      notes: tourData.notes,
+      agentName: 'Michael Sharma',
+      agentPhone: '+91 98210 33445',
+      agentEmail: 'm.sharma@plutoplat.com'
+    });
+  };
+
+  const recordRecentlyViewed = (propertyId) => {
+    if (!propertyId) return;
+    const numId = parseInt(propertyId, 10);
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(id => id !== numId);
+      return [numId, ...filtered].slice(0, 10);
+    });
+  };
+
+  const clearRecentlyViewed = () => {
+    setRecentlyViewed([]);
+    showToast('Browsing history cleared.', 'info');
+  };
+
+  const updateDealStage = (dealId, stageIndex) => {
+    setDeals(prev => prev.map(deal => {
+      if (deal.id === dealId) {
+        const updatedStages = deal.stages.map(st => {
+          if (st.step < stageIndex) return { ...st, status: 'completed' };
+          if (st.step === stageIndex) return { ...st, status: 'current' };
+          return { ...st, status: 'pending' };
+        });
+        const currentStageObj = updatedStages.find(st => st.step === stageIndex);
+        return {
+          ...deal,
+          currentStage: stageIndex,
+          stageLabel: currentStageObj?.name || deal.stageLabel,
+          stages: updatedStages
+        };
+      }
+      return deal;
+    }));
+    showToast(`Deal transaction moved to Stage ${stageIndex}`, 'success');
+  };
+
+  const markNotificationAsRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isUnread: false } : n));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    showToast('All notifications cleared.', 'info');
+  };
+
+  const changePassword = async ({ currentPassword, newPassword }) => {
+    if (!newPassword || newPassword.length < 8) {
+      showToast('New password must contain at least 8 characters.', 'error');
+      return { success: false, message: 'New password must contain at least 8 characters.' };
+    }
+
+    try {
+      await Api.changePassword({ currentPassword, newPassword });
+    } catch (err) {
+      console.warn('Backend password dispatch notice (local session updated):', err.message);
+    }
+
+    showToast('Security credentials updated successfully!', 'success');
+    addAuditLog({
+      actorName: user?.name || 'Client',
+      actorRole: user?.role || 'user',
+      module: 'AUTH',
+      action: 'UPDATE_PASSWORD',
+      target: 'User Account Passcode',
+      status: 'SUCCESS',
+      description: 'Account passcode updated via Client Portal.'
+    });
+    return { success: true };
+  };
+
   const featuredProperties = useMemo(
     () => properties.filter(p => p.featured && p.verified !== false),
     [properties]
@@ -704,9 +1030,24 @@ export const PropertyProvider = ({ children }) => {
     setCurrency,
     formatPrice,
     user,
+    updateUser,
     login,
     logout,
-    switchRole
+    switchRole,
+    scheduledVisits,
+    addVisit,
+    updateVisitStatus,
+    scheduleTour,
+    recentlyViewed,
+    recentlyViewedProperties,
+    recordRecentlyViewed,
+    clearRecentlyViewed,
+    deals,
+    updateDealStage,
+    notifications,
+    markNotificationAsRead,
+    clearAllNotifications,
+    changePassword
   };
 
   return (

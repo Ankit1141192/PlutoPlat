@@ -306,10 +306,57 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+/**
+ * Change Password (Authenticated User)
+ * POST /api/v1/auth/change-password
+ */
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return ApiResponse.error(res, 'Current password and new password are required.', 400);
+    }
+
+    if (newPassword.length < 8) {
+      return ApiResponse.error(res, 'New password must contain at least 8 characters.', 400);
+    }
+
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) {
+      return ApiResponse.error(res, 'User not found.', 404);
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return ApiResponse.error(res, 'Current password is incorrect.', 401);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    await logAudit({
+      actor: user._id,
+      actorRole: user.role,
+      action: 'UPDATE',
+      module: 'AUTH',
+      targetId: user._id,
+      targetType: 'User',
+      description: 'User updated account password',
+      req,
+    });
+
+    return ApiResponse.success(res, 'Password changed successfully.');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   forgotPassword,
   resetPassword,
+  changePassword,
 };

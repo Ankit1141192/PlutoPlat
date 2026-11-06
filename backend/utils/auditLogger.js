@@ -18,7 +18,11 @@ const logAudit = async ({
 }) => {
   try {
     const ipAddress = req
-      ? req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
+      ? req.headers['cf-connecting-ip'] ||
+        req.headers['x-forwarded-for'] ||
+        (req.socket && req.socket.remoteAddress) ||
+        req.ip ||
+        ''
       : '';
     const userAgent = req ? req.headers['user-agent'] || '' : '';
 

@@ -5,6 +5,8 @@ const { enforceAllowedDomain, parseAllowedOrigins } = require('./middlewares/dom
 const { apiLimiter } = require('./middlewares/rateLimiter');
 const errorHandler = require('./middlewares/errorHandler');
 const v1Router = require('./routes/v1');
+const v2Router = require('./routes/v2');
+const v3Router = require('./routes/v3');
 
 const app = express();
 
@@ -97,8 +99,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 7. Mount V1 APIs
+// 7. Mount Versioned APIs
+// V1: User Panel (Buyer / Client Workflow)
 app.use('/api/v1', v1Router);
+
+// V2: Admin Panel (Agent / Broker Workstation)
+app.use('/api/v2', v2Router);
+
+// V3: SuperAdmin Panel (Platform Master HQ)
+app.use('/api/v3', v3Router);
 
 // 8. 404 Route Handler
 app.use((req, res) => {
