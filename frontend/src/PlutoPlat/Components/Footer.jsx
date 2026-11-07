@@ -1,37 +1,71 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Mail, MapPin, Phone, ShieldCheck, ArrowUp } from 'lucide-react';
+import { ArrowUpRight, Mail, MapPin, Phone, ShieldCheck, ArrowUp, Clock } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 
-// Clean SVG Social Icons matching Lucide standard styling
-const XTwitterIcon = ({ size = 18, className = "" }) => (
+// Clean SVG social icons matching Lucide styling
+const XTwitterIcon = ({ size = 18, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
     <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
   </svg>
 );
-
-const InstagramIcon = ({ size = 18, className = "" }) => (
+const InstagramIcon = ({ size = 18, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
     <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
   </svg>
 );
-
-const LinkedinIcon = ({ size = 18, className = "" }) => (
+const LinkedinIcon = ({ size = 18, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
     <rect width="4" height="12" x="2" y="9" />
     <circle cx="4" cy="4" r="2" />
   </svg>
 );
-
-const FacebookIcon = ({ size = 18, className = "" }) => (
+const FacebookIcon = ({ size = 18, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
   </svg>
 );
+
+const socials = [
+  { label: 'Twitter/X', href: 'https://twitter.com', Icon: XTwitterIcon },
+  { label: 'Instagram', href: 'https://instagram.com', Icon: InstagramIcon },
+  { label: 'LinkedIn', href: 'https://linkedin.com', Icon: LinkedinIcon },
+  { label: 'Facebook', href: 'https://facebook.com', Icon: FacebookIcon },
+];
+
+const linkGroups = [
+  {
+    title: 'Explore',
+    links: [
+      { to: '/properties', label: 'All properties' },
+      { to: '/properties?purpose=Buy', label: 'Buy' },
+      { to: '/properties?purpose=Rent', label: 'Rent' },
+      { to: '/properties?purpose=Off-Plan', label: 'Off-plan' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { to: '/about', label: 'About us' },
+      { to: '/faq', label: 'FAQ' },
+      { to: '/contact', label: 'Contact' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { to: '/privacy', label: 'Privacy policy' },
+      { to: '/terms', label: 'Terms of service' },
+    ],
+  },
+];
+
+const linkClass =
+  'group inline-flex items-center gap-1.5 text-sm text-[#A09D94] transition-colors hover:text-white';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -46,237 +80,182 @@ const Footer = () => {
     setEmail('');
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
-    <footer className="bg-[#161916] text-[#D8D4CA] border-t border-[#2A2E2A] pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Top Newsletter & Advisory Banner */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-16 border-b border-[#2A2E2A]">
-          <div className="lg:col-span-6">
-            <span className="text-xs font-semibold text-[#B49A70] uppercase tracking-widest block mb-3">
-              The Private Gazette &bull; Confidential Digest
-            </span>
-            <h3 className="font-serif text-3xl md:text-4xl text-white font-normal mb-4 leading-snug">
-              Receive Off-Market Architectural Acquisitions Directly to Your Inbox.
-            </h3>
-            <p className="text-sm text-[#A09D94] max-w-lg leading-relaxed font-light">
-              Join over 24,000 qualified collectors, family offices, and developers who review our bi-weekly private acquisitions before global release.
-            </p>
-          </div>
+    <footer className="relative overflow-hidden bg-[#121512] text-[#D8D4CA]">
+      {/* soft gold glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(700px 360px at 85% 0%, rgba(180,154,112,0.14), transparent 70%), radial-gradient(500px 300px at 0% 60%, rgba(180,154,112,0.07), transparent 70%)',
+        }}
+      />
 
-          <div className="lg:col-span-6 flex flex-col justify-center">
-            {subscribed ? (
-              <div className="p-4 bg-[#202520] border border-[#B49A70]/40 rounded-xl text-[#E8D9BF] text-sm flex items-center gap-3">
-                <ShieldCheck size={20} className="text-[#B49A70] shrink-0" />
-                <span>Subscription confirmed. Confidential briefings will be delivered to your inbox.</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#77766E]" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="Enter your personal or family office email..."
-                    className="w-full pl-11 pr-4 py-3.5 bg-[#202520] border border-[#353B35] rounded-xl text-white text-sm placeholder:text-[#6E6D66] focus:outline-none focus:border-[#B49A70] transition-colors"
-                  />
+      <div className="relative mx-auto max-w-7xl px-5 pt-16 sm:px-6 lg:pt-24">
+        {/* ───────── Newsletter panel ───────── */}
+        <div className="rounded-3xl bg-gradient-to-br from-[#B49A70]/50 via-[#B49A70]/10 to-transparent p-px">
+          <div className="grid grid-cols-1 items-center gap-8 rounded-3xl bg-[#191D19] p-6 sm:p-10 lg:grid-cols-12 lg:gap-12 lg:p-14">
+            <div className="lg:col-span-7">
+              <p className="mb-3 text-sm font-medium text-[#C9B287]">The Private Gazette</p>
+              <h3 className="font-serif text-[26px] font-normal leading-snug text-white sm:text-3xl lg:text-4xl">
+                Off-market homes, sent to you before they go public.
+              </h3>
+              <p className="mt-4 max-w-lg text-sm font-light leading-relaxed text-[#A09D94]">
+                A twice-monthly digest of private acquisitions for collectors, family offices and developers. No spam, ever.
+              </p>
+            </div>
+
+            <div className="lg:col-span-5">
+              {subscribed ? (
+                <div className="flex items-start gap-3 rounded-2xl border border-[#B49A70]/40 bg-[#202520] p-4 text-sm text-[#E8D9BF]">
+                  <ShieldCheck size={20} className="mt-0.5 shrink-0 text-[#B49A70]" />
+                  <span>Subscription confirmed. Confidential briefings will be delivered to your inbox.</span>
                 </div>
-                <button
-                  type="submit"
-                  className="px-8 py-3.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-xs font-semibold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-                >
-                  <span>Subscribe</span>
-                  <ArrowUpRight size={15} />
-                </button>
-              </form>
-            )}
-            <span className="text-[11px] text-[#6E6D66] mt-3">
-              Strict privacy guaranteed. We never broker or distribute subscriber credentials.
-            </span>
+              ) : (
+                <form onSubmit={handleSubscribe} className="flex flex-col gap-3">
+                  <div className="relative">
+                    <Mail size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#77766E]" />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="Your email address"
+                      aria-label="Email address"
+                      className="w-full rounded-xl border border-[#353B35] bg-[#202520] py-4 pl-11 pr-4 text-base text-white placeholder:text-[#6E6D66] transition-colors focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20 sm:text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] text-sm font-semibold text-[#161916] transition hover:brightness-110 active:scale-[0.99]"
+                  >
+                    Subscribe <ArrowUpRight size={16} />
+                  </button>
+                  <p className="flex items-center gap-1.5 text-xs text-[#6E6D66]">
+                    <ShieldCheck size={13} className="text-[#B49A70]" />
+                    We never share or sell subscriber details.
+                  </p>
+                </form>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Main Footer Links Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10 py-16 border-b border-[#2A2E2A]">
-          {/* Brand Intro */}
-          <div className="lg:col-span-2 pr-4">
-            <Link to="/" className="inline-block mb-6">
-              <span className="font-serif text-3xl font-normal text-white tracking-tight">
-                Pluto<span className="text-[#B49A70]">Plat</span>.
+        {/* ───────── Link columns ───────── */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-8 lg:py-20">
+          {/* Brand */}
+          <div className="col-span-2 lg:col-span-4 lg:pr-8">
+            <Link to="/" className="inline-block">
+              <span className="font-serif text-3xl font-normal tracking-tight text-white">
+                Pluto<span className="text-[#C9B287]">Plat</span>.
               </span>
             </Link>
-            <p className="text-sm text-[#A09D94] leading-relaxed mb-6 font-light">
-              PlutoPlat is the benchmark in prime real estate across Kanpur, Uttar Pradesh, and premier destinations worldwide. We represent landmark architecture, luxury residences, and high-yield investments with unmatched discretion.
+            <p className="mt-5 max-w-sm text-sm font-light leading-relaxed text-[#A09D94]">
+              Prime real estate across Kanpur, Uttar Pradesh and beyond. Landmark architecture, luxury residences and
+              high-yield investments, handled with discretion.
             </p>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-[#8E8B82]">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={16} className="text-[#B49A70]" />
-                <span>Verified Legal Integrity</span>
-              </div>
-              <span>&bull;</span>
-              <span>Kanpur &bull; Dubai &bull; Worldwide</span>
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#2F352F] bg-[#171B17] px-3.5 py-2 text-xs text-[#B9B5AA]">
+              <ShieldCheck size={15} className="text-[#C9B287]" />
+              Verified legal integrity
             </div>
           </div>
 
-          {/* Column: EXPLORE */}
-          <div>
-            <h4 className="font-serif text-base text-white mb-5 uppercase tracking-wider font-semibold">
-              Explore
-            </h4>
-            <ul className="space-y-3 text-xs text-[#A09D94] uppercase tracking-wider">
-              <li>
-                <Link to="/properties" className="hover:text-white transition-colors">
-                  Properties
-                </Link>
-              </li>
-              <li>
-                <Link to="/properties?purpose=Buy" className="hover:text-white transition-colors">
-                  Buy
-                </Link>
-              </li>
-              <li>
-                <Link to="/properties?purpose=Rent" className="hover:text-white transition-colors">
-                  Rent
-                </Link>
-              </li>
-              <li>
-                <Link to="/properties?purpose=Off-Plan" className="hover:text-white transition-colors">
-                  Off-Plan
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column: COMPANY */}
-          <div>
-            <h4 className="font-serif text-base text-white mb-5 uppercase tracking-wider font-semibold">
-              Company
-            </h4>
-            <ul className="space-y-3 text-xs text-[#A09D94] uppercase tracking-wider">
-              <li>
-                <Link to="/about" className="hover:text-white transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="hover:text-white transition-colors">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="hover:text-white transition-colors">
-                  Contact
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column: LEGAL */}
-          <div>
-            <h4 className="font-serif text-base text-white mb-5 uppercase tracking-wider font-semibold">
-              Legal
-            </h4>
-            <ul className="space-y-3 text-xs text-[#A09D94] uppercase tracking-wider">
-              <li>
-                <Link to="/privacy" className="hover:text-white transition-colors">
-                  Privacy
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="hover:text-white transition-colors">
-                  Terms
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column: Concierge Desk */}
-          <div>
-            <h4 className="font-serif text-base text-white mb-5 uppercase tracking-wider font-semibold">
-              Kanpur & Global Desk
-            </h4>
-            <div className="space-y-3.5 text-xs text-[#A09D94]">
-              <div className="flex items-start gap-2.5">
-                <MapPin size={15} className="text-[#B49A70] shrink-0 mt-0.5" />
-                <p>Civil Lines & Swaroop Nagar, Kanpur, Uttar Pradesh 208001, India</p>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Phone size={14} className="text-[#B49A70] shrink-0" />
-                <a href="tel:+919956346155" className="hover:text-white transition-colors font-medium text-white">
-                  +91 9956346155
-                </a>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Mail size={14} className="text-[#B49A70] shrink-0" />
-                <span>kanpur@plutoplat.com</span>
-              </div>
+          {/* Link groups */}
+          {linkGroups.map(({ title, links }) => (
+            <div key={title} className="lg:col-span-2">
+              <h4 className="mb-5 font-serif text-lg font-normal text-white">{title}</h4>
+              <ul className="space-y-3.5">
+                {links.map(({ to, label }) => (
+                  <li key={label}>
+                    <Link to={to} className={linkClass}>
+                      <span className="h-px w-0 bg-[#C9B287] transition-all duration-300 group-hover:w-3" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          ))}
         </div>
 
-        {/* Bottom Legal Copyright + Social Icons */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#706D65] gap-4">
-          <p>&copy; {new Date().getFullYear()} PlutoPlat International Real Estate Inc. All rights reserved.</p>
+        {/* ───────── Contact strip ───────── */}
+        <div className="grid grid-cols-1 gap-3 border-t border-[#262B26] py-8 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { Icon: MapPin, label: 'Visit us', value: 'Civil Lines & Swaroop Nagar, Kanpur, Uttar Pradesh 208001' },
+            { Icon: Phone, label: 'Call us', value: '+91 99563 46155', href: 'tel:+919956346155' },
+            { Icon: Mail, label: 'Email us', value: 'kanpur@plutoplat.com', href: 'mailto:kanpur@plutoplat.com' },
+            { Icon: Clock, label: 'Office hours', value: 'Mon – Sat, 10:00 AM – 7:00 PM' },
+          ].map(({ Icon, label, value, href }) => {
+            const body = (
+              <>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#B49A70]/30 bg-[#B49A70]/10 text-[#C9B287]">
+                  <Icon size={18} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-[#77766E]">{label}</span>
+                  <span className="block text-sm leading-snug text-[#E4E0D6]">{value}</span>
+                </span>
+              </>
+            );
+            const cls =
+              'flex items-center gap-3.5 rounded-2xl border border-[#262B26] bg-[#161A16] p-4 transition-colors';
+            return href ? (
+              <a key={label} href={href} className={`${cls} hover:border-[#B49A70]/50`}>
+                {body}
+              </a>
+            ) : (
+              <div key={label} className={cls}>
+                {body}
+              </div>
+            );
+          })}
+        </div>
 
-          {/* Social Icons (Twitter/X, Instagram, LinkedIn, Facebook) */}
-          <div className="flex items-center gap-5 text-[#A09D94]">
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="PlutoPlat on Twitter/X"
-              className="hover:text-[#B49A70] transition-colors"
-            >
-              <XTwitterIcon size={18} />
-            </a>
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="PlutoPlat on Instagram"
-              className="hover:text-[#B49A70] transition-colors"
-            >
-              <InstagramIcon size={18} />
-            </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="PlutoPlat on LinkedIn"
-              className="hover:text-[#B49A70] transition-colors"
-            >
-              <LinkedinIcon size={18} />
-            </a>
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="PlutoPlat on Facebook"
-              className="hover:text-[#B49A70] transition-colors"
-            >
-              <FacebookIcon size={18} />
-            </a>
+        {/* ───────── Bottom bar ───────── */}
+        <div className="flex flex-col items-center gap-6 border-t border-[#262B26] py-8 text-xs text-[#706D65] md:flex-row md:justify-between">
+          <p className="text-center md:text-left">
+            &copy; {new Date().getFullYear()} PlutoPlat International Real Estate Inc. All rights reserved.
+          </p>
+
+          <div className="flex items-center gap-2.5">
+            {socials.map(({ label, href, Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`PlutoPlat on ${label}`}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2F352F] text-[#A09D94] transition hover:border-[#B49A70] hover:bg-[#B49A70] hover:text-[#161916]"
+              >
+                <Icon size={17} />
+              </a>
+            ))}
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <button
-              onClick={scrollToTop}
-              className="flex items-center gap-1.5 text-[#B49A70] hover:text-white transition-colors cursor-pointer ml-2"
-              title="Return to top"
-            >
-              <span>Back to Top</span>
-              <ArrowUp size={14} />
-            </button>
-          </div>
+          <button
+            onClick={scrollToTop}
+            className="flex h-10 items-center gap-2 rounded-full border border-[#2F352F] px-4 text-[#C9B287] transition hover:border-[#B49A70] hover:text-white"
+            title="Return to top"
+          >
+            Back to top <ArrowUp size={14} />
+          </button>
         </div>
       </div>
+
+      {/* Brand watermark */}
+      {/* <div aria-hidden="true" className="pointer-events-none relative select-none overflow-hidden text-center leading-none">
+        <span
+          className="font-serif block translate-y-[28%] whitespace-nowrap text-[22vw] font-normal tracking-tight sm:text-[16vw]"
+          style={{ color: 'rgba(201,178,135,0.06)' }}
+        >
+          PlutoPlat
+        </span>
+      </div> */}
     </footer>
   );
 };

@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, MapPin, ChevronDown, Volume2, VolumeX, Play, Pause, 
-  Sparkles 
-} from 'lucide-react';
+import { Search, MapPin, ChevronDown, Volume2, VolumeX, Play, Pause, Sparkles, Building2, ShieldCheck, CalendarCheck, BadgeCheck } from 'lucide-react';
 import heroVideo from '../../assets/HeroSection.mp4';
-import { usePropertyStore } from '../../context/PropertyContext';
+
+const purposes = ['Buy', 'Rent', 'Off-Plan'];
+const trending = ['Civil Lines Kanpur', 'Swaroop Nagar', 'Tilak Nagar', 'VIP Road & Ganga', 'Dubai Marina', 'Palm Jumeirah'];
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -56,198 +55,218 @@ const HeroSection = () => {
     navigate(`/properties?${params.toString()}`);
   };
 
+  const handlePurposeClick = (opt) => {
+    setPurpose(opt);
+    if (opt === 'Off-Plan') {
+      const el = document.getElementById('off-plan-showcase');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const handleQuickTagClick = (tag) => {
     navigate(`/properties?location=${encodeURIComponent(tag)}`);
   };
 
+
   return (
-    <section className="relative min-h-[92vh] lg:min-h-screen flex items-center justify-center overflow-hidden bg-[#1C201C] pt-24 pb-20">
-      {/* Background Video with Luxury Cinematic Overlay */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden">
+    <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-[#1C201C] pb-36 pt-28 sm:pb-44 lg:pb-48">
+      {/* Background video */}
+      <div className="absolute inset-0 h-full w-full overflow-hidden">
         <video
           ref={videoRef}
           autoPlay
           loop
           muted={isMuted}
           playsInline
-          className="w-full h-full object-cover scale-105 transform filter brightness-90 contrast-105"
+          className="h-full w-full scale-105 object-cover brightness-90 contrast-105"
         >
           <source src={heroVideo} type="video/mp4" />
-          Your browser does not support the video tag.
         </video>
-        {/* Layered Rich Gradient Overlays for maximum readability and prestige */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1C201C] via-[#1C201C]/50 to-[#1C201C]/70" />
-        <div className="absolute inset-0 bg-black/30 backdrop-contrast-[1.05]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#121512]/80 via-[#121512]/35 to-[#121512]/95" />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'radial-gradient(700px 400px at 50% 40%, rgba(18,21,18,0.55), transparent 70%)' }}
+        />
       </div>
 
-      {/* Floating Video Media Controls (bottom right) */}
-      <div className="absolute bottom-6 right-6 z-20 hidden md:flex items-center gap-2 bg-[#1C201C]/75 backdrop-blur-md border border-[#B49A70]/30 rounded-full px-3 py-1.5 text-xs text-[#EBE7DF] shadow-lg">
+      {/* Video controls */}
+      <div className="absolute bottom-20 right-4 z-20 flex items-center gap-1 rounded-full border border-white/15 bg-[#121512]/70 p-1 text-[#EBE7DF] shadow-lg backdrop-blur-md sm:bottom-24 sm:right-7 lg:bottom-28">
         <button
           onClick={togglePlayback}
-          className="p-1.5 hover:text-[#B49A70] transition-colors rounded-full"
-          title={isPlaying ? 'Pause ambient video' : 'Play ambient video'}
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-[#C9B287]"
+          aria-label={isPlaying ? 'Pause background video' : 'Play background video'}
         >
-          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          {isPlaying ? <Pause size={15} /> : <Play size={15} />}
         </button>
-        <span className="w-px h-3 bg-white/20" />
         <button
           onClick={toggleSound}
-          className="p-1.5 hover:text-[#B49A70] transition-colors rounded-full flex items-center gap-1.5"
-          title={isMuted ? 'Unmute video audio' : 'Mute video audio'}
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-[#C9B287]"
+          aria-label={isMuted ? 'Unmute video' : 'Mute video'}
         >
-          {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-          <span className="text-[11px] font-medium uppercase tracking-wider">{isMuted ? 'Muted' : 'Audio On'}</span>
+          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
         </button>
       </div>
 
-      {/* Main Hero Content */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 text-center text-white">
-        {/* Prestige Tag */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-2 bg-[#252A24]/80 backdrop-blur-md border border-[#B49A70]/40 text-[#EBE7DF] px-4 py-1.5 rounded-full text-xs uppercase tracking-widest font-semibold shadow-xl"
-          >
-            <Sparkles size={13} className="text-[#B49A70]" />
-            <span>Kanpur &bull; Uttar Pradesh &bull; Sovereign Collection</span>
-          </motion.div>
-        </div>
-
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
+      {/* Content */}
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-4 text-center text-white sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.15 }}
-          className="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-normal leading-[1.08] tracking-tight mb-6 max-w-5xl mx-auto drop-shadow-md"
+          transition={{ duration: 0.7 }}
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-4 py-2 text-xs font-medium text-[#EBE7DF] shadow-xl backdrop-blur-md sm:text-[13px]"
         >
-          Find a Place That <span className="italic font-light text-[#E8D9BF]">Feels Like Home</span>.
+          <Sparkles size={14} className="text-[#C9B287]" />
+          <span>Kanpur, Uttar Pradesh &middot; Sovereign Collection</span>
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.12 }}
+          className="font-serif text-[38px] font-normal leading-[1.08] tracking-tight drop-shadow-md sm:text-6xl md:text-7xl lg:text-[84px]"
+        >
+          Find a place that
+          <span className="block text-[#E8D9BF]">feels like home.</span>
         </motion.h1>
 
-        {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.3 }}
-          className="text-base sm:text-lg md:text-xl text-[#E5E1D8] max-w-3xl mx-auto font-light leading-relaxed mb-10 drop-shadow"
+          transition={{ duration: 0.9, delay: 0.25 }}
+          className="mx-auto mb-9 mt-5 max-w-2xl text-[15px] font-light leading-relaxed text-[#E5E1D8] drop-shadow sm:mb-12 sm:text-lg"
         >
-          Curating landmark colonial manors, tranquil waterfront sanctuaries along the holy Ganges, and prestigious residential estates across <span className="text-[#E8D9BF] font-normal">Kanpur, Uttar Pradesh</span> and premier global enclaves.
+          Colonial manors, quiet Ganges-side sanctuaries and prestigious estates across Kanpur, Uttar Pradesh and
+          beyond.
         </motion.p>
 
-        {/* Floating Search Console */}
+        {/* Search console */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 36 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.45 }}
-          className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-2xl border border-white/20 mx-auto max-w-4xl text-[#222522]"
+          transition={{ duration: 0.9, delay: 0.4 }}
+          className="mx-auto max-w-4xl"
         >
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-stretch md:items-end">
-            {/* Location Input */}
-            <div className="flex-1 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
-                Location
-              </label>
-              <div className="relative">
-                <MapPin size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B49A70]" />
+          {/* Purpose tabs */}
+          <div className="mx-auto mb-3 grid w-full max-w-sm grid-cols-3 gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-md sm:max-w-md">
+            {purposes.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handlePurposeClick(opt)}
+                className={`h-10 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  purpose === opt
+                    ? 'bg-white text-[#1C201C] shadow-md'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+
+          {/* Search bar */}
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-col gap-2 rounded-3xl border border-white/30 bg-white/95 p-2.5 text-left text-[#222522] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl md:flex-row md:items-stretch md:gap-0 md:p-2"
+          >
+            {/* Location */}
+            <label className="flex flex-1 cursor-text items-center gap-3 rounded-2xl px-4 py-2.5 transition-colors hover:bg-[#F8F6F2] md:py-3">
+              <MapPin size={20} className="shrink-0 text-[#B49A70]" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-[#6E6D66]">Location</span>
                 <input
                   type="text"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  placeholder="City, Neighborhood or Enclave..."
-                  className="w-full pl-10 pr-4 py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70] text-sm text-[#222522] placeholder:text-[#9A9890] transition-colors"
+                  placeholder="City, neighbourhood or enclave"
+                  className="mt-0.5 w-full bg-transparent text-base text-[#222522] placeholder:text-[#A09E96] focus:outline-none sm:text-sm"
                 />
-              </div>
-            </div>
+              </span>
+            </label>
 
-            {/* Category Dropdown */}
-            <div className="w-full md:w-48 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
-                Property Category
-              </label>
-              <div className="relative">
+            <span className="hidden w-px self-stretch bg-[#E6E1D6] md:my-3 md:block" />
+
+            {/* Category */}
+            <label className="relative flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-2.5 transition-colors hover:bg-[#F8F6F2] md:w-60 md:py-3">
+              <Building2 size={20} className="shrink-0 text-[#B49A70]" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-[#6E6D66]">Property type</span>
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70] text-sm text-[#222522] appearance-none pr-9 cursor-pointer transition-colors"
+                  className="mt-0.5 w-full cursor-pointer appearance-none bg-transparent pr-6 text-base text-[#222522] focus:outline-none sm:text-sm"
                 >
-                  <option value="All">All Categories</option>
-                  <option value="Homes">Luxury Homes</option>
+                  <option value="All">All categories</option>
+                  <option value="Homes">Luxury homes</option>
                   <option value="Villas">Villas</option>
                   <option value="Apartments">Apartments / Penthouses</option>
-                  <option value="Plots">Residential Plots</option>
+                  <option value="Plots">Residential plots</option>
                 </select>
-                <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6E6D66] pointer-events-none" />
-              </div>
-            </div>
+              </span>
+              <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#6E6D66]" />
+            </label>
 
-            {/* Purpose Selector with Sliding Pill (Buy / Rent / Off-Plan) */}
-            <div className="w-full md:w-56 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
-                Acquisition
-              </label>
-              <div className="relative flex border border-[#DDD8CE] rounded-xl bg-[#F8F6F2] p-1">
-                {/* Animated Sliding Pill */}
-                <div
-                  className={`absolute top-1 bottom-1 left-1 w-[calc((100%-8px)/3)] rounded-lg bg-[#1C201C] transition-transform duration-250 ease-out shadow-sm ${
-                    purpose === 'Buy'
-                      ? 'translate-x-0'
-                      : purpose === 'Rent'
-                      ? 'translate-x-full'
-                      : 'translate-x-[200%]'
-                  }`}
-                />
-                {['Buy', 'Rent', 'Off-Plan'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => {
-                      setPurpose(opt);
-                      if (opt === 'Off-Plan') {
-                        const el = document.getElementById('off-plan-showcase');
-                        if (el) {
-                          el.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }
-                    }}
-                    className={`relative z-10 flex-1 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors duration-200 text-center ${
-                      purpose === opt ? 'text-white' : 'text-[#6E6D66] hover:text-[#1C201C]'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
-              className="w-full md:w-auto px-8 py-3.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-sm font-semibold uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl shrink-0 cursor-pointer"
+              className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] px-8 text-sm font-semibold text-[#161916] shadow-lg transition hover:brightness-110 active:scale-[0.99] md:ml-2 md:h-auto"
             >
-              <Search size={16} />
-              <span>Explore</span>
+              <Search size={18} />
+              <span>{purpose === 'Off-Plan' ? 'View off-plan' : 'Search homes'}</span>
             </button>
           </form>
 
-          {/* Quick Enclaves Suggestions (Hidden on small screen / mobile / Android) */}
-          <div className="mt-4 pt-3 border-t border-[#EAE6DE] hidden sm:flex flex-wrap items-center justify-between text-xs text-[#77766E] gap-2">
-            <span className="font-medium text-[#1C201C]">Trending Enclaves:</span>
-            <div className="flex flex-wrap gap-2">
-              {['Civil Lines Kanpur', 'Swaroop Nagar', 'Tilak Nagar', 'VIP Road & Ganga', 'Dubai Marina', 'Palm Jumeirah'].map((place) => (
+          {/* Trending – scrolls sideways on phones */}
+          <div className="mt-5 flex items-center gap-3 text-xs text-white/75">
+            <span className="hidden shrink-0 font-medium text-white sm:block">Trending:</span>
+            <div className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:justify-start sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
+              {trending.map((place) => (
                 <button
                   key={place}
                   type="button"
                   onClick={() => handleQuickTagClick(place)}
-                  className="px-2.5 py-1 bg-[#F8F6F2] hover:bg-[#EBE7DF] text-[#444] hover:text-[#1C201C] border border-[#DDD8CE] rounded-lg transition-colors cursor-pointer"
+                  className="shrink-0 whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-3.5 py-2 backdrop-blur-md transition-colors hover:border-[#C9B287] hover:bg-[#C9B287] hover:text-[#161916]"
                 >
                   {place}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Trust row */}
+          <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/70 sm:text-[13px]">
+            {[
+              { Icon: ShieldCheck, text: 'Legally verified listings' },
+              { Icon: CalendarCheck, text: 'Private site visits' },
+              { Icon: BadgeCheck, text: 'Dedicated advisor' },
+            ].map(({ Icon, text }) => (
+              <li key={text} className="inline-flex items-center gap-2">
+                <Icon size={15} className="text-[#C9B287]" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </motion.div>
       </div>
+
+      {/* Curved bottom edge: lower on the left, higher on the right.
+          Change text-[#F8F6F2] to match the background of the section below. */}
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-[-1px] left-0 z-[5] h-14 w-full text-[#F8F6F2] sm:h-20 lg:h-28"
+        viewBox="0 0 1440 120"
+        preserveAspectRatio="none"
+      >
+        <path fill="currentColor" d="M0 82C240 18 480 18 720 62C960 106 1200 106 1440 40V121H0Z" />
+        <path
+          fill="none"
+          stroke="#C9B287"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+          opacity="0.8"
+          d="M0 82C240 18 480 18 720 62C960 106 1200 106 1440 40"
+        />
+      </svg>
     </section>
   );
 };

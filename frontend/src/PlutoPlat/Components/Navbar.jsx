@@ -1,565 +1,495 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Menu, X, Heart, Search, Bell, User, Globe, ShieldCheck, 
-  ArrowUpRight, LogOut, FileText, ChevronDown, Sparkles,
-  Calendar, Clock, Users, KeyRound, CheckCircle2, TrendingUp
+import {
+  Menu, X, Heart, Search, Bell, User, Globe, ArrowUpRight, LogOut, FileText,
+  ChevronDown, Sparkles, Calendar, Clock, Users, KeyRound, TrendingUp, ChevronRight,
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+
+const navLinks = [
+  { label: 'Home', path: '/' },
+  { label: 'Properties', path: '/properties' },
+  { label: 'Buy', path: '/properties?purpose=Buy' },
+  { label: 'Rent', path: '/properties?purpose=Rent' },
+  { label: 'About', path: '/about' },
+  { label: 'FAQ', path: '/faq' },
+  { label: 'Contact', path: '/contact' },
+];
+
+const currencies = [
+  { code: 'INR', label: 'INR (₹)' },
+  { code: 'AED', label: 'AED (د.إ)' },
+  { code: 'USD', label: 'USD ($)' },
+];
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   const { favorites, currency, setCurrency, user, logout } = usePropertyStore();
 
   const isHome = location.pathname === '/';
+  const isTransparent = isHome && !isScrolled;
 
+  /* scroll state */
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setIsScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close menus on route change
+  /* close menus on route change */
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
   }, [location.pathname, location.search]);
 
-  // Determine navbar styling depending on scroll position and route
-  const isTransparent = isHome && !isScrolled;
+  /* close user menu on outside click / Escape */
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onDown = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
+    };
+    const onKey = (e) => e.key === 'Escape' && setUserMenuOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [userMenuOpen]);
 
-  const navLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'Properties', path: '/properties' },
-    { label: 'Buy', path: '/properties?purpose=Buy' },
-    { label: 'Rent', path: '/properties?purpose=Rent' },
-    { label: 'About', path: '/about' },
-    { label: 'FAQ', path: '/faq' },
-    { label: 'Contact', path: '/contact' },
+  /* lock page scroll while the mobile drawer is open */
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    const onKey = (e) => e.key === 'Escape' && setMobileMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileMenuOpen]);
+
+  const isActive = (item) => {
+    if (item.path === '/') return location.pathname === '/';
+    const [base, query] = item.path.split('?');
+    if (!location.pathname.startsWith(base)) return false;
+    if (query) return location.search.includes(query);
+    // "Properties" shouldn't stay active when Buy / Rent filter is selected
+    if (base === '/properties') return !/purpose=(Buy|Rent)/.test(location.search);
+    return true;
+  };
+
+  const handleLogout = () => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
+    logout();
+    navigate('/');
+  };
+
+  const accountItems = [
+    { to: '/profile', label: 'My profile', icon: User },
+    { to: '/my-enquiries', label: 'Enquiries', icon: FileText, badge: 'Track', tone: 'green' },
+    { to: '/favorites', label: 'Saved properties', icon: Heart, count: favorites.length },
+    { to: '/scheduled-visits', label: 'Property visits', icon: Calendar },
+    { to: '/notifications', label: 'Notifications', icon: Bell, dot: true },
+    { to: '/recently-viewed', label: 'Recently viewed', icon: Clock },
+    { to: '/contact-agents', label: 'Contact agents', icon: Users },
+    { to: '/deals', label: 'Deal tracker', icon: TrendingUp, badge: '7 steps', tone: 'gold' },
+    { to: '/change-password', label: 'Change password', icon: KeyRound },
   ];
+
+  const badgeTone = {
+    green: 'bg-[#10B981]/15 text-[#0E8F63]',
+    gold: 'bg-[#B49A70]/20 text-[#8C7146]',
+  };
+
+  const iconBtn = `relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+    isTransparent
+      ? 'text-white hover:bg-white/15'
+      : 'text-[#1C201C] hover:bg-[#F1EDE3] hover:text-[#9A7F52]'
+  }`;
+
+  const Avatar = ({ size = 'h-8 w-8', text = 'text-xs' }) =>
+    user?.avatar ? (
+      <img src={user.avatar} alt={user.name} className={`${size} rounded-full border border-[#B49A70] object-cover`} />
+    ) : (
+      <span className={`${size} ${text} flex items-center justify-center rounded-full bg-gradient-to-br from-[#D9C49B] to-[#B49A70] font-bold uppercase text-[#1C201C]`}>
+        {user?.name?.charAt(0) || 'U'}
+      </span>
+    );
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
           isTransparent
-            ? 'bg-transparent py-5 border-b border-white/10'
-            : 'bg-white/95 backdrop-blur-md py-4 shadow-sm border-b border-[#DEDAD1]'
+            ? 'border-b border-white/10 bg-gradient-to-b from-black/40 to-transparent py-3 lg:py-4'
+            : 'border-b border-[#E4DFD4] bg-white/90 py-2.5 shadow-[0_8px_30px_-18px_rgba(28,32,28,0.35)] backdrop-blur-xl lg:py-3'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 group focus:outline-none"
-            aria-label="PlutoPlat Home"
-          >
+          <Link to="/" className="shrink-0 focus:outline-none" aria-label="PlutoPlat Home">
             <span
-              className={`font-serif text-2xl md:text-3xl font-normal tracking-tight transition-colors ${
+              className={`font-serif text-[26px] font-normal tracking-tight transition-colors md:text-3xl ${
                 isTransparent ? 'text-white' : 'text-[#1C201C]'
               }`}
             >
-              Pluto<span className="text-[#B49A70] font-semibold">Plat</span>
-              <span className="text-[#B49A70] text-xl">.</span>
+              Pluto<span className="text-[#B49A70]">Plat</span>
+              <span className="text-[#B49A70]">.</span>
             </span>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-7">
-            {navLinks.map((item) => (
-              <NavLink
-                key={item.label}
-                to={item.path}
-                className={({ isActive }) => {
-                  const active =
-                    item.path === '/'
-                      ? location.pathname === '/'
-                      : location.pathname.startsWith(item.path.split('?')[0]) &&
-                        (!item.path.includes('?') || location.search.includes(item.path.split('?')[1]));
-
-                  if (isTransparent) {
-                    return `text-xs uppercase tracking-widest font-medium transition-colors hover:text-[#E8D9BF] ${
-                      active ? 'text-[#E8D9BF] border-b border-[#B49A70] pb-1' : 'text-[#EBE7DF]'
-                    }`;
-                  } else {
-                    return `text-xs uppercase tracking-widest font-medium transition-colors hover:text-[#B49A70] ${
-                      active ? 'text-[#1C201C] border-b-2 border-[#1C201C] pb-1 font-semibold' : 'text-[#6E6D66]'
-                    }`;
-                  }
-                }}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+          {/* Desktop links */}
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+            {navLinks.map((item) => {
+              const active = isActive(item);
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.path}
+                  className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+                    isTransparent
+                      ? active
+                        ? 'bg-white/15 text-white'
+                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      : active
+                      ? 'bg-[#F1EDE3] font-semibold text-[#1C201C]'
+                      : 'text-[#6E6D66] hover:bg-[#F8F6F2] hover:text-[#1C201C]'
+                  }`}
+                >
+                  {item.label}
+                </NavLink>
+              );
+            })}
           </nav>
 
-          {/* Right Action Elements */}
-          <div className="hidden sm:flex items-center gap-4">
-            {/* Currency Selector */}
-            <div className="flex items-center gap-1 text-xs">
-              <Globe
-                size={14}
-                className={isTransparent ? 'text-white/60' : 'text-[#77766E]'}
-              />
+          {/* Desktop actions */}
+          <div className="hidden items-center gap-1.5 lg:flex">
+            {/* Currency */}
+            <label
+              className={`mr-1 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                isTransparent ? 'border-white/25 text-white' : 'border-[#E4DFD4] text-[#222522]'
+              }`}
+            >
+              <Globe size={14} className={isTransparent ? 'text-white/70' : 'text-[#9A7F52]'} />
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className={`bg-transparent text-xs uppercase font-medium focus:outline-none cursor-pointer pr-1 ${
-                  isTransparent ? 'text-white' : 'text-[#222522]'
-                }`}
-                title="Select Currency"
+                className="cursor-pointer bg-transparent focus:outline-none"
+                title="Select currency"
+                aria-label="Select currency"
               >
-                <option value="INR" className="text-black bg-white">INR (₹)</option>
-                <option value="AED" className="text-black bg-white">AED (د.إ)</option>
-                <option value="USD" className="text-black bg-white">USD ($)</option>
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code} className="bg-white text-black">
+                    {c.label}
+                  </option>
+                ))}
               </select>
-            </div>
+            </label>
 
-            {/* Global Search Button */}
-            <Link
-              to="/search"
-              className={`p-2 rounded-full transition-colors ${
-                isTransparent
-                  ? 'text-white hover:text-[#B49A70] hover:bg-white/10'
-                  : 'text-[#222522] hover:text-[#B49A70] hover:bg-[#F8F6F2]'
-              }`}
-              title="Search Archive"
-            >
-              <Search size={17} />
+            <Link to="/search" className={iconBtn} title="Search" aria-label="Search">
+              <Search size={18} />
             </Link>
 
-            {/* Intelligence Briefings */}
-            <Link
-              to="/notifications"
-              className={`relative p-2 rounded-full transition-colors ${
-                isTransparent
-                  ? 'text-white hover:text-[#B49A70] hover:bg-white/10'
-                  : 'text-[#222522] hover:text-[#B49A70] hover:bg-[#F8F6F2]'
-              }`}
-              title="Intelligence Briefings"
-            >
-              <Bell size={17} />
-              <span className="absolute 1 top-1.5 right-1.5 w-2 h-2 bg-[#B49A70] rounded-full ring-2 ring-white" />
+            <Link to="/notifications" className={iconBtn} title="Notifications" aria-label="Notifications">
+              <Bell size={18} />
+              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#B49A70] ring-2 ring-white/80" />
             </Link>
 
-            {/* Saved Properties / Favorites */}
-            <Link
-              to="/favorites"
-              className={`relative p-2 rounded-full transition-colors ${
-                isTransparent
-                  ? 'text-white hover:text-[#B49A70] hover:bg-white/10'
-                  : 'text-[#222522] hover:text-[#C74747] hover:bg-[#F8F6F2]'
-              }`}
-              title="Saved Properties"
-            >
-              <Heart size={17} fill={favorites.length > 0 ? 'currentColor' : 'none'} />
+            <Link to="/favorites" className={iconBtn} title="Saved properties" aria-label="Saved properties">
+              <Heart size={18} fill={favorites.length > 0 ? 'currentColor' : 'none'} />
               {favorites.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C74747] text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#C74747] px-1 text-[10px] font-bold text-white shadow">
                   {favorites.length}
                 </span>
               )}
             </Link>
 
-            {/* Conditionally rendered User Account or Sign In + Let's Start */}
             {user ? (
-              /* User Logo / Avatar Menu when logged in */
-              <div className="relative">
+              <div className="relative ml-1" ref={userMenuRef}>
                 <button
                   type="button"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className={`flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full border transition-all cursor-pointer shadow-sm ${
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 transition-colors ${
                     isTransparent
-                      ? 'bg-[#1C201C]/80 hover:bg-[#1C201C] border-[#B49A70]/50 text-white'
-                      : 'bg-[#F8F6F2] hover:bg-white border-[#DDD8CE] text-[#1C201C]'
+                      ? 'border-white/30 bg-white/10 text-white hover:bg-white/20'
+                      : 'border-[#E4DFD4] bg-[#F8F6F2] text-[#1C201C] hover:bg-white'
                   }`}
-                  title="My Account"
                 >
-                  {user.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-7 h-7 rounded-full object-cover border border-[#B49A70]"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-[#B49A70] text-[#1C201C] flex items-center justify-center font-bold text-xs uppercase">
-                      {user.name?.charAt(0) || 'U'}
-                    </div>
-                  )}
-                  <span className="text-xs font-semibold max-w-[90px] truncate hidden md:inline">
+                  <Avatar />
+                  <span className="hidden max-w-[90px] truncate text-sm font-semibold xl:inline">
                     {user.name?.split(' ')[0]}
                   </span>
-                  <ChevronDown
-                    size={13}
-                    className={`text-[#B49A70] transition-transform duration-200 ${
-                      userMenuOpen ? 'rotate-180' : ''
-                    }`}
-                  />
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white border border-[#DDD8CE] rounded-2xl shadow-2xl p-2.5 z-50 animate-fadeIn">
-                    <div className="px-3 py-2.5 border-b border-[#EAE6DE] mb-1.5 bg-[#FAF8F5] rounded-xl">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#B49A70] flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <Sparkles size={11} />
-                          {user.tier || 'Private Client'}
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-3 max-h-[calc(100vh-110px)] w-80 overflow-y-auto rounded-2xl border border-[#E4DFD4] bg-white p-2 shadow-[0_30px_70px_-20px_rgba(28,32,28,0.45)]"
+                  >
+                    <div className="mb-1.5 rounded-xl bg-gradient-to-br from-[#1C201C] to-[#2B3029] p-4 text-white">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5 text-[#D9C49B]">
+                          <Sparkles size={13} /> {user.tier || 'Private client'}
                         </span>
-                        <span className="text-[9px] bg-[#10B981]/15 text-[#10B981] px-1.5 py-0.5 rounded font-mono font-semibold">Active</span>
+                        <span className="rounded-full bg-[#10B981]/20 px-2 py-0.5 text-[10px] font-semibold text-[#5EE0B0]">
+                          Active
+                        </span>
                       </div>
-                      <div className="font-serif text-sm font-semibold text-[#1C201C] truncate mt-0.5">
-                        {user.name}
+                      <div className="mt-3 flex items-center gap-3">
+                        <Avatar size="h-11 w-11" text="text-base" />
+                        <div className="min-w-0">
+                          <div className="truncate font-serif text-base">{user.name}</div>
+                          <div className="truncate text-xs text-white/60">{user.email}</div>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-[#77766E] truncate">{user.email}</div>
                     </div>
 
-                    <div className="space-y-0.5">
-                      {/* 1. My Profile */}
+                    {accountItems.map(({ to, label, icon: Icon, badge, tone, count, dot }) => (
                       <Link
-                        to="/profile"
+                        key={to}
+                        to={to}
+                        role="menuitem"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
+                        className="group flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium text-[#1C201C] transition-colors hover:bg-[#F8F6F2]"
                       >
-                        <User size={15} className="text-[#B49A70]" />
-                        <span>My Profile</span>
-                      </Link>
-
-                      {/* 2. Enquiries */}
-                      <Link
-                        to="/my-enquiries"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <FileText size={15} className="text-[#B49A70]" />
-                          <span>Enquiries</span>
-                        </div>
-                        <span className="text-[10px] bg-[#10B981]/15 text-[#10B981] px-1.5 py-0.5 rounded font-semibold">Track</span>
-                      </Link>
-
-                      {/* 3. Saved Property */}
-                      <Link
-                        to="/favorites"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Heart size={15} className="text-[#B49A70]" />
-                          <span>Saved Property</span>
-                        </div>
-                        {favorites.length > 0 && (
-                          <span className="text-[10px] bg-[#C74747] text-white px-1.5 py-0.5 rounded-full font-bold">
-                            {favorites.length}
-                          </span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F1EDE3] text-[#9A7F52] transition-colors group-hover:bg-[#B49A70] group-hover:text-white">
+                          <Icon size={16} />
+                        </span>
+                        <span className="flex-1">{label}</span>
+                        {badge && (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeTone[tone]}`}>{badge}</span>
                         )}
+                        {count > 0 && (
+                          <span className="rounded-full bg-[#C74747] px-1.5 py-0.5 text-[10px] font-bold text-white">{count}</span>
+                        )}
+                        {dot && <span className="h-2 w-2 animate-pulse rounded-full bg-[#B49A70]" />}
                       </Link>
+                    ))}
 
-                      {/* 4. Schedule Property Visits */}
-                      <Link
-                        to="/scheduled-visits"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <Calendar size={15} className="text-[#B49A70]" />
-                        <span>Schedule Property Visits</span>
-                      </Link>
-
-                      {/* 5. My Notifications */}
-                      <Link
-                        to="/notifications"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Bell size={15} className="text-[#B49A70]" />
-                          <span>My Notifications</span>
-                        </div>
-                        <span className="w-2 h-2 rounded-full bg-[#B49A70] animate-pulse" />
-                      </Link>
-
-                      {/* 6. Recently Property */}
-                      <Link
-                        to="/recently-viewed"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <Clock size={15} className="text-[#B49A70]" />
-                        <span>Recently Property</span>
-                      </Link>
-
-                      {/* 7. Contact Agents */}
-                      <Link
-                        to="/contact-agents"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <Users size={15} className="text-[#B49A70]" />
-                        <span>Contact Agents</span>
-                      </Link>
-
-                      {/* Deal Process (User Workflow Step 5) */}
-                      <Link
-                        to="/deals"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <TrendingUp size={15} className="text-[#10B981]" />
-                          <span>Deal Process Tracker</span>
-                        </div>
-                        <span className="text-[10px] bg-[#B49A70]/15 text-[#8C7146] px-1.5 py-0.5 rounded font-semibold">7 Steps</span>
-                      </Link>
-
-                      {/* 8. Change Password */}
-                      <Link
-                        to="/change-password"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#1C201C] hover:bg-[#F8F6F2] hover:text-[#B49A70] rounded-xl transition-colors"
-                      >
-                        <KeyRound size={15} className="text-[#B49A70]" />
-                        <span>Change Password</span>
-                      </Link>
-                    </div>
-
-                    <div className="border-t border-[#EAE6DE] my-1.5" />
-
-                    {/* 9. Logout */}
+                    <div className="my-1.5 border-t border-[#EAE6DE]" />
                     <button
                       type="button"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        logout();
-                        navigate('/');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#C74747] hover:bg-[#FDF2F2] rounded-xl transition-colors text-left cursor-pointer"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-[#C74747] transition-colors hover:bg-[#FDF2F2]"
                     >
-                      <LogOut size={15} />
-                      <span>Logout / Disconnect</span>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FDF2F2]">
+                        <LogOut size={16} />
+                      </span>
+                      Log out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              /* When not logged in: Sign In + Let's Start button */
-              <div className="flex items-center gap-3">
+              <div className="ml-1 flex items-center gap-2">
                 <Link
                   to="/login"
-                  className={`text-xs uppercase tracking-wider font-semibold transition-colors ${
-                    isTransparent ? 'text-white hover:text-[#E8D9BF]' : 'text-[#222522] hover:text-[#B49A70]'
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    isTransparent ? 'text-white hover:bg-white/15' : 'text-[#1C201C] hover:bg-[#F1EDE3]'
                   }`}
                 >
-                  Sign In
+                  Sign in
                 </Link>
-
                 <Link
                   to="/register"
-                  className="px-4 py-2.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-xs uppercase tracking-wider font-semibold rounded-xl transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-1.5 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] px-5 py-2.5 text-sm font-semibold text-[#161916] shadow-md transition hover:brightness-110"
                 >
-                  <span>Let's Start</span>
-                  <ArrowUpRight size={14} />
+                  Let's start <ArrowUpRight size={15} />
                 </Link>
               </div>
             )}
           </div>
 
-          {/* Mobile Hamburger Button */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <Link
-              to="/search"
-              className={`p-2 ${isTransparent ? 'text-white' : 'text-[#1C201C]'}`}
-            >
-              <Search size={18} />
+          {/* Mobile / tablet actions */}
+          <div className="flex items-center lg:hidden">
+            <Link to="/search" className={iconBtn} aria-label="Search">
+              <Search size={20} />
             </Link>
-
-            <Link
-              to="/favorites"
-              className={`relative p-2 ${isTransparent ? 'text-white' : 'text-[#1C201C]'}`}
-            >
-              <Heart size={18} fill={favorites.length > 0 ? 'currentColor' : 'none'} />
+            <Link to="/favorites" className={iconBtn} aria-label="Saved properties">
+              <Heart size={20} fill={favorites.length > 0 ? 'currentColor' : 'none'} />
               {favorites.length > 0 && (
-                <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#C74747] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#C74747] px-1 text-[10px] font-bold text-white">
                   {favorites.length}
                 </span>
               )}
             </Link>
-
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-xs focus:outline-none ${
-                isTransparent ? 'text-white' : 'text-[#1C201C]'
-              }`}
-              aria-label="Toggle Navigation Menu"
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className={iconBtn}
+              aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              <Menu size={24} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="fixed top-0 right-0 w-4/5 max-w-sm h-full bg-[#F8F6F2] shadow-2xl flex flex-col justify-between p-6 overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between pb-6 border-b border-[#DEDAD1]">
-                <span className="font-serif text-2xl font-normal text-[#1C201C]">
-                  Pluto<span className="text-[#B49A70]">Plat</span>.
-                </span>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 text-[#6E6D66] hover:text-[#1C201C]"
-                >
-                  <X size={22} />
-                </button>
-              </div>
+      {/* ───────── Mobile drawer ───────── */}
+      <div
+        className={`fixed inset-0 z-[70] lg:hidden ${mobileMenuOpen ? '' : 'pointer-events-none'}`}
+        aria-hidden={!mobileMenuOpen}
+      >
+        {/* backdrop */}
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+            mobileMenuOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
 
-              {/* User badge if logged in */}
-              {user && (
-                <div className="mt-4 p-3.5 bg-white border border-[#E5E0D8] rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#B49A70] text-white flex items-center justify-center font-bold text-xs uppercase">
-                      {user.name?.charAt(0) || 'U'}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-serif text-sm font-semibold text-[#1C201C] truncate">{user.name}</div>
-                      <div className="text-[10px] text-[#8E8B82] truncate">{user.email}</div>
-                    </div>
+        {/* panel */}
+        <aside
+          className={`absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-[#F8F6F2] shadow-2xl transition-transform duration-300 ease-out ${
+            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* top bar */}
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="font-serif text-2xl text-[#1C201C]">
+              Pluto<span className="text-[#B49A70]">Plat</span>.
+            </span>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1C201C] shadow-sm"
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-5 pb-4">
+            {/* user card */}
+            {user && (
+              <div className="rounded-2xl bg-gradient-to-br from-[#1C201C] to-[#2B3029] p-4 text-white">
+                <div className="flex items-center gap-3">
+                  <Avatar size="h-12 w-12" text="text-lg" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-serif text-base">{user.name}</div>
+                    <div className="truncate text-xs text-white/60">{user.email}</div>
                   </div>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                      navigate('/');
-                    }}
-                    className="p-1.5 text-[#C74747] hover:bg-[#FDF2F2] rounded-lg"
-                    title="Sign Out"
-                  >
-                    <LogOut size={16} />
-                  </button>
                 </div>
-              )}
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-[#D9C49B]">
+                  <Sparkles size={13} /> {user.tier || 'Private client'}
+                </div>
+              </div>
+            )}
 
-              <div className="flex flex-col py-4 space-y-3">
-                {navLinks.map((item) => (
+            {/* main links */}
+            <nav className="mt-4 space-y-1" aria-label="Main">
+              {navLinks.map((item) => {
+                const active = isActive(item);
+                return (
                   <NavLink
                     key={item.label}
                     to={item.path}
-                    className="text-base font-serif text-[#1C201C] hover:text-[#B49A70] py-1 border-b border-[#EAE6DE]"
+                    className={`flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${
+                      active ? 'bg-white text-[#1C201C] shadow-sm' : 'text-[#3F433E] active:bg-white'
+                    }`}
                   >
-                    {item.label}
+                    <span className="flex items-center gap-3">
+                      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-[#B49A70]' : 'bg-transparent'}`} />
+                      {item.label}
+                    </span>
+                    <ChevronRight size={16} className="text-[#B9B4A6]" />
+                  </NavLink>
+                );
+              })}
+            </nav>
+
+            {/* account shortcuts */}
+            <div className="mt-5">
+              <p className="mb-2 px-1 text-xs font-semibold text-[#9A7F52]">
+                {user ? 'Your account' : 'Quick links'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(user
+                  ? accountItems
+                  : accountItems.filter((i) => i.to === '/favorites' || i.to === '/my-enquiries')
+                ).map(({ to, label, icon: Icon, count, dot }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className="relative flex min-h-[72px] flex-col justify-between rounded-xl border border-[#E4DFD4] bg-white p-3 text-[13px] font-medium leading-tight text-[#1C201C] transition-colors active:bg-[#F1EDE3]"
+                  >
+                    <Icon size={18} className="text-[#B49A70]" />
+                    <span className="mt-2">{label}</span>
+                    {count > 0 && (
+                      <span className="absolute right-2.5 top-2.5 rounded-full bg-[#C74747] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {count}
+                      </span>
+                    )}
+                    {dot && <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-[#B49A70]" />}
                   </NavLink>
                 ))}
-
-                <NavLink
-                  to="/favorites"
-                  className="text-base font-serif text-[#1C201C] hover:text-[#B49A70] py-1 border-b border-[#EAE6DE] flex items-center justify-between"
-                >
-                  <span>Saved Collection</span>
-                  <span className="text-xs bg-[#B49A70] text-white px-2 py-0.5 rounded-full font-sans">
-                    {favorites.length}
-                  </span>
-                </NavLink>
-
-                <NavLink
-                  to="/my-enquiries"
-                  className="text-base font-serif text-[#1C201C] hover:text-[#B49A70] py-1 border-b border-[#EAE6DE] flex items-center justify-between"
-                >
-                  <span>Active Enquiries</span>
-                  <span className="text-xs text-[#287A50] font-sans font-semibold">Active</span>
-                </NavLink>
-
-                {user && (
-                  <div className="pt-2 border-t border-[#EAE6DE] space-y-2">
-                    <div className="text-[10px] uppercase font-bold text-[#B49A70] tracking-wider px-1">
-                      Client Workstation
-                    </div>
-                    <NavLink
-                      to="/scheduled-visits"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <Calendar size={15} className="text-[#B49A70]" />
-                      <span>Schedule Property Visits</span>
-                    </NavLink>
-                    <NavLink
-                      to="/notifications"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <Bell size={15} className="text-[#B49A70]" />
-                      <span>My Notifications</span>
-                    </NavLink>
-                    <NavLink
-                      to="/recently-viewed"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <Clock size={15} className="text-[#B49A70]" />
-                      <span>Recently Property</span>
-                    </NavLink>
-                    <NavLink
-                      to="/contact-agents"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <Users size={15} className="text-[#B49A70]" />
-                      <span>Contact Agents</span>
-                    </NavLink>
-                    <NavLink
-                      to="/deals"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <TrendingUp size={15} className="text-[#10B981]" />
-                      <span>Deal Process Tracker</span>
-                    </NavLink>
-                    <NavLink
-                      to="/change-password"
-                      className="text-sm font-medium text-[#1C201C] hover:text-[#B49A70] py-1 flex items-center gap-2"
-                    >
-                      <KeyRound size={15} className="text-[#B49A70]" />
-                      <span>Change Password</span>
-                    </NavLink>
-                  </div>
-                )}
               </div>
             </div>
 
-            <div className="space-y-3 pt-6 border-t border-[#DEDAD1]">
-              {user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                    navigate('/');
-                  }}
-                  className="w-full py-3 bg-[#1C201C] text-white text-xs uppercase tracking-wider font-semibold rounded-xl text-center"
-                >
-                  Sign Out
-                </button>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="w-full block text-center py-3 border border-[#1C201C] text-[#1C201C] text-xs uppercase tracking-wider font-semibold rounded-xl"
+            {/* currency */}
+            <div className="mt-5">
+              <p className="mb-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-[#9A7F52]">
+                <Globe size={13} /> Currency
+              </p>
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-[#EDE8DC] p-1">
+                {currencies.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => setCurrency(c.code)}
+                    className={`h-10 rounded-lg text-sm font-semibold transition-all ${
+                      currency === c.code ? 'bg-white text-[#1C201C] shadow' : 'text-[#6E6D66]'
+                    }`}
                   >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="w-full block text-center py-3 bg-[#B49A70] text-white text-xs uppercase tracking-wider font-semibold rounded-xl shadow-sm"
-                  >
-                    Let's Start
-                  </Link>
-                </>
-              )}
+                    {c.code}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+
+          {/* bottom actions */}
+          <div className="space-y-2.5 border-t border-[#E4DFD4] bg-[#F8F6F2] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+            {user ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#C74747]/30 bg-white text-sm font-semibold text-[#C74747]"
+              >
+                <LogOut size={16} /> Log out
+              </button>
+            ) : (
+              <>
+                <Link
+                  to="/register"
+                  className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] text-sm font-semibold text-[#161916] shadow-md"
+                >
+                  Let's start <ArrowUpRight size={16} />
+                </Link>
+                <Link
+                  to="/login"
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-[#1C201C] text-sm font-semibold text-[#1C201C]"
+                >
+                  Sign in
+                </Link>
+              </>
+            )}
+          </div>
+        </aside>
+      </div>
     </>
   );
 };
