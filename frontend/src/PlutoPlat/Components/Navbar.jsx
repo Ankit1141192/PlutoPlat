@@ -154,17 +154,24 @@ const Navbar = () => {
                 <NavLink
                   key={item.label}
                   to={item.path}
-                  className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+                  className={`group relative px-3.5 py-2 text-sm font-medium transition-colors ${
                     isTransparent
                       ? active
-                        ? 'bg-white/15 text-white'
-                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        ? 'font-semibold text-white'
+                        : 'text-white/80 hover:text-white'
                       : active
-                      ? 'bg-[#F1EDE3] font-semibold text-[#1C201C]'
-                      : 'text-[#6E6D66] hover:bg-[#F8F6F2] hover:text-[#1C201C]'
+                      ? 'font-semibold text-[#1C201C]'
+                      : 'text-[#6E6D66] hover:text-[#1C201C]'
                   }`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span
+                    className={`absolute bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${
+                      active
+                        ? 'scale-x-100 opacity-100'
+                        : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100 group-active:scale-x-100 group-active:opacity-100'
+                    }`}
+                  />
                 </NavLink>
               );
             })}
@@ -397,13 +404,26 @@ const Navbar = () => {
                   <NavLink
                     key={item.label}
                     to={item.path}
-                    className={`flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${
+                    className={`group flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${
                       active ? 'bg-white text-[#1C201C] shadow-sm' : 'text-[#3F433E] active:bg-white'
                     }`}
                   >
                     <span className="flex items-center gap-3">
-                      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-[#B49A70]' : 'bg-transparent'}`} />
-                      {item.label}
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                          active ? 'bg-gradient-to-r from-[#C9B287] to-[#B49A70]' : 'bg-transparent'
+                        }`}
+                      />
+                      <span className="relative">
+                        {item.label}
+                        <span
+                          className={`absolute -bottom-0.5 left-0 right-0 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${
+                            active
+                              ? 'scale-x-100 opacity-100'
+                              : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100 group-active:scale-x-100 group-active:opacity-100'
+                          }`}
+                        />
+                      </span>
                     </span>
                     <ChevronRight size={16} className="text-[#B9B4A6]" />
                   </NavLink>
