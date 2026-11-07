@@ -186,16 +186,31 @@ const PlutoMapExplorer = ({
       scrollWheelZoom: !singlePropertyMode,
     });
 
-    // MapTiler layer
-    L.tileLayer(
-      `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+    // High-reliability tile layer with multiple CDN endpoints:
+    // CartoDB Voyager: clean luxury tone, zero API key required, works reliably on all deployed domains
+    const tileLayer = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
       {
         attribution:
-          '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
         maxZoom: 20,
         tileSize: 256,
       }
-    ).addTo(map);
+    );
+
+    tileLayer.on('tileerror', () => {
+      // Fallback to OSM in the rare case CartoDB has any network hiccup
+      if (!map._osmFallback) {
+        map._osmFallback = true;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+      }
+    });
+
+    tileLayer.addTo(map);
 
     // Zoom control placed on top-left to avoid right sidebar overlap
     L.control.zoom({ position: 'topleft' }).addTo(map);
@@ -213,7 +228,45 @@ const PlutoMapExplorer = ({
     });
 
     mapInstanceRef.current = map;
+
+    // Fix for production deployments: force Leaflet to recalculate container geometry
+    // after CSS hydration, Framer Motion animations, and DOM rendering
+    const triggerInvalidate = () => {
+      if (map) {
+        map.invalidateSize();
+      }
+    };
+
+    const t1 = setTimeout(triggerInvalidate, 100);
+    const t2 = setTimeout(triggerInvalidate, 350);
+    const t3 = setTimeout(triggerInvalidate, 800);
+    const t4 = setTimeout(triggerInvalidate, 1500);
+
+    // ResizeObserver catches container size changes (grid/flex re-layouts)
+    let ro = null;
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      ro = new ResizeObserver(() => triggerInvalidate());
+      ro.observe(mapContainerRef.current);
+    }
+
+    // IntersectionObserver triggers invalidateSize when scrolling into view
+    let io = null;
+    if (typeof IntersectionObserver !== 'undefined' && mapContainerRef.current) {
+      io = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) {
+          triggerInvalidate();
+        }
+      });
+      io.observe(mapContainerRef.current);
+    }
+
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      if (ro) ro.disconnect();
+      if (io) io.disconnect();
       map.remove();
       mapInstanceRef.current = null;
       markersLayerRef.current = null;
@@ -410,8 +463,8 @@ const PlutoMapExplorer = ({
       {/* ── The map canvas ── */}
       <div
         ref={mapContainerRef}
-        style={{ height }}
-        className="w-full z-10 relative cursor-grab active:cursor-grabbing"
+        style={{ height: height || '620px', minHeight: '340px' }}
+        className="w-full z-10 relative cursor-grab active:cursor-grabbing bg-[#F4F1EA]"
       />
 
       {/* ── Desktop sidebar (with Dropdown / Collapse '>' and Pin Hide/Show Button) ── */}

@@ -4,14 +4,16 @@ import {
   Building2,
   Plus,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
   ExternalLink,
   Trash2,
-  Edit2,
   X,
-  AlertCircle
+  Sparkles,
+  MapPin,
+  BedDouble,
+  Ruler,
+  Image as ImageIcon
 } from 'lucide-react';
 import AdminLayout from '../Components/AdminLayout';
 import { useAdminStore } from '../context/AdminContext';
@@ -71,8 +73,8 @@ const PropertyList = () => {
       ...form,
       price: `₹${(Number(form.numericPrice || 5000000) * 83.5).toLocaleString('en-IN')}`,
       images: [form.image],
-      ownerEmail: user?.email || 'm.harrison@plutoplat.com',
-      ownerName: user?.name || 'Michael Harrison',
+      ownerEmail: user?.email || 'm.sharma@plutoplat.com',
+      ownerName: user?.name || 'Michael Sharma',
       verified: false,
       status: 'pending'
     });
@@ -99,50 +101,56 @@ const PropertyList = () => {
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="font-serif text-lg text-[#1C201C]">Agent Property Listings</h2>
-            <p className="text-xs text-[#6E6D66]">
-              Add, update, and manage your property inventory. New submissions undergo SuperAdmin review before live publishing.
+            <h2 className="font-serif text-2xl text-[#1C201C] font-normal">Agent Property Listings</h2>
+            <p className="text-xs text-[#6E6D66] mt-0.5">
+              Add, update, and manage your property inventory. Submissions undergo SuperAdmin review before live publishing.
             </p>
           </div>
 
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#B49A70] hover:bg-[#9E865F] text-white text-xs font-semibold rounded-xs shadow-2xs cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto"
           >
-            <Plus size={15} />
+            <Plus size={16} />
             <span>Submit Property Listing</span>
           </button>
         </div>
 
         {/* Tab & Search Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 border border-[#DDD8CE] rounded-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3.5 border border-[#E8E3D8] rounded-2xl shadow-sm">
           {/* Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-[#F8F6F2] rounded-xs border border-[#DDD8CE]">
+          <div className="flex items-center gap-1.5 p-1 bg-[#F1EDE3] rounded-xl">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
-                activeTab === 'all' ? 'bg-[#1C201C] text-white shadow-2xs' : 'text-[#6E6D66] hover:text-[#1C201C]'
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-white text-[#1C201C] shadow-sm'
+                  : 'text-[#6E6D66] hover:text-[#1C201C]'
               }`}
             >
               All ({myProperties.length})
             </button>
             <button
               onClick={() => setActiveTab('pending')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'pending' ? 'bg-[#B49A70] text-white shadow-2xs' : 'text-[#6E6D66] hover:text-[#1C201C]'
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'pending'
+                  ? 'bg-white text-[#1C201C] shadow-sm'
+                  : 'text-[#6E6D66] hover:text-[#1C201C]'
               }`}
             >
               <span>In Review</span>
               {pendingCount > 0 && (
-                <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded-full font-bold">
+                <span className="text-[10px] bg-[#B49A70] text-[#121612] px-2 py-0.2 rounded-full font-bold">
                   {pendingCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => setActiveTab('approved')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
-                activeTab === 'approved' ? 'bg-[#287A50] text-white shadow-2xs' : 'text-[#6E6D66] hover:text-[#1C201C]'
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                activeTab === 'approved'
+                  ? 'bg-white text-[#1C201C] shadow-sm'
+                  : 'text-[#6E6D66] hover:text-[#1C201C]'
               }`}
             >
               Live & Published ({approvedCount})
@@ -150,36 +158,42 @@ const PropertyList = () => {
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full sm:w-72">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#77766E]" />
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A887F]" />
             <input
               type="text"
-              placeholder="Search your listings..."
+              placeholder="Search by title, location or city..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs focus:outline-none focus:border-[#B49A70]"
+              className="h-10 w-full pl-10 pr-4 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70] focus:ring-2 focus:ring-[#B49A70]/20 text-[#1C201C] placeholder:text-[#A9A69B]"
             />
           </div>
         </div>
 
         {/* Listings Table */}
-        <div className="bg-white border border-[#DDD8CE] rounded-sm shadow-2xs overflow-hidden">
+        <div className="bg-white border border-[#E8E3D8] rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#F8F6F2] border-b border-[#DDD8CE] text-[10px] uppercase font-bold tracking-wider text-[#6E6D66]">
-                  <th className="py-3 px-4">Property</th>
-                  <th className="py-3 px-4">Price / Location</th>
-                  <th className="py-3 px-4">Dimensions</th>
-                  <th className="py-3 px-4">Verification State</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="bg-[#FAF8F5] border-b border-[#E8E3D8] text-[11px] uppercase font-semibold tracking-wider text-[#6E6D66]">
+                  <th className="py-4 px-5">Residence</th>
+                  <th className="py-4 px-5">Price & Cluster</th>
+                  <th className="py-4 px-5">Dimensions</th>
+                  <th className="py-4 px-5">Review State</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAE6DE]">
                 {filteredProperties.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs text-[#6E6D66]">
-                      No properties found in this category. Click "Submit Property Listing" to add your first estate.
+                    <td colSpan={5} className="py-12 text-center text-xs text-[#6E6D66]">
+                      <div className="max-w-xs mx-auto space-y-2">
+                        <Building2 size={28} className="mx-auto text-[#B49A70]/50" />
+                        <p className="font-serif text-base text-[#1C201C]">No listings found</p>
+                        <p className="text-[11px] text-[#8A887F]">
+                          Submit your first luxury property listing using the button above.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -187,18 +201,18 @@ const PropertyList = () => {
                     const isPending = !prop.verified || prop.status === 'pending';
 
                     return (
-                      <tr key={prop.id} className="hover:bg-[#F8F6F2] transition-colors">
+                      <tr key={prop.id} className="hover:bg-[#FAF8F5] transition-colors">
                         {/* Title & Image */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3">
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-3.5">
                             <img
                               src={prop.image || prop.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=200&q=80'}
                               alt={prop.title}
-                              className="w-14 h-12 object-cover rounded-2xs border border-[#DDD8CE] shrink-0"
+                              className="w-14 h-14 object-cover rounded-xl border border-[#DDD8CE] shrink-0"
                             />
                             <div className="min-w-0">
-                              <p className="font-semibold text-[#1C201C] truncate max-w-xs">{prop.title}</p>
-                              <span className="text-[10px] uppercase font-bold tracking-wider text-[#B49A70]">
+                              <p className="font-semibold text-sm text-[#1C201C] truncate max-w-xs font-serif">{prop.title}</p>
+                              <span className="text-[10px] uppercase font-semibold tracking-wider text-[#B49A70] inline-block mt-0.5">
                                 {prop.type}
                               </span>
                             </div>
@@ -206,52 +220,52 @@ const PropertyList = () => {
                         </td>
 
                         {/* Price & Location */}
-                        <td className="py-3.5 px-4">
-                          <p className="font-semibold text-[#1C201C]">{prop.price}</p>
-                          <p className="text-[11px] text-[#6E6D66] truncate">{prop.location}</p>
+                        <td className="py-4 px-5">
+                          <p className="font-serif text-sm font-semibold text-[#1C201C]">{prop.price}</p>
+                          <p className="text-xs text-[#6E6D66] truncate flex items-center gap-1 mt-0.5">
+                            <MapPin size={11} className="text-[#8A887F]" />
+                            {prop.location}
+                          </p>
                         </td>
 
                         {/* Specs */}
-                        <td className="py-3.5 px-4 text-[11px] text-[#6E6D66]">
-                          <p>{prop.beds} Beds • {prop.baths} Baths</p>
-                          <p className="text-[10px] text-[#8E8B82]">{prop.sqft} sqft</p>
+                        <td className="py-4 px-5 text-xs text-[#6E6D66]">
+                          <p className="flex items-center gap-1 font-medium text-[#1C201C]">
+                            <BedDouble size={13} className="text-[#8A887F]" />
+                            {prop.beds} Beds • {prop.baths} Baths
+                          </p>
+                          <p className="text-[11px] text-[#8A887F] flex items-center gap-1 mt-0.5">
+                            <Ruler size={12} className="text-[#8A887F]" />
+                            {prop.sqft} sq ft
+                          </p>
                         </td>
 
                         {/* State */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-4 px-5">
                           {isPending ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                              <Clock size={10} /> Pending Review
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              <Clock size={11} /> Pending Review
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                              <CheckCircle2 size={10} /> Live on Marketplace
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 size={11} /> Live Marketplace
                             </span>
                           )}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Link
-                              to={`/property/${prop.id}`}
-                              target="_blank"
-                              className="p-1.5 text-[#6E6D66] hover:text-[#1C201C] rounded-xs border border-[#DDD8CE]"
-                              title="Preview Listing"
-                            >
-                              <ExternalLink size={13} />
-                            </Link>
-
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => {
                                 if (window.confirm(`Delete "${prop.title}" listing?`)) {
                                   deleteProperty(prop.id);
                                 }
                               }}
-                              className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-xs cursor-pointer"
+                              className="p-2 text-[#8A887F] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                               title="Delete Listing"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>
@@ -266,47 +280,50 @@ const PropertyList = () => {
 
         {/* Submit Listing Modal */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="bg-white border border-[#DDD8CE] rounded-sm max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-[#EAE6DE] mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white border border-[#E8E3D8] rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-4 border-b border-[#EAE6DE] mb-5">
                 <div>
-                  <h3 className="font-serif text-lg text-[#1C201C]">Submit Property for Moderation</h3>
-                  <p className="text-[11px] text-[#6E6D66]">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E8E3D8] text-[10px] font-semibold uppercase tracking-wider text-[#B49A70] mb-1">
+                    <Sparkles size={11} /> New Submission
+                  </div>
+                  <h3 className="font-serif text-xl text-[#1C201C] font-normal">Submit Property for Moderation</h3>
+                  <p className="text-xs text-[#6E6D66]">
                     Your listing will be reviewed by the SuperAdmin team before going live.
                   </p>
                 </div>
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="text-[#8E8B82] hover:text-[#1C201C] p-1 cursor-pointer"
+                  className="text-[#8A887F] hover:text-[#1C201C] p-1.5 rounded-lg hover:bg-[#FAF8F5] transition-colors cursor-pointer"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
-                    Property Title *
+                  <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
+                    Property Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Royal Mirage Villa"
+                    placeholder="e.g. Royal Mirage Palatial Estate"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                    className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] placeholder:text-[#A9A69B] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
-                      Architectural Type *
+                    <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
+                      Architectural Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={form.type}
                       onChange={(e) => setForm({ ...form, type: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                      className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                     >
                       <option value="Villas">Villas</option>
                       <option value="Apartments">Apartments</option>
@@ -315,81 +332,81 @@ const PropertyList = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
-                      Expected Price (Numeric) *
+                    <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
+                      Expected Price (Numeric) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
                       required
                       value={form.numericPrice}
                       onChange={(e) => setForm({ ...form, numericPrice: Number(e.target.value) })}
-                      className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                      className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
-                      City, State *
+                    <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
+                      City, Locality <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={form.location}
                       onChange={(e) => setForm({ ...form, location: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                      className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
+                    <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
                       Square Feet
                     </label>
                     <input
                       type="text"
                       value={form.sqft}
                       onChange={(e) => setForm({ ...form, sqft: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                      className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
+                  <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
                     Image URL
                   </label>
                   <input
                     type="url"
                     value={form.image}
                     onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                    className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] mb-1">
+                  <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
                     Description & Provenance
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Describe amenities, architectural highlights, and proximity..."
+                    placeholder="Describe architectural provenance, private amenities, and bespoke finishes..."
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs"
+                    className="w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] p-3 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-[#EAE6DE] flex justify-end gap-2">
+                <div className="pt-4 border-t border-[#EAE6DE] flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setModalOpen(false)}
-                    className="px-4 py-2 border border-[#DDD8CE] rounded-xs text-[#6E6D66] hover:bg-[#F8F6F2]"
+                    className="px-4 py-2.5 border border-[#DDD8CE] rounded-xl text-xs font-semibold text-[#6E6D66] hover:bg-[#FAF8F5] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-[#B49A70] hover:bg-[#9E865F] text-white font-semibold rounded-xs shadow-xs"
+                    className="px-5 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
                   >
                     Submit for Approval
                   </button>
