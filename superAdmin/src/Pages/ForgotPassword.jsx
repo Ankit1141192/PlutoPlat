@@ -33,11 +33,15 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      const res = await SuperAdminApi.forgotPassword({ email: email.trim().toLowerCase() });
+      const res = await SuperAdminApi.forgotPassword({
+        email: email.trim().toLowerCase(),
+        origin: window.location.origin,
+        portal: 'superadmin',
+      });
       const token = res?.data?.resetToken || '';
       setResetToken(token);
       setSubmitted(true);
-      showToast('Master key reset token generated successfully.', 'success');
+      showToast('Master key recovery email dispatched successfully.', 'success');
     } catch (err) {
       setError(err.message || 'Unable to generate reset token. Verify SuperAdmin email.');
     } finally {
@@ -151,7 +155,7 @@ const ForgotPassword = () => {
                     to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
                     className="w-full py-3.5 px-6 bg-[#B49A70] hover:bg-[#C5AC83] text-[#0A0D0B] font-semibold text-xs uppercase tracking-widest rounded-xs transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                   >
-                    Proceed to Set New Master Key
+                    <span>Reset Password</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
 

@@ -12,6 +12,11 @@ const ResetPassword = () => {
   const { showToast } = usePropertyStore();
 
   const [token, setToken] = useState(tokenFromUrl);
+
+  React.useEffect(() => {
+    const t = searchParams.get('token');
+    if (t) setToken(t);
+  }, [searchParams]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

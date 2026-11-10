@@ -21,11 +21,15 @@ const ForgetPassword = () => {
     setErrorMsg('');
 
     try {
-      const res = await Api.forgotPassword({ email: email.trim().toLowerCase() });
+      const res = await Api.forgotPassword({
+        email: email.trim().toLowerCase(),
+        origin: window.location.origin,
+        portal: 'client',
+      });
       const token = res?.data?.resetToken || '';
       setResetToken(token);
       setSubmitted(true);
-      showToast('Password reset link generated successfully.', 'success');
+      showToast('Password reset email dispatched successfully.', 'success');
     } catch (err) {
       setErrorMsg(err.message || 'Failed to request password reset. Please verify your email.');
     } finally {
@@ -91,9 +95,10 @@ const ForgetPassword = () => {
             <div className="pt-4 space-y-3">
               <Link
                 to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
-                className="w-full block py-3 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs text-center"
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs text-center"
               >
-                Proceed to Set New Password
+                <span>Reset Password</span>
+                <ArrowRight size={14} className="text-[#B49A70]" />
               </Link>
               <button
                 type="button"

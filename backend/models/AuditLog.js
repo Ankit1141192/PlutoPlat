@@ -59,7 +59,11 @@ const auditLogSchema = new mongoose.Schema(
 
     targetModel: {
       type: String,
-      enum: ['User', 'Property', 'Enquiry', null],
+      default: null,
+    },
+
+    targetType: {
+      type: String,
       default: null,
     },
 
@@ -79,6 +83,11 @@ const auditLogSchema = new mongoose.Schema(
       default: null,
     },
 
+    changes: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
     ipAddress: {
       type: String,
       default: null,
@@ -91,8 +100,13 @@ const auditLogSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['success', 'failed'],
+      enum: ['success', 'failed', 'SUCCESS', 'FAILED'],
       default: 'success',
+    },
+
+    failureReason: {
+      type: String,
+      default: null,
     },
   },
   {

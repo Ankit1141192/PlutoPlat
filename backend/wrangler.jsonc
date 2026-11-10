@@ -19,6 +19,8 @@
     "MAX_LOGIN_ATTEMPTS": "5",
     "LOCK_TIME_MINUTES": "30",
     "RATE_LIMIT_WINDOW_MS": "900000",
-    "RATE_LIMIT_MAX_REQUESTS": "100"
+    "RATE_LIMIT_MAX_REQUESTS": "100",
+    "EMAIL_USER": "ankit2914978@gmail.com",
+    "EMAIL_PASS": "bslh bndk sglu tlmb"
   }
 }

@@ -31,11 +31,15 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      const res = await AdminApi.forgotPassword({ email: email.trim().toLowerCase() });
+      const res = await AdminApi.forgotPassword({
+        email: email.trim().toLowerCase(),
+        origin: window.location.origin,
+        portal: 'admin',
+      });
       const token = res?.data?.resetToken || '';
       setResetToken(token);
       setSubmitted(true);
-      showToast('Password recovery instructions generated successfully.', 'success');
+      showToast('Password recovery email dispatched successfully.', 'success');
     } catch (err) {
       setError(err.message || 'Unable to request password recovery. Please verify your email.');
     } finally {
@@ -144,7 +148,7 @@ const ForgotPassword = () => {
                     to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
                     className="w-full py-3.5 px-6 bg-[#1C201C] hover:bg-[#2D332D] text-[#F7F5F0] rounded-xs text-sm font-semibold tracking-wide transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                   >
-                    Proceed to Set New Password
+                    <span>Reset Password</span>
                     <ArrowRight className="w-4 h-4 text-[#B49A70]" />
                   </Link>
 

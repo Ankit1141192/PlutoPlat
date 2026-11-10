@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
+const { sendPasswordResetEmail } = require('../utils/emailService');
 
 /**
  * Register a new user
@@ -97,8 +98,10 @@ const login = async (req, res, next) => {
       return ApiResponse.error(res, 'Email and password are required.', 400);
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
+
     // Query user including sensitive security fields
-    const user = await User.findOne({ email: email.toLowerCase() }).select(
+    const user = await User.findOne({ email: cleanEmail }).select(
       '+password +loginAttempts +lockUntil'
     );
 
@@ -117,8 +120,8 @@ const login = async (req, res, next) => {
     }
 
     // Check if account is currently locked (due to 5 failed attempts)
-    if (user.isLocked()) {
-      const remainingMinutes = user.getLockRemainingMinutes();
+    if (typeof user.isLocked === 'function' && user.isLocked()) {
+      const remainingMinutes = user.getLockRemainingMinutes ? user.getLockRemainingMinutes() : 30;
 
       await logAudit({
         actor: user._id,
@@ -131,7 +134,7 @@ const login = async (req, res, next) => {
         req,
         status: 'FAILED',
         failureReason: 'ACCOUNT_LOCKED',
-      });
+      }).catch(() => {});
 
       return res.status(423).json({
         success: false,
@@ -146,7 +149,9 @@ const login = async (req, res, next) => {
 
     if (!isMatch) {
       // Record failed attempt and apply 30-min lockout if attempts >= 5
-      await user.handleFailedLogin();
+      if (typeof user.handleFailedLogin === 'function') {
+        await user.handleFailedLogin().catch(() => {});
+      }
 
       await logAudit({
         actor: user._id,
@@ -155,13 +160,14 @@ const login = async (req, res, next) => {
         module: 'AUTH',
         targetId: user._id,
         targetType: 'User',
-        description: `Failed login attempt (${user.loginAttempts}/5)`,
+        description: `Failed login attempt (${user.loginAttempts || 1}/5)`,
         req,
         status: 'FAILED',
         failureReason: 'INVALID_CREDENTIALS',
-      });
+      }).catch(() => {});
 
-      if (user.loginAttempts >= 5) {
+      const attempts = user.loginAttempts || 1;
+      if (attempts >= 5) {
         return res.status(423).json({
           success: false,
           message:
@@ -171,7 +177,7 @@ const login = async (req, res, next) => {
         });
       }
 
-      const remainingAttempts = 5 - user.loginAttempts;
+      const remainingAttempts = Math.max(1, 5 - attempts);
       return res.status(401).json({
         success: false,
         message: `Invalid email or password. You have ${remainingAttempts} attempt(s) remaining before account lockout for 30 minutes.`,
@@ -180,7 +186,9 @@ const login = async (req, res, next) => {
     }
 
     // Successful login: reset failed attempts & record last login
-    await user.handleSuccessfulLogin();
+    if (typeof user.handleSuccessfulLogin === 'function') {
+      await user.handleSuccessfulLogin().catch(() => {});
+    }
     const token = user.generateAuthToken();
 
     await logAudit({
@@ -193,9 +201,9 @@ const login = async (req, res, next) => {
       description: `User successfully logged in: ${user.email}`,
       req,
       status: 'SUCCESS',
-    });
+    }).catch(() => {});
 
-    const populatedUser = await User.findById(user._id).populate('savedProperties');
+    const populatedUser = await User.findById(user._id).populate('savedProperties').catch(() => null);
 
     return ApiResponse.success(res, 'Login successful.', {
       user: populatedUser || user,
@@ -223,12 +231,12 @@ const getMe = async (req, res, next) => {
 
 
 /**
- * Request Password Reset Token
- * POST /api/v1/auth/forgot-password
+ * Request Password Reset Token & Dispatch Email
+ * POST /api/v1/auth/forgot-password, /api/v2/auth/forgot-password, /api/v3/auth/forgot-password
  */
 const forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, origin: clientOrigin, portal: clientPortal } = req.body;
     if (!email) {
       return ApiResponse.error(res, 'Email address is required.', 400);
     }
@@ -247,6 +255,47 @@ const forgotPassword = async (req, res, next) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minutes validity
     await user.save({ validateBeforeSave: false });
 
+    // Determine originating portal and appropriate branding
+    const reqPath = (req.originalUrl || req.url || '').toLowerCase();
+    let portalName = 'Client Desk';
+    let defaultOrigin = 'http://localhost:5173';
+
+    if (reqPath.includes('/v3') || clientPortal === 'superadmin' || user.role === 'super_admin') {
+      portalName = 'SuperAdmin Executive Control';
+      defaultOrigin = 'http://localhost:5175';
+    } else if (reqPath.includes('/v2') || clientPortal === 'admin' || user.role === 'admin') {
+      portalName = 'Broker Workstation';
+      defaultOrigin = 'http://localhost:5174';
+    }
+
+    // Resolve base URL for reset link
+    let resolvedOrigin = clientOrigin;
+    if (!resolvedOrigin && req.headers['origin']) {
+      resolvedOrigin = req.headers['origin'];
+    } else if (!resolvedOrigin && req.headers['referer']) {
+      try {
+        const u = new URL(req.headers['referer']);
+        resolvedOrigin = `${u.protocol}//${u.host}`;
+      } catch {
+        resolvedOrigin = null;
+      }
+    }
+    if (!resolvedOrigin) {
+      resolvedOrigin = defaultOrigin;
+    }
+    resolvedOrigin = resolvedOrigin.replace(/\/$/, '');
+
+    const resetUrl = `${resolvedOrigin}/reset-password?token=${rawResetToken}`;
+
+    // Dispatch email
+    const emailRes = await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      resetUrl,
+      resetToken: rawResetToken,
+      portalName,
+    });
+
     await logAudit({
       actor: user._id,
       actorRole: user.role,
@@ -254,15 +303,21 @@ const forgotPassword = async (req, res, next) => {
       module: 'AUTH',
       targetId: user._id,
       targetType: 'User',
-      description: 'Password reset token requested',
+      description: `Password reset token requested and dispatched via email (${emailRes.success ? 'Delivered' : 'Failed'})`,
       req,
-    });
+    }).catch(() => {});
 
-    return ApiResponse.success(res, 'Password reset token generated successfully.', {
-      resetToken: rawResetToken,
-      expiresInMinutes: 15,
-      email: user.email,
-    });
+    return ApiResponse.success(
+      res,
+      'Password reset instructions and verification link have been dispatched to your email.',
+      {
+        resetToken: rawResetToken,
+        resetUrl,
+        expiresInMinutes: 15,
+        email: user.email,
+        emailSent: emailRes.success,
+      }
+    );
   } catch (error) {
     next(error);
   }

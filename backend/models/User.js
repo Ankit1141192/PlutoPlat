@@ -211,16 +211,19 @@ userSchema.methods.handleFailedLogin = async function () {
   if (this.lockUntil && this.lockUntil <= Date.now()) {
     this.loginAttempts = 1;
     this.lockUntil = null;
-    return this.save();
+    return this.constructor.updateOne({ _id: this._id }, { loginAttempts: 1, lockUntil: null });
   }
 
-  this.loginAttempts = (this.loginAttempts || 0) + 1;
+  const attempts = (this.loginAttempts || 0) + 1;
+  this.loginAttempts = attempts;
+  let lockUntil = null;
 
-  if (this.loginAttempts >= 5) {
-    this.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+  if (attempts >= 5) {
+    lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+    this.lockUntil = lockUntil;
   }
 
-  return this.save();
+  return this.constructor.updateOne({ _id: this._id }, { loginAttempts: attempts, lockUntil });
 };
 
 // Reset login attempts on successful login
@@ -228,7 +231,10 @@ userSchema.methods.handleSuccessfulLogin = async function () {
   this.loginAttempts = 0;
   this.lockUntil = null;
   this.lastLogin = new Date();
-  return this.save();
+  return this.constructor.updateOne(
+    { _id: this._id },
+    { loginAttempts: 0, lockUntil: null, lastLogin: this.lastLogin }
+  );
 };
 
 // Generate signed JWT token
