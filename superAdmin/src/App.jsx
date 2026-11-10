@@ -4,12 +4,17 @@ import { SuperAdminProvider } from './context/SuperAdminContext';
 import ProtectedRoute from './Components/ProtectedRoute';
 
 import Login from './Pages/Login';
+import Register from './Pages/Register';
+import ForgotPassword from './Pages/ForgotPassword';
+import ResetPassword from './Pages/ResetPassword';
 import Dashboard from './Pages/Dashboard';
 import Properties from './Pages/Properties';
 import Leads from './Pages/Leads';
 import Users from './Pages/Users';
 import Subscriptions from './Pages/Subscriptions';
 import AuditLogs from './Pages/AuditLogs';
+import Profile from './Pages/Profile';
+import Testimonials from './Pages/Testimonials';
 
 export default function App() {
   return (
@@ -18,6 +23,9 @@ export default function App() {
         <Routes>
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Subdomain Root Routes (superadmin.plutoplat.com/*) */}
           <Route
@@ -65,6 +73,30 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <AuditLogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/testimonials"
+            element={
+              <ProtectedRoute>
+                <Testimonials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/testimonials"
+            element={
+              <ProtectedRoute>
+                <Testimonials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />
@@ -123,6 +155,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <AuditLogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

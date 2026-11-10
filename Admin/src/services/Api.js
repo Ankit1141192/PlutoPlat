@@ -3,7 +3,7 @@
  * Handles all network requests for the Admin & Broker workstation.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://my-node-backend.ankit2914978.workers.dev/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://my-node-backend.ankit2914978.workers.dev/api/v2';
 
 const getToken = () => localStorage.getItem('pluto_admin_token') || localStorage.getItem('pluto_token');
 
@@ -17,16 +17,22 @@ const buildHeaders = (auth = false) => {
 };
 
 const request = async (method, path, { body, auth = false } = {}) => {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: buildHeaders(auth),
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: buildHeaders(auth),
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch (netErr) {
+    console.error('Fetch network error:', netErr);
+    throw new Error('Unable to reach the API server. Please check your backend connection.');
+  }
 
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const message = data?.message || `Request failed with status ${res.status}`;
+    const message = data?.message || (res.status === 500 ? 'Server error (500). Please check backend database configuration.' : `Request failed with status ${res.status}`);
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -38,12 +44,28 @@ const request = async (method, path, { body, auth = false } = {}) => {
 
 export const AdminApi = {
   // Authentication
+  async register(payload) {
+    const data = await request('POST', '/auth/register', { body: payload });
+    if (data?.data?.token) {
+      localStorage.setItem('pluto_admin_token', data.data.token);
+    }
+    return data;
+  },
+
   async login(payload) {
     const data = await request('POST', '/auth/login', { body: payload });
     if (data?.data?.token) {
       localStorage.setItem('pluto_admin_token', data.data.token);
     }
     return data;
+  },
+
+  async forgotPassword(payload) {
+    return request('POST', '/auth/forgot-password', { body: payload });
+  },
+
+  async resetPassword(payload) {
+    return request('POST', '/auth/reset-password', { body: payload });
   },
 
   logout() {
@@ -93,6 +115,28 @@ export const AdminApi = {
   // Agent Profile
   async updateProfile(id, payload) {
     return request('PUT', `/users/profile/${id}`, { body: payload, auth: true });
+  },
+
+  // Notifications
+  async getNotifications() {
+    return request('GET', '/notifications', { auth: true });
+  },
+
+  async markNotificationRead(id) {
+    return request('PATCH', `/notifications/${id}/read`, { auth: true });
+  },
+
+  async markAllNotificationsRead() {
+    return request('PATCH', '/notifications/read-all', { auth: true });
+  },
+
+  // Testimonials
+  async getTestimonials() {
+    return request('GET', '/testimonials');
+  },
+
+  async createTestimonial(payload) {
+    return request('POST', '/testimonials', { body: payload });
   }
 };
 

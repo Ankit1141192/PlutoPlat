@@ -36,12 +36,22 @@ const SearchResults = () => {
     return properties.filter((p) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const locStr = (
+          typeof p.location === 'string'
+            ? p.location
+            : `${p.location?.city || ''} ${p.location?.state || ''} ${p.location?.address || ''}`
+        ).toLowerCase();
+        const addrStr = (
+          typeof p.address === 'string'
+            ? p.address
+            : (p.location?.address || '')
+        ).toLowerCase();
         const matches =
-          p.title.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q) ||
-          p.address.toLowerCase().includes(q) ||
-          p.type.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q);
+          (p.title || '').toLowerCase().includes(q) ||
+          locStr.includes(q) ||
+          addrStr.includes(q) ||
+          (p.type || '').toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q);
         if (!matches) return false;
       }
 

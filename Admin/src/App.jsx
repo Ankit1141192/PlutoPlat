@@ -4,6 +4,9 @@ import { AdminProvider } from './context/AdminContext';
 import ProtectedRoute from './Components/ProtectedRoute';
 
 import Login from './Pages/Login';
+import Register from './Pages/Register';
+import ForgotPassword from './Pages/ForgotPassword';
+import ResetPassword from './Pages/ResetPassword';
 import Dashboard from './Pages/Dashboard';
 import PropertyList from './Pages/PropertyList';
 import Leads from './Pages/Leads';
@@ -17,6 +20,9 @@ export default function App() {
         <Routes>
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected Subdomain Root Routes (admin.plutoplat.com/*) */}
           <Route

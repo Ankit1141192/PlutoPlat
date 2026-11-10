@@ -5,8 +5,9 @@
  */
 
 const parseAllowedOrigins = () => {
-  const allowed = process.env.ALLOWED_ORIGIN || 'http://localhost:5173,http://localhost:3000';
+  const allowed = process.env.ALLOWED_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000';
   return allowed
+    .replace(/^"|"$/g, '')
     .split(',')
     .map((o) => o.trim().toLowerCase().replace(/\/$/, ''))
     .filter(Boolean);
@@ -18,6 +19,21 @@ const extractOriginFromUrl = (urlStr) => {
     return `${parsed.protocol}//${parsed.host}`.toLowerCase();
   } catch {
     return null;
+  }
+};
+
+const isLocalhostOrigin = (origin) => {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '[::1]' ||
+      url.hostname.endsWith('.localhost')
+    );
+  } catch {
+    return false;
   }
 };
 
@@ -41,10 +57,18 @@ const enforceAllowedDomain = (req, res, next) => {
     requestOrigin = extractOriginFromUrl(rawReferer);
   }
 
+  // Always allow local development origins if strict mode is disabled
+  if (requestOrigin && !enforceStrict && isLocalhostOrigin(requestOrigin)) {
+    return next();
+  }
+
   // If origin/referer is present, verify against allowed list
   if (requestOrigin) {
     const isAllowed = allowedOrigins.some((allowed) => {
-      if (allowed === requestOrigin) return true;
+      if (allowed === '*' || allowed === requestOrigin) return true;
+      if (isLocalhostOrigin(requestOrigin) && (allowed.includes('localhost') || allowed.includes('127.0.0.1'))) {
+        return true;
+      }
       if (allowed.startsWith('*.')) {
         const rootDomain = allowed.slice(2);
         try {
@@ -57,7 +81,7 @@ const enforceAllowedDomain = (req, res, next) => {
       return false;
     });
 
-    if (!isAllowed) {
+    if (!isAllowed && enforceStrict) {
       return res.status(403).json({
         success: false,
         message: 'Access Denied: Requests from unauthorized domains are blocked.',
@@ -67,8 +91,7 @@ const enforceAllowedDomain = (req, res, next) => {
     return next();
   }
 
-  // If no origin/referer header was sent (e.g. direct bot, curl, postman hit)
-  // When strict mode is enabled, reject request to protect server APIs
+  // If no origin/referer header was sent (e.g. direct curl, postman hit)
   if (enforceStrict) {
     return res.status(403).json({
       success: false,

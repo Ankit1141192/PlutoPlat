@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const enquiryController = require('../../controllers/enquiryController');
-const { authenticate } = require('../../middlewares/auth');
+const { authenticate, optionalAuthenticate } = require('../../middlewares/auth');
 
-// Create enquiry (Buyers & SuperAdmin; Admins blocked)
-router.post('/', authenticate, enquiryController.createEnquiry);
+// Create enquiry (Available to authenticated buyers and guest website visitors)
+router.post('/', optionalAuthenticate, enquiryController.createEnquiry);
 
 // Get enquiries (Role-scoped: Buyer sees own, Admin sees leads on own listings, SuperAdmin sees all)
 router.get('/', authenticate, enquiryController.getMyEnquiries);

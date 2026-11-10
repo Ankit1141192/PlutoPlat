@@ -6,123 +6,105 @@ const propertySchema = new mongoose.Schema(
       type: String,
       required: [true, 'Property title is required'],
       trim: true,
-      minlength: [5, 'Title must be at least 5 characters'],
-      maxlength: [150, 'Title cannot exceed 150 characters'],
+      minlength: [2, 'Title must be at least 2 characters'],
+      maxlength: [250, 'Title cannot exceed 250 characters'],
+    },
+
+    slug: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    subtitle: {
+      type: String,
+      trim: true,
+      default: '',
     },
 
     description: {
       type: String,
-      required: [true, 'Property description is required'],
       trim: true,
-      minlength: [20, 'Description must be at least 20 characters'],
+      default: '',
     },
 
     propertyType: {
       type: String,
-      enum: [
-        'plot', 'house', 'apartment', 'townhouse',
-        'land', 'commercial', 'villa', 'penthouse',
-        'farmhouse', 'cottage', 'bungalow',
-      ],
-      required: [true, 'Property type is required'],
+      trim: true,
+      default: 'villa',
       lowercase: true,
+    },
+
+    type: {
+      type: String,
+      trim: true,
+      default: 'Villas',
     },
 
     listingType: {
       type: String,
-      enum: ['sale', 'rent'],
-      required: true,
+      enum: ['sale', 'rent', 'buy', 'Buy', 'Rent'],
+      default: 'sale',
+    },
+
+    purpose: {
+      type: String,
+      trim: true,
+      default: 'Buy',
     },
 
     price: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed,
       required: [true, 'Property price is required'],
-      min: [1, 'Price must be greater than zero'],
       index: true,
+    },
+
+    numericPrice: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+
+    beds: {
+      type: Number,
+      default: 3,
+    },
+
+    baths: {
+      type: Number,
+      default: 3,
+    },
+
+    sqft: {
+      type: String,
+      default: '',
+    },
+
+    lotSize: {
+      type: String,
+      default: '',
+    },
+
+    yearBuilt: {
+      type: Number,
+      default: 2024,
+    },
+
+    garage: {
+      type: String,
+      default: '',
     },
 
     // Property location
     location: {
-      landmark: {
-        type: String,
-        trim: true,
-        default: '',
-      },
-
-      address: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      city: {
-        type: String,
-        required: true,
-        trim: true,
-        index: true,
-      },
-
-      town: {
-        type: String,
-        trim: true,
-        default: '',
-      },
-
-      village: {
-        type: String,
-        trim: true,
-        default: '',
-      },
-
-      locality: {
-        type: String,
-        trim: true,
-        default: '',
-      },
-
-      areaType: {
-        type: String,
-        enum: ['city', 'town', 'village', 'suburb', 'rural'],
-        default: 'city',
-      },
-
-      state: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      country: {
-        type: String,
-        required: true,
-        trim: true,
-        default: 'India',
-      },
-
-      pincode: {
-        type: String,
-        required: true,
-        validate: {
-          validator: (value) => /^[1-9][0-9]{5}$/.test(value),
-          message: 'Enter a valid 6-digit Indian PIN code',
-        },
-      },
-
-      coordinates: {
-        latitude: {
-          type: Number,
-          required: true,
-          min: -90,
-          max: 90,
-        },
-
-        longitude: {
-          type: Number,
-          required: true,
-          min: -180,
-          max: 180,
-        },
-      },
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({
+        address: 'Prime Corridor',
+        city: 'Kanpur',
+        state: 'Uttar Pradesh',
+        country: 'India',
+        pincode: '208001',
+      }),
     },
 
     isAvailable: {
@@ -130,34 +112,50 @@ const propertySchema = new mongoose.Schema(
       default: true,
     },
 
+    image: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     images: {
       type: [{
         type: String,
         trim: true,
       }],
-      required: true,
-      validate: {
-        validator: (images) => images.length > 0,
-        message: 'At least one property image is required',
-      },
+      default: [],
+    },
+
+    features: {
+      type: [String],
+      default: [],
+    },
+
+    amenities: {
+      type: [String],
+      default: [],
     },
 
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
       index: true,
+    },
+
+    postedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
 
     isVerified: {
       type: Boolean,
-      default: false,
+      default: true,
     },
 
     status: {
       type: String,
-      enum: ['draft', 'pending', 'active', 'rejected'],
-      default: 'pending',
+      enum: ['draft', 'pending', 'active', 'approved', 'rejected'],
+      default: 'active',
       index: true,
     },
 
@@ -172,42 +170,102 @@ const propertySchema = new mongoose.Schema(
       default: false,
     },
 
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+
     isPromoted: {
       type: Boolean,
       default: false,
     },
 
-    promotionEndDate: {
-      type: Date,
+    views: {
+      type: Number,
+      default: 0,
+    },
+
+    agent: {
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
   },
   {
     timestamps: true,
     versionKey: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Search and filtering indexes
+// Virtual id matching _id
+propertySchema.virtual('id').get(function () {
+  return this._id ? this._id.toString() : '';
+});
+
+// Sync image, numericPrice, location before save
+propertySchema.pre('save', function () {
+  if (!this.image && this.images && this.images.length > 0) {
+    this.image = this.images[0];
+  }
+  if (!this.images || this.images.length === 0) {
+    if (this.image) {
+      this.images = [this.image];
+    }
+  }
+
+  // Sync numericPrice
+  if (typeof this.price === 'number') {
+    this.numericPrice = this.price;
+  } else if (typeof this.price === 'string') {
+    const parsed = parseInt(this.price.replace(/[^\d]/g, ''), 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      this.numericPrice = parsed;
+    }
+  }
+
+  if (this.featured) this.isFeatured = true;
+  if (this.isFeatured) this.featured = true;
+
+  if (this.status === 'approved') this.status = 'active';
+});
+
+// Format normalized JSON for frontend
+propertySchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  obj.id = obj._id.toString();
+
+  // Ensure location string for frontend components that expect string
+  if (typeof obj.location === 'object' && obj.location !== null) {
+    const loc = obj.location;
+    obj.locationString = `${loc.city || ''}${loc.state ? ', ' + loc.state : ''}`.trim() || loc.address || 'Civil Lines, Kanpur';
+    obj.address = loc.address || obj.locationString;
+    obj.city = loc.city || '';
+  } else if (typeof obj.location === 'string') {
+    obj.locationString = obj.location;
+    obj.address = obj.location;
+  }
+
+  if (!obj.image && obj.images && obj.images.length > 0) {
+    obj.image = obj.images[0];
+  }
+
+  if (!obj.numericPrice && typeof obj.price === 'number') {
+    obj.numericPrice = obj.price;
+  }
+
+  return obj;
+};
+
+// Search indexes
 propertySchema.index({
   'location.city': 1,
   'location.state': 1,
 });
 
 propertySchema.index({
-  propertyType: 1,
-  listingType: 1,
-  price: 1,
-});
-
-propertySchema.index({
-  isAvailable: 1,
-  isVerified: 1,
-  status: 1,
-});
-
-propertySchema.index({
-  'location.coordinates': '2dsphere',
+  title: 'text',
+  description: 'text',
 });
 
 const Property = mongoose.model('Property', propertySchema);

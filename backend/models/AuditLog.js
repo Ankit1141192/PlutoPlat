@@ -5,7 +5,8 @@ const auditLogSchema = new mongoose.Schema(
     actor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Actor ID is required'],
+      required: false,
+      default: null,
       index: true,
     },
 

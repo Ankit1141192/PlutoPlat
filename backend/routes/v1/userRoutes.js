@@ -9,7 +9,9 @@ router.post('/saved-properties/:propertyId/toggle', authenticate, userController
 
 // Notifications
 router.get('/notifications', authenticate, userController.getNotifications);
+router.patch('/notifications/read-all', authenticate, userController.markAllNotificationsRead);
 router.patch('/notifications/:id/read', authenticate, userController.markNotificationRead);
+router.delete('/notifications/:id', authenticate, userController.deleteNotification);
 
 // Public/Authenticated: Get user profile by ID
 router.get('/profile/:id', userController.getUserProfile);

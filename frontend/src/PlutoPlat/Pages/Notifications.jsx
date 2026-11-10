@@ -1,68 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Bell, CheckCheck, Trash2, ArrowRight, Sparkles, 
-  ShieldAlert, Calendar, DollarSign, ExternalLink 
+  ShieldAlert, Calendar, DollarSign, ExternalLink, Loader2
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
+
+const DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    category: 'Off-Market',
+    badge: 'EXCLUSIVE OFF-MARKET',
+    title: 'Confidential Trophy Estate Available for Private Review',
+    timestamp: 'Just now',
+    isUnread: true,
+    description: 'A 14,000 sq.ft modern architectural estate has entered discrete pre-market representation. Available exclusively to Sovereign Tier members.',
+    actionLabel: 'Review Private Briefing',
+    actionLink: '/properties'
+  },
+  {
+    id: 'notif-2',
+    category: 'Itineraries',
+    badge: 'VIEWING CONFIRMED',
+    title: 'Chauffeured Site Visit Scheduled for The Imperial Villa',
+    timestamp: '2 hours ago',
+    isUnread: true,
+    description: 'Your scheduled private viewing has been logged with our senior concierge advisor. Direct agent coordination active.',
+    actionLabel: 'Open Viewing Itinerary',
+    actionLink: '/my-enquiries'
+  },
+  {
+    id: 'notif-3',
+    category: 'Market Intelligence',
+    badge: 'VALUATION REVISION',
+    title: 'Prime Civil Lines Luxury Penthouse Adjusted',
+    timestamp: 'Yesterday',
+    isUnread: false,
+    description: 'Strategic valuation revision recorded to facilitate autumn escrow settlement before year-end.',
+    actionLabel: 'Inspect Revised Pricing',
+    actionLink: '/properties'
+  },
+  {
+    id: 'notif-4',
+    category: 'Security Alerts',
+    badge: 'COMPLIANCE AUDIT',
+    title: 'Fiduciary Non-Disclosure Agreement Renewed',
+    timestamp: '3 days ago',
+    isUnread: false,
+    description: 'Your fiduciary NDA with PlutoPlat International Real Estate Inc. has been automatically renewed with 256-bit encryption safeguards.',
+    actionLabel: 'View Profile Security',
+    actionLink: '/profile'
+  }
+];
 
 const Notifications = () => {
-  const { showToast } = usePropertyStore();
+  const { showToast, user } = usePropertyStore();
 
   const [activeTab, setActiveTab] = useState('All');
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      category: 'Off-Market',
-      badge: 'EXCLUSIVE OFF-MARKET',
-      title: 'Confidential Bel-Air Promontory Now Available for Private Review',
-      timestamp: '18 minutes ago',
-      isUnread: true,
-      description: 'An unlisted 14,000 sq.ft modern architectural estate designed by Paul McClean has entered discrete pre-market representation. Available exclusively to Sovereign Tier members.',
-      actionLabel: 'Review Private Briefing',
-      actionLink: '/property/1'
-    },
-    {
-      id: 2,
-      category: 'Itineraries',
-      badge: 'VIEWING CONFIRMED',
-      title: 'Rolls-Royce Chauffeur Confirmed for The Sapphire Estate',
-      timestamp: '2 hours ago',
-      isUnread: true,
-      description: 'Your scheduled private viewing on Summitridge Drive has been confirmed for tomorrow at 02:30 PM PST. Driver contact details and security gate credentials have been provisioned.',
-      actionLabel: 'Open Viewing Itinerary',
-      actionLink: '/my-enquiries'
-    },
-    {
-      id: 3,
-      category: 'Market Intelligence',
-      badge: 'VALUATION REVISION',
-      title: 'Prime Malibu Oceanfront Estate Adjusted by $1,200,000',
-      timestamp: 'Yesterday at 16:45',
-      isUnread: false,
-      description: 'The owner of Modern Cliffside Haven has instructed a strategic valuation revision to $12,400,000 to facilitate autumn escrow settlement before year-end.',
-      actionLabel: 'Inspect Revised Pricing',
-      actionLink: '/property/2'
-    },
-    {
-      id: 4,
-      category: 'Security Alerts',
-      badge: 'COMPLIANCE AUDIT',
-      title: 'Annual Mutual Non-Disclosure Agreement Successfully Renewed',
-      timestamp: '3 days ago',
-      isUnread: false,
-      description: 'Your fiduciary NDA (#PLP-NDA-2024-098) with PlutoPlat International Real Estate Inc. has been automatically renewed for a 24-month term with updated biometric safeguards.',
-      actionLabel: 'View Certificate in Vault',
-      actionLink: '/profile'
-    }
-  ]);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [loading, setLoading] = useState(false);
 
-  const handleMarkAllRead = () => {
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        setLoading(true);
+        const res = await Api.getNotifications();
+        if (res?.data?.notifications && res.data.notifications.length > 0) {
+          const mapped = res.data.notifications.map((n) => ({
+            id: n._id || n.id,
+            category: n.category || 'Off-Market',
+            badge: (n.category || n.type || 'ADVISORY').toUpperCase(),
+            title: n.title,
+            timestamp: n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent',
+            isUnread: n.isUnread !== undefined ? n.isUnread : !n.read,
+            description: n.description || n.message,
+            actionLabel: n.actionLabel || 'View Details',
+            actionLink: n.link || '/properties'
+          }));
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        // Fallback to local intelligence stream
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifs();
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await Api.markAllNotificationsRead();
+    } catch (e) {}
     setNotifications((prev) => prev.map((n) => ({ ...n, isUnread: false })));
     showToast('All intelligence briefings marked as read.', 'success');
   };
 
-  const handleDeleteNotification = (id) => {
+  const handleDeleteNotification = async (id) => {
+    try {
+      await Api.deleteNotification(id);
+    } catch (e) {}
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     showToast('Briefing archived from your stream.', 'info');
   };

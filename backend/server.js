@@ -1,8 +1,10 @@
+const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = require('./app');
 const connectDB = require('./config/db');
+const { seedInitialData } = require('./utils/seedData');
 
 const PORT = process.env.PORT || 5000;
 
@@ -18,6 +20,9 @@ const startServer = async () => {
   try {
     // Connect to database
     await connectDB();
+
+    // Auto seed initial dataset if empty
+    await seedInitialData();
 
     server = app.listen(PORT, () => {
       console.log(`===============================================`);

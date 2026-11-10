@@ -31,16 +31,22 @@ const buildHeaders = (auth = false) => {
  * Throws an Error with the backend's message on non-2xx responses.
  */
 const request = async (method, path, { body, auth = false } = {}) => {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: buildHeaders(auth),
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: buildHeaders(auth),
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch (netErr) {
+    console.error('Fetch network error:', netErr);
+    throw new Error('Unable to reach the API server. Please check your backend connection.');
+  }
 
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const message = data?.message || `Request failed with status ${res.status}`;
+    const message = data?.message || (res.status === 500 ? 'Server error (500). Please check backend database configuration.' : `Request failed with status ${res.status}`);
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -66,7 +72,11 @@ export const Api = {
    * @param {{ name, email, phone, password, role?, location? }} payload
    */
   async register(payload) {
-    return request('POST', '/auth/register', { body: payload });
+    const data = await request('POST', '/auth/register', { body: payload });
+    if (data?.data?.token) {
+      localStorage.setItem('pluto_token', data.data.token);
+    }
+    return data;
   },
 
   /**
@@ -200,6 +210,23 @@ export const Api = {
    */
   async markNotificationRead(id) {
     return request('PATCH', `/users/notifications/${id}/read`, { auth: true });
+  },
+
+  /**
+   * Mark all notifications as read.
+   * PATCH /api/v1/users/notifications/read-all
+   */
+  async markAllNotificationsRead() {
+    return request('PATCH', '/users/notifications/read-all', { auth: true });
+  },
+
+  /**
+   * Delete a notification.
+   * DELETE /api/v1/users/notifications/:id
+   * @param {string} id
+   */
+  async deleteNotification(id) {
+    return request('DELETE', `/users/notifications/${id}`, { auth: true });
   },
 
   // ══════════════════════════════════════════

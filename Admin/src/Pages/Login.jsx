@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Lock,
   Mail,
@@ -24,7 +24,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => location.state?.message || '');
   const [lockoutRemaining, setLockoutRemaining] = useState(null);
 
   const from = location.state?.from?.pathname || '/';
@@ -55,12 +55,6 @@ const Login = () => {
     }
   };
 
-  const handleQuickDemo = (demoEmail, demoPass = 'Password@123') => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError('');
-  };
-
   return (
     <div className="min-h-screen bg-[#F8F6F2] flex flex-col justify-between selection:bg-[#B49A70] selection:text-white">
       {/* Top Header */}
@@ -79,10 +73,7 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EBE7DF]/60 border border-[#DEDAD1] text-xs font-medium text-[#6E6D66]">
-          <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-          Subdomain: <code className="text-[#1C201C] font-mono font-semibold">admin.plutoplat.com</code>
-        </div>
+        
       </header>
 
       {/* Main Body */}
@@ -205,9 +196,9 @@ const Login = () => {
                   />
                   Remember workstation device
                 </label>
-                <span className="text-xs text-[#B49A70] hover:underline cursor-pointer">
-                  Security Assistance
-                </span>
+                <Link to="/forgot-password" className="text-xs text-[#B49A70] hover:underline">
+                  Forgot Password?
+                </Link>
               </div>
 
               <button
@@ -226,30 +217,12 @@ const Login = () => {
               </button>
             </form>
 
-            {/* Quick Demo Sign-in for immediate testing */}
-            <div className="mt-8 pt-6 border-t border-[#DEDAD1]/70">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#6E6D66] mb-3">
-                Quick Demo Credentials (One-Click)
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('m.sharma@plutoplat.com')}
-                  className="px-3.5 py-2.5 bg-[#F8F6F2] hover:bg-[#EBE7DF] border border-[#DEDAD1] rounded-xs text-left text-xs transition-colors cursor-pointer"
-                >
-                  <div className="font-semibold text-[#1C201C]">Michael Sharma</div>
-                  <div className="text-[11px] text-[#6E6D66]">Senior Agent (Pro Partner)</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('p.patel@plutoplat.com')}
-                  className="px-3.5 py-2.5 bg-[#F8F6F2] hover:bg-[#EBE7DF] border border-[#DEDAD1] rounded-xs text-left text-xs transition-colors cursor-pointer"
-                >
-                  <div className="font-semibold text-[#1C201C]">Priya Patel</div>
-                  <div className="text-[11px] text-[#6E6D66]">Verified Broker (Mumbai)</div>
-                </button>
-              </div>
-            </div>
+            <p className="mt-6 text-center text-xs text-[#6E6D66]">
+              New Broker or Realty Partner?{' '}
+              <Link to="/register" className="font-semibold text-[#1C201C] underline hover:text-[#B49A70]">
+                Apply for Access
+              </Link>
+            </p>
 
           </div>
 

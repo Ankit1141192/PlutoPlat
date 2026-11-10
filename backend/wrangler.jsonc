@@ -13,7 +13,7 @@
     "NODE_ENV": "production",
     "MONGO_URI": "mongodb+srv://ankit2914978_db_user:qXdyWvZPWB3Ac45R@cluster0.b8xd9bf.mongodb.net/plutoplat?retryWrites=true&w=majority",
     "JWT_SECRET": "PlutoPaltSecretKeySuperSecure2026",
-    "ALLOWED_ORIGIN": "http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175,https://my-node-backend.ankit2914978.workers.dev,*.vercel.app,*.plutoplat.com,https://plutoplat.com,https://admin.plutoplat.com,https://superadmin.plutoplat.com",
+    "ALLOWED_ORIGIN": "http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175,https://my-node-backend.ankit2914978.workers.dev,*.vercel.app,*.plutoplat.com,https://plutoplat.com,https://admin.plutoplat.com,https://superadmin.plutoplat.com,https://www.plutoplot.in,https://admin.plutoplot.in,https://superadmin.plutoplot.in",
     "ENFORCE_ORIGIN_CHECK": "false",
     "JWT_EXPIRES_IN": "7d",
     "MAX_LOGIN_ATTEMPTS": "5",

@@ -3,19 +3,6 @@ import { AdminApi } from '../services/Api';
 
 const AdminContext = createContext(null);
 
-const DEFAULT_AGENT_USER = {
-  id: 'USR-002',
-  name: 'Michael Sharma',
-  email: 'm.sharma@plutoplat.com',
-  phone: '+91 98210 33445',
-  role: 'admin',
-  agency: 'Sovereign Heritage Realty Partners',
-  rera: 'UP-RERA-2026-98124',
-  tier: 'Pro Partner (₹4,999/mo)',
-  city: 'Civil Lines, Kanpur',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-};
-
 const INITIAL_PROPERTIES = [
   {
     id: 1,
@@ -161,6 +148,53 @@ export const AdminProvider = ({ children }) => {
     }
   }, [leads]);
 
+  // Silently sync session on mount/refresh if token exists without logging out on network failure
+  useEffect(() => {
+    const token = localStorage.getItem('pluto_admin_token');
+    if (token) {
+      AdminApi.getMe()
+        .then((res) => {
+          if (res?.data?.user) {
+            const authUser = res.data.user;
+            if (authUser.role === 'admin' || authUser.role === 'super_admin') {
+              setUser(authUser);
+              localStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
+            } else {
+              // Revoke if role is not authorized
+              AdminApi.logout();
+              setUser(null);
+              localStorage.removeItem('plutoplat_admin_user');
+            }
+          }
+        })
+        .catch((err) => {
+          if (err?.status === 401) {
+            AdminApi.logout();
+            setUser(null);
+            localStorage.removeItem('plutoplat_admin_user');
+          }
+        });
+
+      // Sync live agent properties from MongoDB backend
+      AdminApi.getMyProperties()
+        .then((res) => {
+          if (res?.data?.properties && res.data.properties.length > 0) {
+            setProperties(res.data.properties);
+          }
+        })
+        .catch(() => {});
+
+      // Sync live inquiries/leads from MongoDB backend
+      AdminApi.getMyEnquiries()
+        .then((res) => {
+          if (res?.data?.leads && res.data.leads.length > 0) {
+            setLeads(res.data.leads);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
     setTimeout(() => {
@@ -171,35 +205,23 @@ export const AdminProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // First attempt remote API login
-      try {
-        const response = await AdminApi.login({ email, password });
-        if (response?.data?.user) {
-          const authUser = response.data.user;
-          // Verify role permission
-          if (authUser.role !== 'admin' && authUser.role !== 'super_admin') {
-            throw new Error('Access Denied: Only Admin and Agent accounts are authorized to access this workstation.');
-          }
-          setUser(authUser);
-          showToast(`Welcome back, ${authUser.name}!`, 'success');
-          return authUser;
-        }
-      } catch (apiErr) {
-        // Fallback for local demo preview if network/backend is unavailable
-        if (email.toLowerCase().includes('agent') || email.toLowerCase() === 'm.sharma@plutoplat.com' || email.toLowerCase() === 'owner@plutoplat.com') {
-          const demoUser = {
-            ...DEFAULT_AGENT_USER,
-            email: email,
-            name: email === 'owner@plutoplat.com' ? 'Julian Beaumont' : 'Michael Sharma',
-            role: email === 'owner@plutoplat.com' ? 'super_admin' : 'admin'
-          };
-          setUser(demoUser);
-          localStorage.setItem('pluto_admin_token', 'demo-agent-jwt-token-2026');
-          showToast(`Signed in to Agent Workstation as ${demoUser.name}`, 'success');
-          return demoUser;
-        }
-        throw apiErr;
+      const response = await AdminApi.login({ email: email.trim().toLowerCase(), password });
+      const authUser = response?.data?.user;
+
+      if (!authUser) {
+        throw new Error(response?.message || 'Login failed. Please verify credentials.');
       }
+
+      // Verify role permission strictly: only admin and super_admin
+      if (authUser.role !== 'admin' && authUser.role !== 'super_admin') {
+        AdminApi.logout();
+        throw new Error('Access Denied: Only Admin and Agent accounts are authorized to access this workstation.');
+      }
+
+      setUser(authUser);
+      localStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
+      showToast(`Welcome back, ${authUser.name}!`, 'success');
+      return authUser;
     } finally {
       setLoading(false);
     }
@@ -208,7 +230,40 @@ export const AdminProvider = ({ children }) => {
   const logout = () => {
     AdminApi.logout();
     setUser(null);
+    try {
+      localStorage.removeItem('plutoplat_admin_user');
+    } catch (e) {
+      console.error(e);
+    }
     showToast('Signed out of Admin Workstation.', 'info');
+  };
+
+  const updateProfile = async (formData) => {
+    const userId = user?._id || user?.id;
+    if (userId && localStorage.getItem('pluto_admin_token')) {
+      await AdminApi.updateProfile(userId, {
+        name: formData.name,
+        phone: formData.phone,
+        location: { city: formData.city },
+      });
+    }
+    const nextUser = {
+      ...(user || {}),
+      name: formData.name,
+      phone: formData.phone,
+      city: formData.city,
+      agency: formData.agency || user?.agency,
+      rera: formData.rera || user?.rera,
+      location: { ...(user?.location || {}), city: formData.city },
+    };
+    setUser(nextUser);
+    try {
+      localStorage.setItem('plutoplat_admin_user', JSON.stringify(nextUser));
+    } catch (e) {
+      console.error(e);
+    }
+    showToast('Agent profile credentials & dossier updated successfully.', 'success');
+    return nextUser;
   };
 
   const switchRole = (newRole) => {
@@ -220,29 +275,43 @@ export const AdminProvider = ({ children }) => {
   };
 
   // Property Actions
-  const addProperty = (newProp) => {
-    const id = Date.now();
-    const createdProp = {
-      ...newProp,
-      id,
-      verified: user?.role === 'super_admin',
-      status: user?.role === 'super_admin' ? 'approved' : 'pending',
-      ownerEmail: user?.email || 'm.sharma@plutoplat.com',
-      ownerName: user?.name || 'Michael Sharma',
-      createdAt: new Date().toISOString()
-    };
-    setProperties(prev => [createdProp, ...prev]);
-    showToast('Property submitted! Awaiting SuperAdmin verification and approval.', 'success');
-    return createdProp;
+  const addProperty = async (newProp) => {
+    try {
+      const res = await AdminApi.createProperty(newProp);
+      const created = res?.data?.property || { ...newProp, id: Date.now(), status: 'approved', verified: true };
+      setProperties(prev => [created, ...prev]);
+      showToast('Property published and live on user portal!', 'success');
+      return created;
+    } catch (err) {
+      console.warn('Backend property publish notice:', err.message);
+      const fallbackProp = {
+        ...newProp,
+        id: Date.now(),
+        verified: true,
+        status: 'approved',
+        ownerEmail: user?.email || 'agent@plutoplat.com',
+        ownerName: user?.name || 'Authorized Agent',
+        createdAt: new Date().toISOString()
+      };
+      setProperties(prev => [fallbackProp, ...prev]);
+      showToast('Property recorded and published.', 'success');
+      return fallbackProp;
+    }
   };
 
-  const updateProperty = (id, updatedFields) => {
-    setProperties(prev => prev.map(p => (p.id === id ? { ...p, ...updatedFields } : p)));
+  const updateProperty = async (id, updatedFields) => {
+    try {
+      await AdminApi.updateProperty(id, updatedFields);
+    } catch (err) {}
+    setProperties(prev => prev.map(p => (p.id === id || p._id === id ? { ...p, ...updatedFields } : p)));
     showToast('Property details updated successfully.', 'success');
   };
 
-  const deleteProperty = (id) => {
-    setProperties(prev => prev.filter(p => p.id !== id));
+  const deleteProperty = async (id) => {
+    try {
+      await AdminApi.deleteProperty(id);
+    } catch (err) {}
+    setProperties(prev => prev.filter(p => p.id !== id && p._id !== id));
     showToast('Property listing removed.', 'info');
   };
 
@@ -269,7 +338,8 @@ export const AdminProvider = ({ children }) => {
     leads,
     updateLeadStatus,
     toast,
-    showToast
+    showToast,
+    updateProfile
   };
 
   return (

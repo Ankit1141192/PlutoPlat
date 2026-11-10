@@ -73,36 +73,19 @@ const Register = () => {
       const res = await Api.register(payload);
       const registeredUser = res?.data?.user;
 
+      if (!registeredUser) {
+        throw new Error(res?.message || 'Registration failed. Please try again.');
+      }
+
       setSuccessMsg('Account created! Taking you to your profile…');
       showToast('Welcome to PlutoPlat! Your account is ready.', 'success');
 
-      login({
-        id: registeredUser?._id || registeredUser?.id,
-        name: fullName.trim(),
-        email: email.trim(),
-        phone: cleanPhone,
-        role: 'user',
-        city: city.trim() || 'Kanpur, Uttar Pradesh',
-      });
+      login(registeredUser);
 
       setTimeout(() => navigate('/profile'), 900);
     } catch (err) {
-      console.warn('Backend registration error notice:', err);
-
-      if (err?.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        setErrorMsg(err.message);
-      } else {
-        // Fallback for preview mode
-        showToast('Account registered successfully. Welcome!', 'success');
-        login({
-          name: fullName.trim(),
-          email: email.trim(),
-          phone: cleanPhone,
-          role: 'user',
-          city: city.trim() || 'Kanpur, Uttar Pradesh',
-        });
-        setTimeout(() => navigate('/profile'), 800);
-      }
+      console.warn('Backend registration error:', err);
+      setErrorMsg(err.message || 'Registration failed. Please verify your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -239,7 +222,7 @@ const Register = () => {
         <button
           type="submit"
           disabled={loading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#B49A70] text-sm font-semibold tracking-wide text-white shadow-md transition hover:bg-[#9E865F] active:scale-[0.99] disabled:opacity-70"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#B49A70] text-sm font-semibold tracking-wide text-white shadow-md transition hover:bg-[#9E865F] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
         >
           {loading ? (
             <>

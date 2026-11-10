@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   User, ShieldCheck, Heart, Phone, MapPin, Building,
   KeyRound, FileText, CheckCircle2, Edit3, Save, X,
-  ExternalLink, Award, LogOut, Mail, Briefcase, ChevronRight
+  ExternalLink, Award, LogOut, Mail, Briefcase, ChevronRight,
+  Camera, Upload
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
 import { WhatsAppIcon } from '../Components/RegisterInterestModal';
 
 const TABS = [
@@ -52,12 +54,12 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: user?.name || 'Lord Julian Beaumont',
-    entityName: 'Beaumont Sovereign Capital & Family Trust',
-    title: 'Managing Principal & Architectural Connoisseur',
-    email: user?.email || 'client@plutoplat.com',
-    phone: user?.phone || '+91 9956346155',
-    city: user?.city || 'Civil Lines, Kanpur, Uttar Pradesh',
+    fullName: user?.name || '',
+    entityName: 'Private Client Portfolio',
+    title: 'Private Investor',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    city: user?.location?.city || user?.city || '',
     memberSince: user?.memberSince || 'October 2024',
     tier: user?.tier || 'Sovereign Private Member',
     targetBudgetMin: '₹5,00,00,000',
@@ -69,13 +71,45 @@ const Profile = () => {
   });
 
   useEffect(() => {
+    // If not authenticated and no token, redirect to login
+    const token = localStorage.getItem('pluto_token');
+    if (!user && !token) {
+      navigate('/login', { replace: true, state: { from: '/profile' } });
+      return;
+    }
+
+    if (token) {
+      Api.getMe()
+        .then((res) => {
+          if (res?.data?.user) {
+            const u = res.data.user;
+            setFormData((prev) => ({
+              ...prev,
+              fullName: u.name || prev.fullName,
+              email: u.email || prev.email,
+              phone: u.phone || prev.phone,
+              city: u.location?.city || prev.city,
+            }));
+            updateUser?.(u);
+          }
+        })
+        .catch((err) => {
+          if (err?.status === 401) {
+            logout();
+            navigate('/login');
+          }
+        });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     if (user) {
       setFormData((prev) => ({
         ...prev,
         fullName: user.name || prev.fullName,
         email: user.email || prev.email,
         phone: user.phone || prev.phone,
-        city: user.city || prev.city,
+        city: user.location?.city || user.city || prev.city,
       }));
     }
   }, [user]);
@@ -83,19 +117,75 @@ const Profile = () => {
   const handleInputChange = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     setIsEditing(false);
-    if (updateUser) {
-      updateUser({
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        city: formData.city,
-      });
-    } else {
+
+    try {
+      const userId = user?._id || user?.id;
+      if (userId && localStorage.getItem('pluto_token')) {
+        await Api.updateUserProfile(userId, {
+          name: formData.fullName,
+          phone: formData.phone,
+          location: { city: formData.city },
+        });
+      }
+
+      if (updateUser) {
+        updateUser({
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.city,
+          location: { ...(user?.location || {}), city: formData.city },
+        });
+      }
       showToast?.('Client dossier & acquisition preferences updated successfully.', 'success');
+    } catch (err) {
+      console.warn('Profile update error:', err);
+      showToast?.(err.message || 'Failed to update profile.', 'error');
     }
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast?.('Please upload a valid image file (JPEG, PNG, WebP).', 'error');
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      showToast?.('Image size must be under 12MB.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Photo = reader.result;
+      const userId = user?.id || user?._id;
+
+      try {
+        if (userId && localStorage.getItem('pluto_token')) {
+          await Api.updateUserProfile(userId, {
+            profileImage: base64Photo,
+            avatar: base64Photo,
+          });
+        }
+        if (updateUser) {
+          updateUser({
+            profileImage: base64Photo,
+            avatar: base64Photo,
+          });
+        }
+        showToast?.('Profile photo updated successfully!', 'success');
+      } catch (err) {
+        console.warn('Photo upload sync error:', err);
+        showToast?.(err.message || 'Failed to update photo.', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSignOut = () => {
@@ -125,10 +215,10 @@ const Profile = () => {
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left gap-4 sm:gap-6 min-w-0">
-              <div className="relative shrink-0">
-                {user?.avatar ? (
+              <div className="relative shrink-0 group/avatar">
+                {user?.avatar || user?.profileImage ? (
                   <img
-                    src={user.avatar}
+                    src={user.avatar || user.profileImage}
                     alt={formData.fullName}
                     className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-[#B49A70] shadow-xl"
                   />
@@ -137,12 +227,32 @@ const Profile = () => {
                     {formData.fullName?.charAt(0) || 'U'}
                   </div>
                 )}
-                <span
-                  className="absolute bottom-1 right-1 w-7 h-7 bg-[#10B981] border-2 border-[#1C201C] rounded-full flex items-center justify-center"
-                  title="Verified"
+                
+                {/* Hover overlay to change photo */}
+                <label
+                  htmlFor="avatar-file-input"
+                  className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-semibold tracking-wider"
+                  title="Click to update photo"
                 >
-                  <CheckCircle2 size={14} className="text-white" />
-                </span>
+                  <Camera size={22} className="mb-0.5 text-[#E8D9BF]" />
+                  <span>Update</span>
+                </label>
+                <input
+                  id="avatar-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+
+                {/* Camera badge button */}
+                <label
+                  htmlFor="avatar-file-input"
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-[#B49A70] hover:bg-[#9E865F] border-2 border-[#1C201C] rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110"
+                  title="Upload profile photo"
+                >
+                  <Camera size={14} className="text-white" />
+                </label>
               </div>
 
               <div className="min-w-0">

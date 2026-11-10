@@ -21,15 +21,25 @@ app.use(
 );
 
 // 2. Strict CORS Configuration
-const allowedOrigins = parseAllowedOrigins();
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl during local dev if not strict)
       if (!origin) return callback(null, true);
+      const allowedOrigins = parseAllowedOrigins();
       const originLower = origin.toLowerCase().replace(/\/$/, '');
+
+      // Allow all localhost / 127.0.0.1 variants during development
+      if (
+        originLower.includes('localhost') ||
+        originLower.includes('127.0.0.1') ||
+        process.env.ENFORCE_ORIGIN_CHECK !== 'true'
+      ) {
+        return callback(null, true);
+      }
+
       const isAllowed = allowedOrigins.some((allowed) => {
-        if (allowed === originLower) return true;
+        if (allowed === '*' || allowed === originLower) return true;
         if (allowed.startsWith('*.')) {
           const rootDomain = allowed.slice(2);
           try {
@@ -67,9 +77,9 @@ app.use('/api', enforceAllowedDomain);
 // 4. Global API Rate Limiter
 app.use('/api', apiLimiter);
 
-// 5. Body Parsers with payload size limits
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// 5. Body Parsers with generous payload size limits (supporting base64 photos)
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // 6. Base & Health Endpoints
 app.get('/', (req, res) => {

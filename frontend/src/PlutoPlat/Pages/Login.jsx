@@ -5,45 +5,6 @@ import { usePropertyStore } from '../../context/PropertyContext';
 import { Api } from '../Services/Api';
 import { AuthLayout, Field, PasswordToggle } from './AuthLayout';
 
-const demoProfiles = [
-  {
-    label: 'Buyer',
-    user: {
-      id: 'USR-004',
-      name: 'Vikramaditya (Buyer)',
-      email: 'v.singhania@heritageholdings.in',
-      phone: '+91 98110 44521',
-      role: 'user',
-      tier: 'Private Client',
-      city: 'Civil Lines, Kanpur',
-    },
-  },
-  {
-    label: 'Agent',
-    user: {
-      id: 'USR-002',
-      name: 'Michael Sharma (Agent)',
-      email: 'm.sharma@plutoplat.com',
-      phone: '+91 98210 33445',
-      role: 'admin',
-      tier: 'Partner Agent',
-      city: 'Civil Lines, Kanpur',
-    },
-  },
-  {
-    label: 'Super admin',
-    user: {
-      id: 'USR-001',
-      name: 'Julian Beaumont',
-      email: 'owner@plutoplat.com',
-      phone: '+91 99563 46155',
-      role: 'super_admin',
-      tier: 'Website Owner',
-      city: 'Kanpur, UP',
-    },
-  },
-];
-
 const Login = () => {
   const navigate = useNavigate();
   const { login } = usePropertyStore();
@@ -57,32 +18,30 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!email || !password) {
+      setErrorMsg('Please enter both email and password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await Api.login({ email, password });
+      const res = await Api.login({ email: email.trim().toLowerCase(), password });
       const apiUser = res?.data?.user;
 
-      login({
-        id: apiUser?._id || apiUser?.id,
-        name: apiUser?.name || email.split('@')[0],
-        email: apiUser?.email || email,
-        phone: apiUser?.phone,
-        role: apiUser?.role || 'user',
-        city: apiUser?.location?.city || 'Kanpur, Uttar Pradesh',
-      });
+      if (!apiUser) {
+        throw new Error(res?.message || 'Login failed. Please check your credentials.');
+      }
 
+      login(apiUser);
       navigate('/profile');
     } catch (err) {
-      console.warn('Backend login notice:', err);
-      if (err?.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        setErrorMsg(err.message);
+      console.warn('Login error:', err);
+      if (err.status === 423 || err.data?.isLocked) {
+        setErrorMsg(`Account locked for ${err.data?.remainingMinutes || 30} minutes due to multiple failed login attempts.`);
       } else {
-        // Fallback for seamless experience
-        const cleanName = email.split('@')[0].replace(/[._-]/g, ' ');
-        const formattedName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-        login({ name: formattedName, email, role: 'user', city: 'Kanpur, Uttar Pradesh' });
-        navigate('/profile');
+        setErrorMsg(err.message || 'Invalid email or password. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -158,7 +117,7 @@ const Login = () => {
         <button
           type="submit"
           disabled={loading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#1C201C] text-sm font-semibold tracking-wide text-white shadow-md transition hover:bg-black active:scale-[0.99] disabled:opacity-70"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#1C201C] text-sm font-semibold tracking-wide text-white shadow-md transition hover:bg-black active:scale-[0.99] disabled:opacity-70 cursor-pointer"
         >
           {loading ? (
             <>
@@ -177,26 +136,6 @@ const Login = () => {
       <p className="mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-[#287A50]">
         <ShieldCheck size={14} /> Secured with 256-bit SSL
       </p>
-
-      {/* Demo profiles */}
-      {/* <div className="mt-6 border-t border-[#EAE6DE] pt-5">
-        <p className="mb-3 text-center text-xs text-[#8E8B82]">Or try a demo profile</p>
-        <div className="grid grid-cols-3 gap-2">
-          {demoProfiles.map(({ label, user }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => {
-                login(user);
-                navigate('/profile');
-              }}
-              className="h-11 rounded-md border border-[#DDD8CE] bg-[#F8F6F2] px-1 text-xs font-semibold text-[#1C201C] transition hover:border-[#B49A70] hover:bg-[#F1EDE3]"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div> */}
 
       <p className="mt-6 text-center text-sm text-[#6E6D66]">
         New to PlutoPlat?{' '}

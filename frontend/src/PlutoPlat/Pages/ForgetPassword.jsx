@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ShieldCheck, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { Mail, ShieldCheck, ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
 
 const ForgetPassword = () => {
   const navigate = useNavigate();
@@ -10,17 +11,26 @@ const ForgetPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    setErrorMsg('');
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await Api.forgotPassword({ email: email.trim().toLowerCase() });
+      const token = res?.data?.resetToken || '';
+      setResetToken(token);
       setSubmitted(true);
-      showToast(`Password reset link has been sent to ${email}.`, 'success');
-    }, 700);
+      showToast('Password reset link generated successfully.', 'success');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to request password reset. Please verify your email.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,19 +60,37 @@ const ForgetPassword = () => {
           </p>
         </div>
 
+        {errorMsg && (
+          <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2.5">
+            <AlertCircle size={16} className="shrink-0 text-red-600" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         {submitted ? (
           <div className="text-center py-4 space-y-4">
             <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-200">
               <CheckCircle2 size={30} />
             </div>
-            <h3 className="font-serif text-xl text-[#1C201C]">Reset Link Sent Successfully</h3>
+            <h3 className="font-serif text-xl text-[#1C201C]">Reset Link Generated</h3>
             <p className="text-xs text-[#6E6D66] leading-relaxed font-light">
-              We have sent password reset instructions to <strong className="text-[#1C201C] font-mono">{email}</strong>. Please check your inbox.
+              Password reset instructions have been generated for <strong className="text-[#1C201C] font-mono">{email}</strong>.
             </p>
+
+            {resetToken && (
+              <div className="p-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs text-left">
+                <div className="text-[10px] uppercase font-semibold text-[#6E6D66] tracking-wider mb-1">
+                  Active Reset Token (15m validity):
+                </div>
+                <div className="text-[11px] font-mono text-[#1C201C] break-all select-all bg-white p-2 border border-[#EAE6DE]">
+                  {resetToken}
+                </div>
+              </div>
+            )}
 
             <div className="pt-4 space-y-3">
               <Link
-                to="/reset-password?token=PLP-DEMO-TOKEN"
+                to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
                 className="w-full block py-3 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs text-center"
               >
                 Proceed to Set New Password
@@ -72,7 +100,7 @@ const ForgetPassword = () => {
                 onClick={() => setSubmitted(false)}
                 className="text-xs text-[#B49A70] hover:underline cursor-pointer"
               >
-                Didn't receive the email? Resend link
+                Need another token? Request again
               </button>
             </div>
           </div>

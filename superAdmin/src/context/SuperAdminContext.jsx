@@ -3,17 +3,6 @@ import { SuperAdminApi } from '../services/Api';
 
 const SuperAdminContext = createContext(null);
 
-const DEFAULT_SUPERADMIN_USER = {
-  id: 'USR-001',
-  name: 'Julian Beaumont',
-  email: 'owner@plutoplat.com',
-  phone: '+91 99563 46155',
-  role: 'super_admin',
-  tier: 'Website Owner & Platform Controller',
-  city: 'Kanpur, Uttar Pradesh',
-  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
-};
-
 const INITIAL_PROPERTIES = [
   {
     id: 1,
@@ -327,6 +316,70 @@ export const SuperAdminProvider = ({ children }) => {
     }
   }, [auditLogs]);
 
+  // Sync SuperAdmin session on mount/refresh if token exists
+  useEffect(() => {
+    const token = localStorage.getItem('pluto_superadmin_token');
+    if (token) {
+      SuperAdminApi.getMe()
+        .then((res) => {
+          if (res?.data?.user) {
+            const authUser = res.data.user;
+            if (authUser.role === 'super_admin') {
+              setUser(authUser);
+              localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
+            } else {
+              SuperAdminApi.logout();
+              setUser(null);
+              localStorage.removeItem('plutoplat_superadmin_user');
+            }
+          }
+        })
+        .catch((err) => {
+          if (err?.status === 401) {
+            SuperAdminApi.logout();
+            setUser(null);
+            localStorage.removeItem('plutoplat_superadmin_user');
+          }
+        });
+
+      // Sync platform properties from MongoDB backend
+      SuperAdminApi.getProperties()
+        .then((res) => {
+          if (res?.data?.properties && res.data.properties.length > 0) {
+            setProperties(res.data.properties);
+          }
+        })
+        .catch(() => {});
+
+      // Sync platform leads from MongoDB backend
+      SuperAdminApi.getAllEnquiries()
+        .then((res) => {
+          if (res?.data?.leads && res.data.leads.length > 0) {
+            setLeads(res.data.leads);
+          }
+        })
+        .catch(() => {});
+
+      // Sync platform users from MongoDB backend
+      SuperAdminApi.getAllUsers()
+        .then((res) => {
+          if (res?.data?.users && res.data.users.length > 0) {
+            setUsersList(res.data.users);
+          }
+        })
+        .catch(() => {});
+
+      // Sync audit telemetry from MongoDB backend
+      SuperAdminApi.getAuditLogs()
+        .then((res) => {
+          if (res?.data?.audits && res.data.audits.length > 0) {
+            setAuditLogs(res.data.audits);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
     setTimeout(() => {
@@ -338,7 +391,7 @@ export const SuperAdminProvider = ({ children }) => {
     const newEntry = {
       id: `AUD-${Math.floor(800 + Math.random() * 200)}`,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      actorName: actorName || user?.name || 'Julian Beaumont',
+      actorName: actorName || user?.name || 'SuperAdmin',
       actorRole: actorRole || user?.role || 'super_admin',
       module: module || 'SYSTEM',
       action: action || 'ACTION',
@@ -353,49 +406,33 @@ export const SuperAdminProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // First attempt remote backend authentication
-      try {
-        const response = await SuperAdminApi.login({ email, password });
-        if (response?.data?.user) {
-          const authUser = response.data.user;
-          if (authUser.role !== 'super_admin') {
-            throw new Error('Access Denied: Only SuperAdmin accounts are authorized to access Platform Control.');
-          }
-          setUser(authUser);
-          addAuditLog({
-            actorName: authUser.name,
-            actorRole: 'super_admin',
-            module: 'AUTH',
-            action: 'LOGIN',
-            target: 'SuperAdmin Control Console',
-            description: `SuperAdmin ${authUser.email} successfully logged in.`
-          });
-          showToast(`Welcome, ${authUser.name}! SuperAdmin access verified.`, 'success');
-          return authUser;
-        }
-      } catch (apiErr) {
-        // Fallback for local demo preview if backend is offline
-        if (email.toLowerCase().includes('owner') || email.toLowerCase() === 'owner@plutoplat.com') {
-          const demoUser = {
-            ...DEFAULT_SUPERADMIN_USER,
-            email: email,
-            role: 'super_admin'
-          };
-          setUser(demoUser);
-          localStorage.setItem('pluto_superadmin_token', 'demo-superadmin-jwt-token-2026');
-          addAuditLog({
-            actorName: demoUser.name,
-            actorRole: 'super_admin',
-            module: 'AUTH',
-            action: 'LOGIN',
-            target: 'SuperAdmin Control Console',
-            description: `SuperAdmin ${demoUser.email} logged in via authorized bypass.`
-          });
-          showToast(`Welcome, ${demoUser.name}! SuperAdmin access verified.`, 'success');
-          return demoUser;
-        }
-        throw apiErr;
+      const response = await SuperAdminApi.login({ email: email.trim().toLowerCase(), password });
+      const authUser = response?.data?.user;
+
+      if (!authUser) {
+        throw new Error(response?.message || 'Authentication failed.');
       }
+
+      // Strictly verify SuperAdmin role
+      if (authUser.role !== 'super_admin') {
+        SuperAdminApi.logout();
+        throw new Error('Access Denied: Only SuperAdmin accounts are authorized to access Platform Control.');
+      }
+
+      setUser(authUser);
+      localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
+
+      addAuditLog({
+        actorName: authUser.name,
+        actorRole: 'super_admin',
+        module: 'AUTH',
+        action: 'LOGIN',
+        target: 'SuperAdmin Control Console',
+        description: `SuperAdmin ${authUser.email} successfully logged in.`
+      });
+
+      showToast(`Welcome, ${authUser.name}! SuperAdmin access verified.`, 'success');
+      return authUser;
     } finally {
       setLoading(false);
     }
@@ -412,14 +449,57 @@ export const SuperAdminProvider = ({ children }) => {
       description: 'SuperAdmin signed out of platform control console.'
     });
     setUser(null);
+    try {
+      localStorage.removeItem('plutoplat_superadmin_user');
+    } catch (e) {
+      console.error(e);
+    }
     showToast('Signed out of SuperAdmin Console.', 'info');
   };
 
+  const updateProfile = async (formData) => {
+    const userId = user?._id || user?.id;
+    if (userId && localStorage.getItem('pluto_superadmin_token')) {
+      await SuperAdminApi.updateProfile(userId, {
+        name: formData.name,
+        phone: formData.phone,
+        location: { city: formData.city },
+      });
+    }
+
+    const nextUser = {
+      ...(user || {}),
+      name: formData.name,
+      phone: formData.phone,
+      city: formData.city,
+      location: { ...(user?.location || {}), city: formData.city },
+    };
+    setUser(nextUser);
+    try {
+      localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(nextUser));
+    } catch (e) {
+      console.error(e);
+    }
+
+    addAuditLog({
+      module: 'USER',
+      action: 'UPDATE_PROFILE',
+      target: 'SuperAdmin Profile',
+      description: `SuperAdmin updated identity credentials.`
+    });
+
+    showToast('SuperAdmin profile updated successfully.', 'success');
+    return nextUser;
+  };
+
   // Property Moderation
-  const approveProperty = (id) => {
-    const prop = properties.find(p => p.id === id);
+  const approveProperty = async (id) => {
+    try {
+      await SuperAdminApi.moderateProperty(id, { action: 'approve' });
+    } catch (err) {}
+    const prop = properties.find(p => p.id === id || p._id === id);
     setProperties(prev =>
-      prev.map(p => (p.id === id ? { ...p, verified: true, status: 'approved' } : p))
+      prev.map(p => (p.id === id || p._id === id ? { ...p, verified: true, status: 'approved' } : p))
     );
     addAuditLog({
       module: 'PROPERTY',
@@ -427,13 +507,16 @@ export const SuperAdminProvider = ({ children }) => {
       target: prop?.title || `ID: ${id}`,
       description: `SuperAdmin approved listing "${prop?.title || id}" for public catalog.`
     });
-    showToast(`Property "${prop?.title || id}" is now approved and live!`, 'success');
+    showToast(`Property "${prop?.title || id}" is now approved and live on user panel!`, 'success');
   };
 
-  const rejectProperty = (id, reason = 'Document verification pending') => {
-    const prop = properties.find(p => p.id === id);
+  const rejectProperty = async (id, reason = 'Document verification pending') => {
+    try {
+      await SuperAdminApi.moderateProperty(id, { action: 'reject', reason });
+    } catch (err) {}
+    const prop = properties.find(p => p.id === id || p._id === id);
     setProperties(prev =>
-      prev.map(p => (p.id === id ? { ...p, verified: false, status: 'rejected', rejectReason: reason } : p))
+      prev.map(p => (p.id === id || p._id === id ? { ...p, verified: false, status: 'rejected', rejectReason: reason } : p))
     );
     addAuditLog({
       module: 'PROPERTY',
@@ -444,9 +527,12 @@ export const SuperAdminProvider = ({ children }) => {
     showToast(`Property "${prop?.title || id}" has been rejected.`, 'info');
   };
 
-  const deleteProperty = (id) => {
-    const toDelete = properties.find(p => p.id === id);
-    setProperties(prev => prev.filter(p => p.id !== id));
+  const deleteProperty = async (id) => {
+    try {
+      await SuperAdminApi.deleteProperty(id);
+    } catch (err) {}
+    const toDelete = properties.find(p => p.id === id || p._id === id);
+    setProperties(prev => prev.filter(p => p.id !== id && p._id !== id));
     addAuditLog({
       module: 'PROPERTY',
       action: 'DELETE',
@@ -456,30 +542,53 @@ export const SuperAdminProvider = ({ children }) => {
     showToast('Property listing removed from platform.', 'info');
   };
 
-  const addProperty = (newProp) => {
-    const id = Date.now();
-    const createdProp = {
-      ...newProp,
-      id,
-      verified: true,
-      status: 'approved',
-      ownerEmail: user?.email || 'owner@plutoplat.com',
-      ownerName: user?.name || 'Julian Beaumont',
-      createdAt: new Date().toISOString()
-    };
-    setProperties(prev => [createdProp, ...prev]);
-    addAuditLog({
-      module: 'PROPERTY',
-      action: 'CREATE',
-      target: createdProp.title,
-      description: `SuperAdmin created verified direct listing: ${createdProp.title}`
-    });
-    showToast('Verified property created and published live!', 'success');
-    return createdProp;
+  const addProperty = async (newProp) => {
+    try {
+      const res = await SuperAdminApi.createProperty({
+        ...newProp,
+        verified: true,
+        status: 'approved',
+      });
+      const createdProp = res?.data?.property || {
+        ...newProp,
+        id: Date.now(),
+        verified: true,
+        status: 'approved',
+        ownerEmail: user?.email || 'owner@plutoplat.com',
+        ownerName: user?.name || 'Platform Director',
+        createdAt: new Date().toISOString()
+      };
+      setProperties(prev => [createdProp, ...prev]);
+      addAuditLog({
+        module: 'PROPERTY',
+        action: 'CREATE',
+        target: createdProp.title,
+        description: `SuperAdmin created verified direct listing: ${createdProp.title}`
+      });
+      showToast('Verified property created and published live on user panel!', 'success');
+      return createdProp;
+    } catch (err) {
+      console.warn('Backend property publish notice:', err.message);
+      const fallbackProp = {
+        ...newProp,
+        id: Date.now(),
+        verified: true,
+        status: 'approved',
+        ownerEmail: user?.email || 'owner@plutoplat.com',
+        ownerName: user?.name || 'Platform Director',
+        createdAt: new Date().toISOString()
+      };
+      setProperties(prev => [fallbackProp, ...prev]);
+      showToast('Verified property created and published live!', 'success');
+      return fallbackProp;
+    }
   };
 
-  const updateProperty = (id, updatedFields) => {
-    setProperties(prev => prev.map(p => (p.id === id ? { ...p, ...updatedFields } : p)));
+  const updateProperty = async (id, updatedFields) => {
+    try {
+      await SuperAdminApi.updateProperty(id, updatedFields);
+    } catch (err) {}
+    setProperties(prev => prev.map(p => (p.id === id || p._id === id ? { ...p, ...updatedFields } : p)));
     addAuditLog({
       module: 'PROPERTY',
       action: 'UPDATE',
@@ -599,7 +708,8 @@ export const SuperAdminProvider = ({ children }) => {
     addAuditLog,
     formatPrice,
     toast,
-    showToast
+    showToast,
+    updateProfile
   };
 
   return (

@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, ShieldCheck, CheckCircle2, ArrowRight, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, ShieldCheck, CheckCircle2, ArrowRight, ArrowLeft, Eye, EyeOff, AlertCircle, KeyRound, Loader2 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || 'ACTIVE-TOKEN';
+  const tokenFromUrl = searchParams.get('token') || '';
 
   const { showToast } = usePropertyStore();
 
+  const [token, setToken] = useState(tokenFromUrl);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!token.trim()) {
+      setErrorMsg('A valid reset verification token is required.');
+      return;
+    }
 
     if (password.length < 8) {
       setErrorMsg('Password must be at least 8 characters long.');
@@ -31,11 +39,24 @@ const ResetPassword = () => {
       return;
     }
 
-    setSubmitted(true);
-    showToast('Your new password has been updated successfully.', 'success');
-    setTimeout(() => {
-      navigate('/login');
-    }, 1800);
+    setLoading(true);
+
+    try {
+      await Api.resetPassword({
+        token: token.trim(),
+        newPassword: password,
+      });
+
+      setSubmitted(true);
+      showToast('Your new password has been updated successfully. Please sign in.', 'success');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to reset password. The token may be expired or invalid.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,6 +105,23 @@ const ResetPassword = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
+                Reset Verification Token
+              </label>
+              <div className="relative">
+                <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#77766E]" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Paste your 64-character token here"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-3 bg-[#F8F6F2] border border-[#DDD8CE] font-mono text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
                 New Password (Min. 8 characters)
@@ -148,10 +186,20 @@ const ResetPassword = () => {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
+              disabled={loading}
+              className="w-full py-3.5 bg-[#1C201C] hover:bg-black disabled:opacity-75 text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
-              <span>Save New Password</span>
-              <ArrowRight size={14} className="text-[#B49A70]" />
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin text-white" />
+                  <span>Updating Password...</span>
+                </>
+              ) : (
+                <>
+                  <span>Save New Password</span>
+                  <ArrowRight size={14} className="text-[#B49A70]" />
+                </>
+              )}
             </button>
           </form>
         )}

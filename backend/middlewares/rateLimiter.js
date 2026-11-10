@@ -9,17 +9,20 @@ const getKey = (req) => {
   );
 };
 
+const isDev = process.env.NODE_ENV === 'development';
+
 /**
  * General API Rate Limiter
  * Protects against DDoS and repeated rapid API flooding.
  */
 const apiLimiter = rateLimit({
-  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per window
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: isDev ? 10000 : (Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 200),
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getKey,
   validate: false,
+  skip: () => isDev,
   message: {
     success: false,
     message: 'Too many requests from this IP. Please try again later.',
@@ -31,8 +34,8 @@ const apiLimiter = rateLimit({
  * First defensive line before database account-level lockout.
  */
 const loginRateLimiter = rateLimit({
-  windowMs: 30 * 60 * 1000, // 30 minutes
-  max: 20, // Max 20 attempts per IP in 30 minutes
+  windowMs: 30 * 60 * 1000,
+  max: isDev ? 200 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getKey,
@@ -47,8 +50,8 @@ const loginRateLimiter = rateLimit({
  * Registration & Sensitive Auth Operations Limiter
  */
 const authRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // Max 30 attempts per hour per IP
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 300 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getKey,

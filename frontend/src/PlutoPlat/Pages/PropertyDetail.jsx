@@ -5,6 +5,7 @@ import {
   Heart, ArrowLeft, Phone, Mail, Check, Share2, Sparkles, Home, Compass, Navigation 
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
 import PropertyCard from '../Components/PropertyCard';
 import ScheduleTourModal from '../Components/ScheduleTourModal';
 import EnquiryModal from '../Components/EnquiryModal';
@@ -18,17 +19,29 @@ const PropertyDetail = () => {
     formatPrice, showToast, recordRecentlyViewed 
   } = usePropertyStore();
 
-  const property = getPropertyById(id);
+  const [asyncProp, setAsyncProp] = useState(null);
+  const property = getPropertyById(id) || asyncProp;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isTourModalOpen, setIsTourModalOpen] = useState(false);
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
 
   useEffect(() => {
-    if (property?.id && recordRecentlyViewed) {
-      recordRecentlyViewed(property.id);
+    if (!getPropertyById(id) && id) {
+      Api.getPropertyById(id)
+        .then((res) => {
+          if (res?.data?.property) setAsyncProp(res.data.property);
+        })
+        .catch((err) => console.warn('Direct property fetch notice:', err.message));
     }
-  }, [property?.id, recordRecentlyViewed]);
+  }, [id, properties]);
+
+  useEffect(() => {
+    const propId = property?.id || property?._id;
+    if (propId && recordRecentlyViewed) {
+      recordRecentlyViewed(propId);
+    }
+  }, [property?.id, property?._id, recordRecentlyViewed]);
 
   if (!property) {
     return (

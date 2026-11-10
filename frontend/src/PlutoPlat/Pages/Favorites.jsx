@@ -73,7 +73,7 @@ const Favorites = () => {
         <div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
             {favoriteProperties.map((prop) => (
-              <PropertyCard key={prop.id} property={prop} />
+              <PropertyCard key={prop.id || prop._id} property={prop} />
             ))}
           </div>
 

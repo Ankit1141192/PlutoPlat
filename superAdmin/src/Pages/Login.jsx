@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -24,7 +24,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => location.state?.message || '');
   const [lockoutRemaining, setLockoutRemaining] = useState(null);
 
   const from = location.state?.from?.pathname || '/';
@@ -55,12 +55,6 @@ const Login = () => {
     }
   };
 
-  const handleQuickDemo = () => {
-    setEmail('owner@plutoplat.com');
-    setPassword('MasterOwnerPass@2026');
-    setError('');
-  };
-
   return (
     <div className="min-h-screen bg-[#0A0D0B] text-[#F7F5F0] flex flex-col justify-between selection:bg-[#B49A70] selection:text-white">
       {/* Top Header */}
@@ -79,10 +73,7 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#151A16] border border-[#263028] text-xs font-medium text-[#9B988E]">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          Subdomain: <code className="text-white font-mono font-semibold">superadmin.plutoplat.com</code>
-        </div>
+        
       </header>
 
       {/* Main Body */}
@@ -174,9 +165,9 @@ const Login = () => {
                   <label className="block text-xs font-medium uppercase tracking-wider text-[#D5CFBF]">
                     Root Access Passkey
                   </label>
-                  <span className="text-[11px] text-[#8E8B82]">
-                    High-Entropy Secret
-                  </span>
+                  <Link to="/forgot-password" className="text-[11px] text-[#B49A70] hover:underline">
+                    Forgot Master Key?
+                  </Link>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
@@ -214,29 +205,12 @@ const Login = () => {
               </button>
             </form>
 
-            {/* Quick Demo Sign-in */}
-            <div className="mt-8 pt-6 border-t border-[#202722]">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8B82]">
-                  Authorized Quick Access
-                </span>
-                <span className="text-[10px] text-emerald-400 font-mono">ENCRYPTED</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleQuickDemo}
-                className="w-full p-3 bg-[#181F1A] hover:bg-[#202922] border border-[#2B382F] rounded-xs text-left text-xs transition-colors cursor-pointer flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-semibold text-white">Julian Beaumont (Platform Owner)</div>
-                  <div className="text-[11px] text-[#B49A70]">owner@plutoplat.com</div>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-[#B49A70]/15 text-[#B49A70] border border-[#B49A70]/30 rounded-2xs">
-                  Fill Credentials
-                </span>
-              </button>
+            <div className="mt-8 pt-6 border-t border-[#263028] text-center">
+              <span className="text-xs text-[#6E6D66]">Setting up a new platform instance? </span>
+              <Link to="/register" className="text-xs text-[#B49A70] font-semibold hover:underline">
+                Initialize Master SuperAdmin
+              </Link>
             </div>
-
           </div>
 
         </div>

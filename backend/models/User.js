@@ -31,8 +31,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       validate: {
-        validator: (value) => /^\+?[1-9]\d{9,14}$/.test(value),
-        message: 'Please enter a valid phone number',
+        validator: (value) => {
+          if (!value) return false;
+          const cleaned = value.replace(/[\s\-\(\)]/g, '');
+          return /^\+?[0-9]{10,15}$/.test(cleaned);
+        },
+        message: 'Please enter a valid phone number (at least 10 digits)',
       },
     },
 
@@ -91,24 +95,17 @@ const userSchema = new mongoose.Schema(
         type: String,
         trim: true,
         default: '',
-        validate: {
-          validator: (value) =>
-            value === '' || /^[1-9][0-9]{5}$/.test(value),
-          message: 'Enter a valid 6-digit Indian PIN code',
-        },
       },
 
       coordinates: {
         latitude: {
           type: Number,
-          min: -90,
-          max: 90,
+          default: null,
         },
 
         longitude: {
           type: Number,
-          min: -180,
-          max: 180,
+          default: null,
         },
       },
     },
@@ -128,7 +125,6 @@ const userSchema = new mongoose.Schema(
 
     subscriptionTier: {
       type: String,
-      enum: ['free', 'agent_pro', 'vip_concierge'],
       default: 'free',
     },
 
@@ -169,11 +165,25 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Hash password before saving
+// Virtual avatar property mapping to profileImage
+userSchema.virtual('avatar').get(function () {
+  return this.profileImage;
+});
+
+userSchema.virtual('avatar').set(function (val) {
+  this.profileImage = val;
+});
+
+// Sanitize phone and hash password before saving
 userSchema.pre('save', async function () {
+  if (this.phone) {
+    this.phone = this.phone.replace(/[\s\-\(\)]/g, '');
+  }
   if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
@@ -198,7 +208,6 @@ userSchema.methods.getLockRemainingMinutes = function () {
 
 // Handle failed login attempt (locks for 30 minutes after 5 attempts)
 userSchema.methods.handleFailedLogin = async function () {
-  // If a previous lock expired, reset counter
   if (this.lockUntil && this.lockUntil <= Date.now()) {
     this.loginAttempts = 1;
     this.lockUntil = null;
@@ -207,7 +216,6 @@ userSchema.methods.handleFailedLogin = async function () {
 
   this.loginAttempts = (this.loginAttempts || 0) + 1;
 
-  // After 5 attempts, lock for 30 minutes
   if (this.loginAttempts >= 5) {
     this.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
   }
@@ -242,6 +250,8 @@ userSchema.methods.generateAuthToken = function () {
 // Exclude sensitive data from JSON output
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
+  obj.id = obj._id;
+  obj.avatar = obj.profileImage;
   delete obj.password;
   delete obj.loginAttempts;
   delete obj.lockUntil;

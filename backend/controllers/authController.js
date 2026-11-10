@@ -27,24 +27,33 @@ const register = async (req, res, next) => {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = String(phone).replace(/[\s\-\(\)]/g, '');
+
     // Check for existing user
     const existingUser = await User.findOne({
-      $or: [{ email: email.toLowerCase() }, { phone }],
+      $or: [{ email: cleanEmail }, { phone: cleanPhone }],
     });
 
     if (existingUser) {
-      const field = existingUser.email === email.toLowerCase() ? 'Email' : 'Phone number';
+      const field = existingUser.email === cleanEmail ? 'Email' : 'Phone number';
       return ApiResponse.error(res, `${field} is already registered.`, 409);
     }
 
+    // Determine target role and subscription tier
+    const targetRole = role && ['user', 'admin', 'super_admin'].includes(role) ? role : 'user';
+    let subscriptionTier = 'Free';
+    if (targetRole === 'super_admin') subscriptionTier = 'Website Owner';
+    else if (targetRole === 'admin') subscriptionTier = 'agent_pro';
+
     // Create user (password will be hashed via pre-save hook)
-    // Default role is user; do not allow public registration to set super_admin/admin
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      phone,
+      name: name.trim(),
+      email: cleanEmail,
+      phone: cleanPhone,
       password,
-      role: role && ['user'].includes(role) ? role : 'user',
+      role: targetRole,
+      subscriptionTier,
       location: location || {},
     });
 
@@ -186,8 +195,10 @@ const login = async (req, res, next) => {
       status: 'SUCCESS',
     });
 
+    const populatedUser = await User.findById(user._id).populate('savedProperties');
+
     return ApiResponse.success(res, 'Login successful.', {
-      user,
+      user: populatedUser || user,
       token,
     });
   } catch (error) {
@@ -201,8 +212,9 @@ const login = async (req, res, next) => {
  */
 const getMe = async (req, res, next) => {
   try {
+    const user = await User.findById(req.user._id).populate('savedProperties');
     return ApiResponse.success(res, 'User profile fetched successfully.', {
-      user: req.user,
+      user: user || req.user,
     });
   } catch (error) {
     next(error);
@@ -221,10 +233,10 @@ const forgotPassword = async (req, res, next) => {
       return ApiResponse.error(res, 'Email address is required.', 400);
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      // Return ambiguous success to avoid user enumeration
-      return ApiResponse.success(res, 'If an account exists with this email, password reset instructions have been dispatched.');
+      return ApiResponse.error(res, 'No registered account found with that email address.', 404);
     }
 
     // Generate random 32-byte reset token
@@ -246,9 +258,10 @@ const forgotPassword = async (req, res, next) => {
       req,
     });
 
-    return ApiResponse.success(res, 'Password reset instructions have been dispatched to your email address.', {
+    return ApiResponse.success(res, 'Password reset token generated successfully.', {
       resetToken: rawResetToken,
       expiresInMinutes: 15,
+      email: user.email,
     });
   } catch (error) {
     next(error);
@@ -261,9 +274,10 @@ const forgotPassword = async (req, res, next) => {
  */
 const resetPassword = async (req, res, next) => {
   try {
-    const { token, newPassword } = req.body;
+    const rawToken = req.body.token || req.body.resetToken;
+    const newPassword = req.body.newPassword || req.body.password;
 
-    if (!token || !newPassword) {
+    if (!rawToken || !newPassword) {
       return ApiResponse.error(res, 'Reset token and new password are required.', 400);
     }
 
@@ -271,10 +285,14 @@ const resetPassword = async (req, res, next) => {
       return ApiResponse.error(res, 'New password must contain at least 8 characters.', 400);
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const tokenStr = String(rawToken).trim();
+    const hashedToken = crypto.createHash('sha256').update(tokenStr).digest('hex');
 
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
+      $or: [
+        { resetPasswordToken: hashedToken },
+        { resetPasswordToken: tokenStr },
+      ],
       resetPasswordExpires: { $gt: Date.now() },
     });
 

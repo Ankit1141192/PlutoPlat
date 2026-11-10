@@ -7,16 +7,22 @@ import { usePropertyStore } from '../../context/PropertyContext';
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite, formatPrice } = usePropertyStore();
-  const favorited = isFavorite(property.id);
+  const propId = property.id || property._id;
+  const favorited = isFavorite(propId);
 
   const handleCardClick = () => {
-    navigate(`/property/${property.id}`);
+    navigate(`/property/${propId}`);
   };
 
   const handleHeartClick = (e) => {
     e.stopPropagation();
-    toggleFavorite(property.id);
+    toggleFavorite(propId);
   };
+
+  const displayImage = property.image || (property.images && property.images[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+  const displayLocation = typeof property.location === 'string'
+    ? property.location
+    : `${property.location?.city || ''}${property.location?.state ? ', ' + property.location.state : ''}`.trim() || property.location?.address || 'Civil Lines, Kanpur';
 
   return (
     <motion.div
@@ -28,7 +34,7 @@ const PropertyCard = ({ property }) => {
       {/* Image Container with Badges */}
       <div className="relative aspect-[16/10] overflow-hidden bg-[#EAE6DE]">
         <img
-          src={property.image}
+          src={displayImage}
           alt={property.title}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
@@ -75,7 +81,7 @@ const PropertyCard = ({ property }) => {
         <div>
           <div className="flex items-center text-[#77766E] text-[10px] sm:text-xs font-medium mb-1">
             <MapPin size={11} className="mr-1 text-[#B49A70] shrink-0 sm:w-3.5 sm:h-3.5" />
-            <span className="truncate">{property.location}</span>
+            <span className="truncate">{displayLocation}</span>
           </div>
 
           <h3 className="font-serif text-sm sm:text-xl md:text-2xl text-[#1C201C] group-hover:text-[#B49A70] transition-colors leading-snug line-clamp-1 mb-0.5 sm:mb-1 font-normal">

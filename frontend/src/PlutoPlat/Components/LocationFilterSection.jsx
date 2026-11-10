@@ -152,9 +152,16 @@ const LocationFilterSection = () => {
   const countByLocation = useMemo(() => {
     const map = {};
     LOCATIONS.forEach(({ locationKey }) => {
-      map[locationKey] = properties.filter((p) =>
-        p.location?.toLowerCase().includes(locationKey.toLowerCase())
-      ).length;
+      const key = locationKey.toLowerCase();
+      map[locationKey] = properties.filter((p) => {
+        const locStr = (
+          typeof p.location === 'string'
+            ? p.location
+            : `${p.location?.city || ''} ${p.location?.state || ''} ${p.location?.address || ''}`
+        ).toLowerCase();
+        const titleStr = (p.title || '').toLowerCase();
+        return locStr.includes(key) || titleStr.includes(key);
+      }).length;
     });
     return map;
   }, [properties]);

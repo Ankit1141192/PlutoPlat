@@ -58,13 +58,21 @@ const Property = () => {
   const filteredProperties = useMemo(() => {
     return properties
       .filter((p) => {
-        // Location filter
+        // Location filter (handles string or object location safely)
         if (locationInput.trim()) {
           const loc = locationInput.toLowerCase();
-          const matchLoc =
-            p.location.toLowerCase().includes(loc) ||
-            p.title.toLowerCase().includes(loc) ||
-            p.address.toLowerCase().includes(loc);
+          const locStr = (
+            typeof p.location === 'string'
+              ? p.location
+              : `${p.location?.city || ''} ${p.location?.state || ''} ${p.location?.address || ''}`
+          ).toLowerCase();
+          const titleStr = (p.title || '').toLowerCase();
+          const addrStr = (
+            typeof p.address === 'string'
+              ? p.address
+              : (p.location?.address || '')
+          ).toLowerCase();
+          const matchLoc = locStr.includes(loc) || titleStr.includes(loc) || addrStr.includes(loc);
           if (!matchLoc) return false;
         }
 
@@ -79,10 +87,11 @@ const Property = () => {
         }
 
         // Price range filter
-        if (minPrice && p.numericPrice < parseInt(minPrice, 10)) {
+        const priceNum = typeof p.numericPrice === 'number' ? p.numericPrice : (typeof p.price === 'number' ? p.price : 0);
+        if (minPrice && priceNum < parseInt(minPrice, 10)) {
           return false;
         }
-        if (maxPrice && p.numericPrice > parseInt(maxPrice, 10)) {
+        if (maxPrice && priceNum > parseInt(maxPrice, 10)) {
           return false;
         }
 
@@ -99,11 +108,13 @@ const Property = () => {
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.numericPrice - b.numericPrice;
-        if (sortBy === 'price-desc') return b.numericPrice - a.numericPrice;
-        if (sortBy === 'beds') return b.beds - a.beds;
+        const priceA = typeof a.numericPrice === 'number' ? a.numericPrice : (typeof a.price === 'number' ? a.price : 0);
+        const priceB = typeof b.numericPrice === 'number' ? b.numericPrice : (typeof b.price === 'number' ? b.price : 0);
+        if (sortBy === 'price-asc') return priceA - priceB;
+        if (sortBy === 'price-desc') return priceB - priceA;
+        if (sortBy === 'beds') return (b.beds || 0) - (a.beds || 0);
         // Default: featured first
-        return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+        return ((b.featured || b.isFeatured) ? 1 : 0) - ((a.featured || a.isFeatured) ? 1 : 0);
       });
   }, [
     properties,

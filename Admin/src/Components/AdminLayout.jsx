@@ -11,68 +11,59 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
-  Sparkles,
-  ArrowRightLeft,
-  ShieldCheck,
-  CheckCircle2
+  ShieldCheck
 } from 'lucide-react';
 import { useAdminStore } from '../context/AdminContext';
+
+// Set these in .env (VITE_SUPERADMIN_URL, VITE_BUYER_SITE_URL); the localhost values are dev fallbacks
+const SUPERADMIN_URL = import.meta.env.VITE_SUPERADMIN_URL || 'http://localhost:5175';
+const BUYER_SITE_URL = import.meta.env.VITE_BUYER_SITE_URL || 'http://localhost:5173';
 
 const AdminLayout = ({ children, title = 'Agent & Partner Workstation' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, properties, leads } = useAdminStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Filter properties owned by this agent
+  const seesAll = user?.role === 'admin' || user?.role === 'super_admin';
+
   const myProperties = (properties || []).filter(
-    (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || user?.role === 'admin' || user?.role === 'super_admin'
+    (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || seesAll
   );
-  const myPendingCount = myProperties.filter((p) => !p.verified || p.status === 'pending').length;
+  const pendingCount = myProperties.filter((p) => !p.verified || p.status === 'pending').length;
 
-  // Filter leads on this agent's properties
   const myLeads = (leads || []).filter(
-    (l) => l.agentEmail === user?.email || l.agentName === user?.name || user?.role === 'admin' || user?.role === 'super_admin'
+    (l) => l.agentEmail === user?.email || l.agentName === user?.name || seesAll
   );
   const newLeadsCount = myLeads.filter((l) => l.status === 'New').length;
 
   const navLinks = [
+    { name: 'Dashboard', path: '/', altPath: '/admin', icon: LayoutDashboard },
     {
-      name: 'Agent Dashboard',
-      path: '/',
-      altPath: '/admin',
-      icon: LayoutDashboard,
-    },
-    {
-      name: 'My Listed Properties',
+      name: 'My properties',
       path: '/properties',
       altPath: '/admin/properties',
       icon: Building2,
-      badge: myPendingCount > 0 ? `${myPendingCount} pending` : null,
-      badgeColor: 'bg-[#B49A70] text-[#121612]',
+      badge: pendingCount > 0 ? `${pendingCount} in review` : null,
+      badgeColor: 'bg-[#B49A70]/20 text-[#D9C49B]'
     },
     {
-      name: 'Client Inquiries',
+      name: 'Inquiries',
       path: '/leads',
       altPath: '/admin/leads',
       icon: Inbox,
       badge: newLeadsCount > 0 ? `${newLeadsCount} new` : null,
-      badgeColor: 'bg-emerald-600 text-white',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300'
     },
-    {
-      name: 'Notifications',
-      path: '/notifications',
-      altPath: '/admin/notifications',
-      icon: Bell,
-    },
-    {
-      name: 'My Agent Profile',
-      path: '/profile',
-      altPath: '/admin/profile',
-      icon: User,
-    },
+    { name: 'Notifications', path: '/notifications', altPath: '/admin/notifications', icon: Bell },
+    { name: 'My profile', path: '/profile', altPath: '/admin/profile', icon: User }
   ];
+
+  const isActive = (item) => {
+    const p = location.pathname;
+    if (item.path === '/') return p === '/' || p === '/admin' || p === '/admin/dashboard';
+    return p === item.path || p === item.altPath || p.startsWith(item.path + '/');
+  };
 
   const handleLogout = () => {
     logout();
@@ -80,200 +71,139 @@ const AdminLayout = ({ children, title = 'Agent & Partner Workstation' }) => {
   };
 
   const initials = user?.name
-    ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'MS';
+    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'AG';
+
+  const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B49A70]';
+
+  const NavItem = ({ item, onClick }) => {
+    const Icon = item.icon;
+    const active = isActive(item);
+    return (
+      <Link
+        to={item.path}
+        onClick={onClick}
+        aria-current={active ? 'page' : undefined}
+        className={`flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-sm transition-colors ${focus} ${
+          active ? 'bg-[#B49A70] font-semibold text-[#121612]' : 'text-[#C9C5BB] hover:bg-white/5 hover:text-white'
+        }`}
+      >
+        <span className="flex items-center gap-3">
+          <Icon size={18} className={active ? 'text-[#121612]' : 'text-[#8E8B82]'} />
+          {item.name}
+        </span>
+        {item.badge && (
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${active ? 'bg-[#121612]/15 text-[#121612]' : item.badgeColor}`}>
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2] flex flex-col md:flex-row text-[#1C201C] selection:bg-[#B49A70] selection:text-white">
-      {/* Desktop Luxury Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#101411] to-[#161B16] text-[#E8E5DF] shrink-0 border-r border-[#262E27] relative">
-        {/* Ambient Top Glow */}
-        <div className="absolute top-0 right-0 w-44 h-44 bg-[#B49A70]/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Brand */}
-        <div className="p-6 border-b border-[#262E27]/80 relative z-10">
-          <Link to="/" className="inline-block">
-            <span className="font-serif text-2xl text-white tracking-tight">
+    <div className="flex min-h-screen flex-col bg-[#F8F6F2] text-[#1C201C] selection:bg-[#B49A70] selection:text-white md:flex-row">
+      {/* Desktop sidebar: stays in view while the page scrolls */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-[#262E27] bg-[#101411] text-[#E8E5DF] md:flex">
+        <div className="border-b border-white/10 p-6">
+          <Link to="/" className={`inline-block rounded ${focus}`}>
+            <span className="font-serif text-2xl tracking-tight text-white">
               Pluto<span className="text-[#D9C49B]">Plat</span>.
             </span>
           </Link>
-          <div className="mt-2.5 flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#D9C49B] bg-[#B49A70]/20 px-2.5 py-0.5 rounded-full border border-[#B49A70]/30">
-              Partner Desk
-            </span>
-            <span className="text-[11px] text-[#8E8B82]">Seller / Agent</span>
-          </div>
+          <p className="mt-1.5 text-sm text-[#8E8B82]">Partner desk</p>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 px-3 py-5 space-y-1.5 overflow-y-auto relative z-10">
-          <div className="px-3 mb-2 text-[10px] uppercase font-semibold tracking-wider text-[#737068]">
-            Workstation
-          </div>
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            const isHome = item.path === '/';
-            const isActive = isHome
-              ? location.pathname === '/' || location.pathname === '/admin' || location.pathname === '/admin/dashboard'
-              : location.pathname === item.path || location.pathname === item.altPath || location.pathname.startsWith(item.path + '/');
-
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-[#B49A70] text-[#121612] font-semibold shadow-sm'
-                    : 'text-[#B8B4AA] hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon size={17} className={isActive ? 'text-[#121612]' : 'text-[#8E8B82]'} />
-                  <span>{item.name}</span>
-                </div>
-                {item.badge && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${item.badgeColor || 'bg-white/10 text-white'}`}>
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+        <nav aria-label="Main" className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+          {navLinks.map((item) => (
+            <NavItem key={item.name} item={item} />
+          ))}
         </nav>
 
-        {/* Portals Switcher */}
-        <div className="p-3 border-t border-[#262E27]/80 space-y-1 relative z-10">
-          <div className="px-3 mb-1 text-[10px] uppercase font-semibold tracking-wider text-[#737068]">
-            Quick Portals
-          </div>
+        <div className="space-y-1 border-t border-white/10 p-3">
           <a
-            href="http://localhost:5175"
+            href={SUPERADMIN_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between px-3 py-2 text-xs text-[#B8B4AA] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+            className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm text-[#B8B4AA] transition-colors hover:bg-white/5 hover:text-white ${focus}`}
           >
-            <div className="flex items-center gap-2.5">
-              <ArrowRightLeft size={14} className="text-[#B49A70]" />
-              <span>SuperAdmin (5175)</span>
-            </div>
-            <ExternalLink size={12} className="text-[#737068]" />
+            SuperAdmin portal <ExternalLink size={13} className="text-[#737068]" />
           </a>
           <a
-            href="http://localhost:5173"
+            href={BUYER_SITE_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between px-3 py-2 text-xs text-[#B8B4AA] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+            className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm text-[#B8B4AA] transition-colors hover:bg-white/5 hover:text-white ${focus}`}
           >
-            <div className="flex items-center gap-2.5">
-              <ExternalLink size={14} className="text-[#B49A70]" />
-              <span>Buyer Website (5173)</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-medium">Live</span>
+            View public site <ExternalLink size={13} className="text-[#737068]" />
           </a>
         </div>
 
-        {/* User Card */}
-        <div className="p-4 border-t border-[#262E27] bg-[#0E120F] flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-[#B49A70] text-[#121612] font-serif font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ring-2 ring-[#B49A70]/30">
+        <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-[#0C0F0D] p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#B49A70] font-serif text-sm font-bold text-[#121612]">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{user?.name || 'Michael Sharma'}</p>
-              <p className="text-[10px] text-[#B49A70] truncate flex items-center gap-1">
-                <ShieldCheck size={11} /> Verified Agent
+              <p className="truncate text-sm font-semibold text-white">{user?.name || 'Agent'}</p>
+              <p className="flex items-center gap-1 truncate text-xs text-[#D9C49B]">
+                <ShieldCheck size={12} /> Verified agent
               </p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            title="Sign Out"
-            className="text-[#8E8B82] hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label="Sign out"
+            title="Sign out"
+            className={`cursor-pointer rounded-lg p-2 text-[#8E8B82] transition-colors hover:bg-white/5 hover:text-red-400 ${focus}`}
           >
-            <LogOut size={16} />
+            <LogOut size={17} />
           </button>
         </div>
       </aside>
 
-      {/* Mobile Top Header */}
-      <header className="md:hidden bg-[#101411] text-white p-4 flex items-center justify-between border-b border-[#262E27]">
-        <div className="flex items-center gap-2">
-          <span className="font-serif text-xl">Pluto<span className="text-[#D9C49B]">Plat</span>.</span>
-          <span className="text-[10px] bg-[#B49A70] text-[#121612] px-2 py-0.5 font-bold rounded-full">
-            Partner Desk
-          </span>
-        </div>
+      {/* Mobile header + drawer */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#262E27] bg-[#101411] p-4 text-white md:hidden">
+        <span className="font-serif text-xl">
+          Pluto<span className="text-[#D9C49B]">Plat</span>.
+        </span>
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-white p-1.5 rounded-lg hover:bg-white/10"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          className={`rounded-lg p-2 hover:bg-white/10 ${focus}`}
         >
-          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </header>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-[#101411] text-white p-4 border-b border-[#262E27] space-y-2">
+      {menuOpen && (
+        <div className="space-y-1 border-b border-[#262E27] bg-[#101411] p-3 md:hidden">
           {navLinks.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between p-2.5 rounded-xl text-sm hover:bg-white/10"
-            >
-              <div className="flex items-center gap-3">
-                <item.icon size={18} />
-                <span>{item.name}</span>
-              </div>
-              {item.badge && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-[#B49A70] text-[#121612] font-bold">
-                  {item.badge}
-                </span>
-              )}
-            </Link>
+            <NavItem key={item.name} item={item} onClick={() => setMenuOpen(false)} />
           ))}
-          <div className="pt-3 border-t border-[#262E27] flex items-center justify-between">
-            <div className="text-xs text-[#8E8B82]">Signed in as {user?.name || 'Agent'}</div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium"
-            >
-              <LogOut size={14} /> Sign Out
+          <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3.5 pt-3">
+            <span className="text-sm text-[#8E8B82]">{user?.name || 'Agent'}</span>
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm font-medium text-red-400 hover:text-red-300">
+              <LogOut size={15} /> Sign out
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header Bar */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-[#E8E3D8] px-6 md:px-8 py-4 flex items-center justify-between gap-4 sticky top-0 z-20">
-          <div>
-            <h1 className="font-serif text-xl md:text-2xl text-[#1C201C] font-normal tracking-tight">{title}</h1>
-            <p className="text-xs text-[#6E6D66] mt-0.5">Seller & Broker Listing Management Workstation</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF8F5] border border-[#E8E3D8] text-xs text-[#6E6D66]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Live Sync</span>
-            </div>
-
-            {/* Quick Add Listing */}
-            <Link
-              to="/properties"
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-[#1C201C] text-white hover:bg-[#B49A70] hover:text-[#121612] rounded-xl transition-all duration-200 shadow-sm"
-            >
-              <PlusCircle size={15} />
-              <span>Submit Property</span>
-            </Link>
-          </div>
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 hidden items-center justify-between gap-4 border-b border-[#E8E3D8] bg-white/90 px-8 py-4 backdrop-blur-md md:flex">
+          <p className="font-serif text-lg text-[#1C201C]">{title}</p>
+          <Link
+            to="/properties"
+            className={`inline-flex items-center gap-2 rounded-xl bg-[#1C201C] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B49A70] hover:text-[#121612] ${focus}`}
+          >
+            <PlusCircle size={16} /> Add a property
+          </Link>
         </header>
 
-        {/* Page Content Viewport */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl w-full">
-          {children}
-        </main>
+        <main className="mx-auto w-full max-w-7xl flex-1 p-5 md:p-8">{children}</main>
       </div>
     </div>
   );

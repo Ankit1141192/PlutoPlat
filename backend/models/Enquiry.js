@@ -12,14 +12,16 @@ const enquirySchema = new mongoose.Schema(
     buyer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Buyer ID is required'],
+      required: false,
+      default: null,
       index: true,
     },
 
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Seller ID is required'],
+      required: false,
+      default: null,
       index: true,
     },
 

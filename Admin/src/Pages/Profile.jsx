@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -11,28 +11,83 @@ import {
   Award,
   Sparkles,
   FileCheck,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import AdminLayout from '../Components/AdminLayout';
 import { useAdminStore } from '../context/AdminContext';
+import { AdminApi } from '../services/Api';
 
 const Profile = () => {
-  const { user, showToast } = useAdminStore();
+  const { user, showToast, updateProfile } = useAdminStore();
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: user?.name || 'Michael Sharma',
-    email: user?.email || 'm.sharma@plutoplat.com',
-    phone: user?.phone || '+91 98210 33445',
-    agency: 'Sovereign Heritage Realty Partners',
-    rera: 'UP-RERA-2026-98124',
-    city: user?.city || 'Civil Lines, Kanpur, Uttar Pradesh',
-    tier: 'Senior Partner Agent',
-    bio: 'Senior property advisor specializing in luxury trophy estates, ancestral villas, and off-market residential acquisitions across Uttar Pradesh and prime metropolitan hubs.',
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    agency: user?.agency || 'Licensed Realty Partner',
+    rera: user?.rera || '',
+    city: user?.location?.city || user?.city || '',
+    tier: user?.role === 'super_admin' ? 'SuperAdmin Executive' : 'Licensed Agent & Broker',
+    bio: user?.bio || 'Authorized real estate representative for verified luxury properties and buyer advisory.',
   });
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    if (localStorage.getItem('pluto_admin_token')) {
+      AdminApi.getMe()
+        .then((res) => {
+          if (res?.data?.user) {
+            const u = res.data.user;
+            setFormData((prev) => ({
+              ...prev,
+              name: u.name || prev.name,
+              email: u.email || prev.email,
+              phone: u.phone || prev.phone,
+              city: u.location?.city || prev.city,
+            }));
+          }
+        })
+        .catch((err) => console.warn('Could not refresh agent profile:', err));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+        city: user.location?.city || user.city || prev.city,
+        agency: user.agency || prev.agency,
+        rera: user.rera || prev.rera,
+      }));
+    }
+  }, [user]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    showToast('Agent profile credentials & dossier updated successfully.', 'success');
+    setSaving(true);
+    try {
+      if (updateProfile) {
+        await updateProfile(formData);
+      } else {
+        const userId = user?._id || user?.id;
+        if (userId) {
+          await AdminApi.updateProfile(userId, {
+            name: formData.name,
+            phone: formData.phone,
+            location: { city: formData.city },
+          });
+        }
+        showToast('Agent profile credentials & dossier updated successfully.', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to update profile.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -51,10 +106,10 @@ const Profile = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#EAE6DE]">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#101411] to-[#1E251E] text-[#D9C49B] flex items-center justify-center font-serif text-2xl font-bold shadow-md ring-4 ring-[#B49A70]/20">
-                  {formData.name.charAt(0)}
+                  {formData.name?.charAt(0) || 'A'}
                 </div>
                 <div>
-                  <h3 className="text-lg font-serif font-medium text-[#1C201C]">{formData.name}</h3>
+                  <h3 className="text-lg font-serif font-medium text-[#1C201C]">{formData.name || 'Agent'}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                       <ShieldCheck size={13} className="text-emerald-600" />
@@ -68,10 +123,20 @@ const Profile = () => {
 
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto"
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto disabled:opacity-50"
               >
-                <Save size={15} />
-                <span>Save Dossier</span>
+                {saving ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Saving…</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={15} />
+                    <span>Save Dossier</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -83,6 +148,7 @@ const Profile = () => {
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
@@ -121,6 +187,7 @@ const Profile = () => {
                   type="text"
                   value={formData.rera}
                   onChange={(e) => setFormData({ ...formData, rera: e.target.value })}
+                  placeholder="e.g. UP-RERA-2026-98124"
                   className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] font-mono transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
                 />
               </div>

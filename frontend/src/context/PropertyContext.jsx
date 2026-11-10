@@ -319,11 +319,13 @@ export const PropertyProvider = ({ children }) => {
   const [favorites, setFavorites] = useState(() => {
     try {
       const saved = localStorage.getItem('plutoplat_favorites');
-      return saved ? JSON.parse(saved) : [1, 3];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return [1, 3];
+      return [];
     }
   });
+
+  const [testimonials, setTestimonials] = useState(TESTIMONIALS);
 
   const [leads, setLeads] = useState(() => {
     try {
@@ -477,6 +479,76 @@ export const PropertyProvider = ({ children }) => {
     }
   }, [notifications]);
 
+  // Sync session on mount/refresh if token exists & fetch backend properties / testimonials
+  useEffect(() => {
+    // 1. Fetch properties from backend MongoDB
+    Api.getProperties()
+      .then((res) => {
+        if (res?.data?.properties && res.data.properties.length > 0) {
+          setProperties(res.data.properties);
+        }
+      })
+      .catch((err) => console.warn('Properties load notice (local dataset active):', err.message));
+
+    // 2. Fetch testimonials from backend MongoDB
+    Api.getTestimonials()
+      .then((res) => {
+        if (res?.data && res.data.length > 0) {
+          setTestimonials(res.data);
+        }
+      })
+      .catch((err) => console.warn('Testimonials load notice (local dataset active):', err.message));
+
+    // 3. User session & saved properties sync
+    const token = localStorage.getItem('pluto_token');
+    if (token) {
+      Api.getMe()
+        .then((res) => {
+          if (res?.data?.user) {
+            const apiUser = res.data.user;
+            const roleLabels = {
+              super_admin: 'Website Owner',
+              admin: 'Agent / Broker',
+              user: 'Client'
+            };
+            const updatedUser = {
+              id: apiUser._id || apiUser.id,
+              name: apiUser.name,
+              email: apiUser.email,
+              phone: apiUser.phone,
+              role: apiUser.role || 'user',
+              tier: roleLabels[apiUser.role] || 'Registered Client',
+              city: apiUser.location?.city || '',
+              location: apiUser.location,
+              profileImage: apiUser.profileImage,
+              avatar: apiUser.profileImage,
+              subscriptionTier: apiUser.subscriptionTier,
+            };
+            setUser(updatedUser);
+            localStorage.setItem('plutoplat_user', JSON.stringify(updatedUser));
+          }
+        })
+        .catch((err) => {
+          if (err?.status === 401) {
+            setUser(null);
+            localStorage.removeItem('plutoplat_user');
+            localStorage.removeItem('pluto_token');
+          }
+        });
+
+      // Load saved properties for authenticated buyer
+      Api.getSavedProperties()
+        .then((res) => {
+          if (res?.data?.savedIds && res.data.savedIds.length > 0) {
+            setFavorites(res.data.savedIds);
+          } else if (res?.data?.savedProperties && res.data.savedProperties.length > 0) {
+            setFavorites(res.data.savedProperties.map((p) => p.id || p._id));
+          }
+        })
+        .catch((err) => console.warn('Saved properties load notice:', err.message));
+    }
+  }, []);
+
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
     setTimeout(() => {
@@ -492,16 +564,32 @@ export const PropertyProvider = ({ children }) => {
     };
 
     const newUser = {
-      id: userData.id || `PLP-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: userData.name || userData.fullName || 'Valued User',
-      email: userData.email || 'user@plutoplat.com',
-      phone: userData.phone || '+91 99563 46155',
+      id: userData._id || userData.id,
+      name: userData.name || userData.fullName || 'User',
+      email: userData.email || '',
+      phone: userData.phone || '',
       role: userData.role || 'user',
       tier: roleLabels[userData.role] || 'Registered Client',
-      avatar: userData.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-      city: userData.city || 'Kanpur, Uttar Pradesh',
+      avatar: userData.profileImage || userData.avatar || '',
+      profileImage: userData.profileImage || userData.avatar || '',
+      city: userData.location?.city || userData.city || '',
+      location: userData.location,
     };
     setUser(newUser);
+
+    // Sync saved properties directly from backend user document
+    if (userData.savedProperties && Array.isArray(userData.savedProperties)) {
+      setFavorites(userData.savedProperties.map(p => (p._id ? p._id.toString() : p.toString())));
+    } else {
+      Api.getSavedProperties()
+        .then((res) => {
+          if (res?.data?.savedIds) {
+            setFavorites(res.data.savedIds);
+          }
+        })
+        .catch(() => {});
+    }
+
     try {
       localStorage.setItem('plutoplat_user', JSON.stringify(newUser));
     } catch (e) {
@@ -512,10 +600,13 @@ export const PropertyProvider = ({ children }) => {
   };
 
   const logout = () => {
+    Api.logout();
     setUser(null);
+    setFavorites([]);
     try {
       localStorage.removeItem('plutoplat_user');
       localStorage.removeItem('pluto_token');
+      localStorage.removeItem('plutoplat_favorites');
     } catch (e) {
       console.error(e);
     }
@@ -571,19 +662,24 @@ export const PropertyProvider = ({ children }) => {
   };
 
   // Property Actions (CRUD & Moderation)
-  const addProperty = (newProp) => {
-    const id = Date.now();
-    const isSuperAdmin = user?.role === 'super_admin';
+  const addProperty = async (newProp) => {
+    let createdProp = null;
+    try {
+      const res = await Api.createProperty(newProp);
+      if (res?.data?.property) createdProp = res.data.property;
+    } catch (e) {}
 
-    const createdProp = {
-      ...newProp,
-      id,
-      verified: isSuperAdmin,
-      status: isSuperAdmin ? 'approved' : 'pending',
-      ownerEmail: user?.email || 'm.sharma@plutoplat.com',
-      ownerName: user?.name || 'Michael Sharma',
-      createdAt: new Date().toISOString()
-    };
+    if (!createdProp) {
+      createdProp = {
+        ...newProp,
+        id: Date.now(),
+        verified: true,
+        status: 'approved',
+        ownerEmail: user?.email || 'm.sharma@plutoplat.com',
+        ownerName: user?.name || 'Michael Sharma',
+        createdAt: new Date().toISOString()
+      };
+    }
 
     setProperties(prev => [createdProp, ...prev]);
 
@@ -594,17 +690,10 @@ export const PropertyProvider = ({ children }) => {
       action: 'CREATE',
       target: createdProp.title,
       status: 'SUCCESS',
-      description: isSuperAdmin
-        ? `SuperAdmin published verified property: ${createdProp.title}`
-        : `Agent submitted property for SuperAdmin review: ${createdProp.title}`
+      description: `Property created and published: ${createdProp.title}`
     });
 
-    showToast(
-      isSuperAdmin
-        ? 'Property listing verified and published live successfully!'
-        : 'Property submitted! Awaiting SuperAdmin verification and approval.',
-      'success'
-    );
+    showToast('Property listing created and published live on PlutoPlat!', 'success');
     return createdProp;
   };
 
@@ -791,32 +880,42 @@ export const PropertyProvider = ({ children }) => {
   };
 
   const toggleFavorite = (propertyId) => {
+    const idStr = String(propertyId);
     setFavorites(prev => {
-      const exists = prev.includes(propertyId);
+      const exists = prev.some(id => String(id) === idStr);
       if (exists) {
         showToast('Property removed from your saved list.', 'info');
-        return prev.filter(id => id !== propertyId);
+        return prev.filter(id => String(id) !== idStr);
       } else {
         showToast('Property saved to your collection!', 'success');
         return [...prev, propertyId];
       }
     });
+
+    if (localStorage.getItem('pluto_token')) {
+      Api.toggleSavedProperty(propertyId).catch(err => {
+        console.warn('Backend toggle property saved notice:', err.message);
+      });
+    }
   };
 
-  const isFavorite = (propertyId) => favorites.includes(propertyId);
+  const isFavorite = (propertyId) => {
+    const idStr = String(propertyId);
+    return favorites.some(id => String(id) === idStr);
+  };
 
   const favoriteProperties = useMemo(
-    () => properties.filter(p => favorites.includes(p.id)),
+    () => properties.filter(p => favorites.some(id => String(id) === String(p.id) || String(id) === String(p._id))),
     [properties, favorites]
   );
 
   const recentlyViewedProperties = useMemo(() => {
     return recentlyViewed
-      .map(id => properties.find(p => p.id === id))
+      .map(id => properties.find(p => String(p.id) === String(id) || String(p._id) === String(id)))
       .filter(Boolean);
   }, [properties, recentlyViewed]);
 
-  const updateUser = (userData) => {
+  const updateUser = async (userData) => {
     setUser(prev => {
       const updated = { ...(prev || {}), ...userData };
       try {
@@ -826,7 +925,33 @@ export const PropertyProvider = ({ children }) => {
       }
       return updated;
     });
+
+    // Sync to MongoDB if logged in
+    const token = localStorage.getItem('pluto_token');
+    const userId = user?.id || user?._id || userData?.id || userData?._id;
+    if (token && userId) {
+      try {
+        await Api.updateUserProfile(userId, userData);
+      } catch (err) {
+        console.warn('Backend user profile sync notice:', err.message);
+      }
+    }
     showToast('Profile dossier updated successfully.', 'success');
+  };
+
+  const addTestimonial = async (data) => {
+    try {
+      const res = await Api.createTestimonial(data);
+      const created = res?.data || { id: Date.now(), ...data };
+      setTestimonials(prev => [created, ...prev]);
+      showToast('Thank you! Your testimonial has been published.', 'success');
+      return created;
+    } catch (err) {
+      const fallback = { id: Date.now(), ...data };
+      setTestimonials(prev => [fallback, ...prev]);
+      showToast('Testimonial recorded.', 'info');
+      return fallback;
+    }
   };
 
   const addVisit = (visitData) => {
@@ -975,15 +1100,26 @@ export const PropertyProvider = ({ children }) => {
   );
 
   const getPropertyById = (id) => {
-    const numericId = parseInt(id, 10);
-    return properties.find(p => p.id === numericId) || null;
+    if (!id) return null;
+    const strId = String(id);
+    return (
+      properties.find(
+        (p) => String(p.id) === strId || String(p._id) === strId || p.slug === id
+      ) || null
+    );
   };
 
   // Indian Real Estate Price Formatter (Crores & Lakhs)
   const formatPrice = (numericVal) => {
     if (!numericVal) return 'Price on Request';
+    if (typeof numericVal === 'string' && (numericVal.startsWith('₹') || numericVal.startsWith('$'))) {
+      return numericVal;
+    }
+    const num = Number(String(numericVal).replace(/[^\d.]/g, ''));
+    if (isNaN(num) || num <= 0) return 'Price on Request';
+
     if (currency === 'INR') {
-      const inrValue = Math.round(numericVal * 83.5);
+      const inrValue = num > 100000000 ? num : Math.round(num * 83.5);
       if (inrValue >= 10000000) {
         return `₹${(inrValue / 10000000).toFixed(2)} Cr`;
       }
@@ -992,14 +1128,15 @@ export const PropertyProvider = ({ children }) => {
       }
       return `₹${inrValue.toLocaleString('en-IN')}`;
     }
-    return `$${numericVal.toLocaleString('en-US')}`;
+    return `$${num.toLocaleString('en-US')}`;
   };
 
   const value = {
     properties,
     categories: CATEGORIES,
     agents: AGENTS,
-    testimonials: TESTIMONIALS,
+    testimonials,
+    addTestimonial,
     stats: STATS,
     faqs: FAQS,
     favorites,

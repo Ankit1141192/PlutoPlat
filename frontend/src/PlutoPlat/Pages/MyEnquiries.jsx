@@ -1,16 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FileText, Clock, CheckCircle, Calendar, ArrowRight, 
   MapPin, Phone, Mail, Download, ShieldCheck, Sparkles 
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
+import { Api } from '../Services/Api';
 
 const MyEnquiries = () => {
   const { showToast } = usePropertyStore();
   const [filterStatus, setFilterStatus] = useState('All');
+  const [enquiries, setEnquiries] = useState([]);
 
-  const mockEnquiries = [
+  useEffect(() => {
+    if (localStorage.getItem('pluto_token')) {
+      Api.getMyEnquiries()
+        .then((res) => {
+          if (res?.data?.enquiries && res.data.enquiries.length > 0) {
+            const mapped = res.data.enquiries.map((enq) => ({
+              id: enq._id ? `PLP-${enq._id.toString().slice(-6).toUpperCase()}` : enq.id,
+              propertyId: enq.property?._id || enq.property?.id || 1,
+              propertyTitle: enq.property?.title || 'Prime Residence Inquiry',
+              location: typeof enq.property?.location === 'string' ? enq.property.location : (enq.property?.location?.city || 'Civil Lines, Kanpur'),
+              price: enq.property?.price ? `₹${(enq.property.price / 10000000).toFixed(2)} Cr` : 'Price on Request',
+              type: enq.property?.type || 'Villas',
+              image: enq.property?.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
+              submittedDate: new Date(enq.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+              status: enq.status === 'pending' ? 'Active Review' : (enq.status === 'completed' ? 'Closed' : 'Tour Scheduled'),
+              statusLabel: enq.status === 'pending' ? 'Under Advisory Review' : 'Advisor Liaison Active',
+              statusColor: enq.status === 'pending' ? 'gold' : 'emerald',
+              appointmentDate: enq.siteVisit?.date ? new Date(enq.siteVisit.date).toLocaleDateString() : null,
+              advisor: {
+                name: enq.seller?.name || 'Michael Sharma',
+                title: 'Senior Real Estate Advisor',
+                phone: enq.seller?.phone || '+91 99563 46155',
+                avatar: enq.seller?.profileImage || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80',
+              },
+              notes: enq.message || 'Direct inquiry submitted through buyer portal.',
+            }));
+            setEnquiries(mapped);
+          }
+        })
+        .catch((err) => console.warn('My enquiries load notice:', err.message));
+    }
+  }, []);
+
+  const defaultEnquiries = [
     {
       id: 'PLP-ENQ-9041',
       propertyId: 1,
@@ -76,7 +111,9 @@ const MyEnquiries = () => {
     }
   ];
 
-  const filtered = mockEnquiries.filter((item) => {
+  const activeList = enquiries.length > 0 ? enquiries : defaultEnquiries;
+
+  const filtered = activeList.filter((item) => {
     if (filterStatus === 'All') return true;
     return item.status === filterStatus;
   });

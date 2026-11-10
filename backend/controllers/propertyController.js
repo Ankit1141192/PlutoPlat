@@ -1,14 +1,45 @@
 const Property = require('../models/Property');
 const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
+const { sendNotification } = require('../utils/notificationService');
+
+/**
+ * Format property document for clean frontend consumption
+ */
+const normalizeProperty = (prop) => {
+  const p = prop.toObject ? prop.toObject() : prop;
+  const id = p._id ? p._id.toString() : (p.id || String(Date.now()));
+
+  let locStr = 'Kanpur, Uttar Pradesh';
+  if (typeof p.location === 'string') {
+    locStr = p.location;
+  } else if (p.location && typeof p.location === 'object') {
+    const parts = [p.location.city, p.location.state].filter(Boolean);
+    locStr = parts.length > 0 ? parts.join(', ') : (p.location.address || 'Kanpur, UP');
+  }
+
+  const primaryImage = p.image || (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+
+  return {
+    ...p,
+    id,
+    _id: id,
+    location: locStr,
+    locationDetails: p.location,
+    image: primaryImage,
+    images: p.images && p.images.length > 0 ? p.images : [primaryImage],
+    type: p.type || p.propertyType || 'Villas',
+    purpose: p.purpose || (p.listingType === 'rent' ? 'Rent' : 'Buy'),
+    numericPrice: p.numericPrice || (typeof p.price === 'number' ? p.price : 8500000),
+    price: p.price || (p.numericPrice ? `₹${(p.numericPrice / 10000000).toFixed(2)} Cr` : 'Price on Request'),
+    featured: p.featured || p.isFeatured || false,
+    verified: p.verified !== undefined ? p.verified : (p.isVerified !== undefined ? p.isVerified : true),
+  };
+};
 
 /**
  * Create a new property
  * POST /api/v1/properties
- * RBAC:
- * - user: Forbidden (Buyers cannot create listings)
- * - admin: Allowed (Always created with status='pending' and isVerified=false)
- * - super_admin: Allowed (Directly approved or custom status)
  */
 const createProperty = async (req, res, next) => {
   try {
@@ -23,8 +54,8 @@ const createProperty = async (req, res, next) => {
     }
 
     const isSuperAdmin = userRole === 'super_admin';
-    const status = isSuperAdmin ? (req.body.status || 'active') : 'pending';
-    const isVerified = isSuperAdmin ? (req.body.isVerified !== undefined ? req.body.isVerified : true) : false;
+    const status = isSuperAdmin ? (req.body.status || 'active') : (req.body.status || 'approved');
+    const isVerified = isSuperAdmin ? (req.body.isVerified !== undefined ? req.body.isVerified : true) : true;
 
     const propertyData = {
       ...req.body,
@@ -47,11 +78,32 @@ const createProperty = async (req, res, next) => {
       req,
     });
 
-    const message = isSuperAdmin
-      ? 'Property created and verified successfully.'
-      : 'Property listing submitted for SuperAdmin moderation. It will be published upon approval.';
+    const locText = typeof property.location === 'string'
+      ? property.location
+      : property.location?.city || 'Kanpur, UP';
 
-    return ApiResponse.success(res, message, { property }, 201);
+    // Dispatch notifications
+    await sendNotification({
+      recipientRole: 'super_admin',
+      title: 'New Listing Added to Platform',
+      message: `${req.user.name} (${userRole}) added "${property.title}" in ${locText}.`,
+      type: 'property',
+      category: 'Listing Updates',
+      link: `/properties`,
+    });
+
+    await sendNotification({
+      recipientRole: 'user',
+      title: 'New Property Available',
+      message: `"${property.title}" in ${locText} is now published and open for viewing.`,
+      type: 'property',
+      category: 'Off-Market',
+      link: `/property/${property._id}`,
+    });
+
+    const message = 'Property created and published successfully. Visible on the public portal.';
+
+    return ApiResponse.success(res, message, { property: normalizeProperty(property) }, 201);
   } catch (error) {
     next(error);
   }
@@ -60,24 +112,24 @@ const createProperty = async (req, res, next) => {
 /**
  * Get all properties with filters & pagination
  * GET /api/v1/properties
- * RBAC:
- * - Public / Buyers: Only retrieve active & verified listings
- * - Admin: View all active, or filter their own listings by status
- * - SuperAdmin: Full access to all statuses (pending moderation queue, active, rejected)
  */
 const getProperties = async (req, res, next) => {
   try {
     const {
       page = 1,
-      limit = 12,
+      limit = 50,
       propertyType,
+      type,
       listingType,
+      purpose,
       city,
+      location,
       minPrice,
       maxPrice,
       search,
       status,
       owner,
+      featured,
     } = req.query;
 
     const query = {};
@@ -94,47 +146,102 @@ const getProperties = async (req, res, next) => {
         query.owner = owner;
       }
     } else if (isAdmin && owner && req.user._id.toString() === owner) {
-      // Admin looking at their own listings
       query.owner = req.user._id;
       if (status && status !== 'all') {
         query.status = status;
       }
     } else {
-      // Default public / buyer query: only verified & active properties
-      query.status = 'active';
-      query.isVerified = true;
-      query.isAvailable = true;
+      // Default public: show all active/approved/listed properties (hide only rejected/archived)
+      query.status = { $nin: ['rejected', 'archived'] };
     }
 
-    if (propertyType) query.propertyType = propertyType;
-    if (listingType) query.listingType = listingType;
-    if (city) query['location.city'] = new RegExp(city, 'i');
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+    // Property Type filter
+    const targetType = type || propertyType;
+    if (targetType && targetType !== 'All') {
+      query.$or = query.$or || [];
+      const typeRegex = new RegExp(targetType, 'i');
+      query.$or.push({ type: typeRegex }, { propertyType: typeRegex });
     }
-    if (search) {
-      query.$or = [
-        { title: new RegExp(search, 'i') },
-        { description: new RegExp(search, 'i') },
-        { 'location.city': new RegExp(search, 'i') },
-        { 'location.state': new RegExp(search, 'i') },
+
+    // Purpose / ListingType filter
+    const targetPurpose = purpose || listingType;
+    if (targetPurpose && targetPurpose !== 'All') {
+      const pLower = targetPurpose.toLowerCase();
+      const mapped = pLower === 'buy' || pLower === 'sale' ? ['sale', 'buy', 'Buy'] : ['rent', 'Rent'];
+      query.$or = query.$or || [];
+      query.$or.push({ purpose: { $in: mapped } }, { listingType: { $in: mapped } });
+    }
+
+    // Location / City filter
+    const locFilter = location || city;
+    if (locFilter && locFilter.trim()) {
+      const locRegex = new RegExp(locFilter.trim(), 'i');
+      const locConditions = [
+        { 'location.city': locRegex },
+        { 'location.state': locRegex },
+        { 'location.address': locRegex },
+        { location: locRegex },
+        { title: locRegex },
+        { subtitle: locRegex },
+        { description: locRegex },
       ];
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: locConditions }];
+        delete query.$or;
+      } else {
+        query.$or = locConditions;
+      }
+    }
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      const priceQuery = {};
+      if (minPrice) priceQuery.$gte = Number(minPrice);
+      if (maxPrice) priceQuery.$lte = Number(maxPrice);
+      query.numericPrice = priceQuery;
+    }
+
+    // Featured filter
+    if (featured === 'true') {
+      query.$or = query.$or || [];
+      query.$or.push({ featured: true }, { isFeatured: true });
+    }
+
+    // General search text
+    if (search && search.trim()) {
+      const sRegex = new RegExp(search.trim(), 'i');
+      const searchConditions = [
+        { title: sRegex },
+        { subtitle: sRegex },
+        { description: sRegex },
+        { 'location.city': sRegex },
+        { 'location.address': sRegex },
+        { location: sRegex },
+      ];
+      if (query.$and) {
+        query.$and.push({ $or: searchConditions });
+      } else if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: searchConditions }];
+        delete query.$or;
+      } else {
+        query.$or = searchConditions;
+      }
     }
 
     const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    const [properties, total] = await Promise.all([
+    const [rawProperties, total] = await Promise.all([
       Property.find(query)
         .populate('owner', 'name email phone profileImage role')
         .skip(skip)
         .limit(limitNum)
-        .sort({ createdAt: -1 }),
+        .sort({ isFeatured: -1, featured: -1, createdAt: -1 }),
       Property.countDocuments(query),
     ]);
+
+    const properties = rawProperties.map(normalizeProperty);
 
     return ApiResponse.success(res, 'Properties fetched successfully.', {
       properties,
@@ -142,7 +249,7 @@ const getProperties = async (req, res, next) => {
         page: pageNum,
         limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limitNum),
+        totalPages: Math.ceil(total / limitNum) || 1,
       },
     });
   } catch (error) {
@@ -156,20 +263,25 @@ const getProperties = async (req, res, next) => {
  */
 const getPropertyById = async (req, res, next) => {
   try {
-    const property = await Property.findById(req.params.id).populate(
-      'owner',
-      'name email phone profileImage role'
-    );
+    let property = null;
+    const { id } = req.params;
+
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      property = await Property.findById(id).populate('owner', 'name email phone profileImage role');
+    } else {
+      property = await Property.findOne({ slug: id }) || await Property.findOne({ id });
+    }
 
     if (!property) {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
 
-    // Increment views safely
     property.views = (property.views || 0) + 1;
     await property.save();
 
-    return ApiResponse.success(res, 'Property fetched successfully.', { property });
+    return ApiResponse.success(res, 'Property fetched successfully.', {
+      property: normalizeProperty(property),
+    });
   } catch (error) {
     next(error);
   }
@@ -181,7 +293,8 @@ const getPropertyById = async (req, res, next) => {
  */
 const getMyProperties = async (req, res, next) => {
   try {
-    const properties = await Property.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    const rawProperties = await Property.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    const properties = rawProperties.map(normalizeProperty);
     return ApiResponse.success(res, 'Your property listings fetched successfully.', { properties });
   } catch (error) {
     next(error);
@@ -191,14 +304,13 @@ const getMyProperties = async (req, res, next) => {
 /**
  * Moderate Property (SuperAdmin only)
  * PATCH /api/v1/properties/:id/moderate
- * Approve or Reject a listing submitted by agents
  */
 const moderateProperty = async (req, res, next) => {
   try {
     const { status, rejectionReason } = req.body;
 
-    if (!['active', 'rejected', 'pending'].includes(status)) {
-      return ApiResponse.error(res, "Invalid moderation status. Choose 'active', 'rejected', or 'pending'.", 400);
+    if (!['active', 'approved', 'rejected', 'pending'].includes(status)) {
+      return ApiResponse.error(res, "Invalid moderation status. Choose 'active', 'approved', 'rejected', or 'pending'.", 400);
     }
 
     const property = await Property.findById(req.params.id);
@@ -206,11 +318,14 @@ const moderateProperty = async (req, res, next) => {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
 
-    property.status = status;
-    property.isVerified = status === 'active';
-    if (status === 'rejected' && rejectionReason) {
+    const finalStatus = status === 'approved' ? 'active' : status;
+    property.status = finalStatus;
+    property.isVerified = finalStatus === 'active';
+    property.verified = finalStatus === 'active';
+
+    if (finalStatus === 'rejected' && rejectionReason) {
       property.rejectionReason = rejectionReason;
-    } else if (status === 'active') {
+    } else if (finalStatus === 'active') {
       property.rejectionReason = '';
     }
 
@@ -219,15 +334,17 @@ const moderateProperty = async (req, res, next) => {
     await logAudit({
       actor: req.user._id,
       actorRole: req.user.role,
-      action: status === 'active' ? 'APPROVE' : 'REJECT',
+      action: finalStatus === 'active' ? 'APPROVE' : 'REJECT',
       module: 'PROPERTY',
       targetId: property._id,
       targetType: 'Property',
-      description: `Moderated property: ${property.title} to ${status.toUpperCase()}`,
+      description: `Moderated property: ${property.title} to ${finalStatus.toUpperCase()}`,
       req,
     });
 
-    return ApiResponse.success(res, `Property status updated to ${status}.`, { property });
+    return ApiResponse.success(res, `Property status updated to ${finalStatus}.`, {
+      property: normalizeProperty(property),
+    });
   } catch (error) {
     next(error);
   }
@@ -244,17 +361,17 @@ const updateProperty = async (req, res, next) => {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
 
-    const isOwner = property.owner.toString() === req.user._id.toString();
+    const isOwner = property.owner && property.owner.toString() === req.user._id.toString();
     const isSuperAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isSuperAdmin) {
       return ApiResponse.error(res, 'Forbidden: You can only edit your own listings.', 403);
     }
 
-    // If an admin edits their listing, reset status to pending for re-moderation unless super_admin
     if (!isSuperAdmin) {
       req.body.status = 'pending';
       req.body.isVerified = false;
+      req.body.verified = false;
     }
 
     Object.assign(property, req.body);
@@ -271,7 +388,9 @@ const updateProperty = async (req, res, next) => {
       req,
     });
 
-    return ApiResponse.success(res, 'Property updated successfully.', { property });
+    return ApiResponse.success(res, 'Property updated successfully.', {
+      property: normalizeProperty(property),
+    });
   } catch (error) {
     next(error);
   }
@@ -288,7 +407,7 @@ const deleteProperty = async (req, res, next) => {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
 
-    const isOwner = property.owner.toString() === req.user._id.toString();
+    const isOwner = property.owner && property.owner.toString() === req.user._id.toString();
     const isSuperAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isSuperAdmin) {
@@ -322,4 +441,5 @@ module.exports = {
   moderateProperty,
   updateProperty,
   deleteProperty,
+  normalizeProperty,
 };
