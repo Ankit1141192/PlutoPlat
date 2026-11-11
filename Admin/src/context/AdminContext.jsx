@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { AdminApi } from '../services/Api';
 
 const AdminContext = createContext(null);
@@ -117,8 +118,55 @@ export const AdminProvider = ({ children }) => {
     }
   });
 
+  const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [loading, setLoading] = useState(false);
+
+  // Real-Time Socket.IO Integration for Admin & Agent Desks
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect', () => {
+      console.log('[Socket.IO] Admin connected to server:', socket.id);
+      socket.emit('register', {
+        role: 'admin',
+        userId: user?._id || user?.id,
+      });
+    });
+
+    socket.on('new_notification', (notif) => {
+      console.log('[Socket.IO] Admin received real-time notification:', notif);
+      setNotifications((prev) => [notif, ...prev.filter((n) => (n._id || n.id) !== (notif._id || notif.id))]);
+      showToast(`📢 ${notif.title}`, 'info');
+    });
+
+    socket.on('property_created', (prop) => {
+      setProperties((prev) => {
+        if (prev.some((p) => (p.id || p._id) === (prop.id || prop._id))) return prev;
+        return [prop, ...prev];
+      });
+    });
+
+    socket.on('property_updated', (prop) => {
+      setProperties((prev) =>
+        prev.map((p) => ((p.id || p._id) === (prop.id || prop._id) ? { ...p, ...prop } : p))
+      );
+    });
+
+    socket.on('property_deleted', ({ id, _id }) => {
+      const targetId = id || _id;
+      setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   useEffect(() => {
     try {
@@ -189,6 +237,15 @@ export const AdminProvider = ({ children }) => {
         .then((res) => {
           if (res?.data?.leads && res.data.leads.length > 0) {
             setLeads(res.data.leads);
+          }
+        })
+        .catch(() => {});
+
+      // Sync live notifications from MongoDB backend
+      AdminApi.getNotifications()
+        .then((res) => {
+          if (res?.data?.notifications) {
+            setNotifications(res.data.notifications);
           }
         })
         .catch(() => {});
@@ -339,7 +396,9 @@ export const AdminProvider = ({ children }) => {
     updateLeadStatus,
     toast,
     showToast,
-    updateProfile
+    updateProfile,
+    notifications,
+    setNotifications,
   };
 
   return (

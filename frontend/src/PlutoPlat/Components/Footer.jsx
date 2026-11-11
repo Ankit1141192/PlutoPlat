@@ -53,6 +53,7 @@ const linkGroups = [
       { to: '/about', label: 'About us' },
       { to: '/faq', label: 'FAQ' },
       { to: '/contact', label: 'Contact' },
+      { to: '/more', label: 'Platform Extras & More' },
     ],
   },
   {
@@ -64,8 +65,20 @@ const linkGroups = [
   },
 ];
 
+// Change this to your exact address or business name to pin the map precisely.
+const OFFICE_QUERY = 'Civil Lines Kanpur';
+const MAP_EMBED_URL = `https://maps.google.com/maps?q=${encodeURIComponent(OFFICE_QUERY)}&z=14&output=embed`;
+const MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(OFFICE_QUERY)}`;
+
 const linkClass =
   'group inline-flex items-center gap-1.5 text-sm text-[#A09D94] transition-colors hover:text-white';
+
+const contactItems = [
+  { Icon: MapPin, label: 'Visit us', value: 'Civil Lines & Swaroop Nagar, Kanpur, Uttar Pradesh 208001' },
+  { Icon: Phone, label: 'Call us', value: '+91 99563 46155', href: 'tel:+919956346155' },
+  { Icon: Mail, label: 'Email us', value: 'kanpur@plutoplat.com', href: 'mailto:kanpur@plutoplat.com' },
+  { Icon: Clock, label: 'Office hours', value: 'Mon – Sat, 10:00 AM – 7:00 PM' },
+];
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -97,18 +110,18 @@ const Footer = () => {
       <div className="relative mx-auto max-w-7xl px-5 pt-16 sm:px-6 lg:pt-24">
         {/* ───────── Newsletter panel ───────── */}
         <div className="rounded-3xl bg-gradient-to-br from-[#B49A70]/50 via-[#B49A70]/10 to-transparent p-px">
-          <div className="grid grid-cols-1 items-center gap-8 rounded-3xl bg-[#191D19] p-6 sm:p-10 lg:grid-cols-12 lg:gap-12 lg:p-14">
-            <div className="lg:col-span-7">
-              <p className="mb-3 text-sm font-medium text-[#C9B287]">The Private Gazette</p>
-              <h3 className="font-serif text-[26px] font-normal leading-snug text-white sm:text-3xl lg:text-4xl">
+          <div className="grid grid-cols-1 items-center gap-6 rounded-3xl bg-[#191D19] p-6 sm:p-8 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-8">
+            <div className="lg:col-span-8">
+              <p className="mb-2 text-sm font-medium text-[#C9B287]">The Private Gazette</p>
+              <h3 className="font-serif text-2xl font-normal leading-snug text-white xl:whitespace-nowrap xl:text-[28px]">
                 Off-market homes, sent to you before they go public.
               </h3>
-              <p className="mt-4 max-w-lg text-sm font-light leading-relaxed text-[#A09D94]">
+              <p className="mt-2 text-sm font-light leading-relaxed text-[#A09D94]">
                 A twice-monthly digest of private acquisitions for collectors, family offices and developers. No spam, ever.
               </p>
             </div>
 
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-4">
               {subscribed ? (
                 <div className="flex items-start gap-3 rounded-2xl border border-[#B49A70]/40 bg-[#202520] p-4 text-sm text-[#E8D9BF]">
                   <ShieldCheck size={20} className="mt-0.5 shrink-0 text-[#B49A70]" />
@@ -127,12 +140,12 @@ const Footer = () => {
                       required
                       placeholder="Your email address"
                       aria-label="Email address"
-                      className="w-full rounded-xl border border-[#353B35] bg-[#202520] py-4 pl-11 pr-4 text-base text-white placeholder:text-[#6E6D66] transition-colors focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20 sm:text-sm"
+                      className="w-full rounded-xl border border-[#353B35] bg-[#202520] py-3 pl-11 pr-4 text-base text-white placeholder:text-[#6E6D66] transition-colors focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20 sm:text-sm"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] text-sm font-semibold text-[#161916] transition hover:brightness-110 active:scale-[0.99]"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] text-sm font-semibold text-[#161916] transition hover:brightness-110 active:scale-[0.99]"
                   >
                     Subscribe <ArrowUpRight size={16} />
                   </button>
@@ -149,7 +162,7 @@ const Footer = () => {
         {/* ───────── Link columns ───────── */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-8 lg:py-20">
           {/* Brand */}
-          <div className="col-span-2 lg:col-span-4 lg:pr-8">
+          <div className="col-span-2 lg:col-span-3 lg:pr-6">
             <Link to="/" className="inline-block">
               <span className="font-serif text-3xl font-normal tracking-tight text-white">
                 Pluto<span className="text-[#C9B287]">Plat</span>.
@@ -181,16 +194,41 @@ const Footer = () => {
               </ul>
             </div>
           ))}
+
+          {/* Mini map */}
+          <div className="col-span-2 lg:col-span-3">
+            <h4 className="mb-5 font-serif text-lg font-normal text-white">Visit our office</h4>
+
+            <div className="overflow-hidden rounded-2xl border border-[#2F352F] bg-[#161A16]">
+              <iframe
+                title="PlutoPlat office location, Civil Lines, Kanpur"
+                src={MAP_EMBED_URL}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="h-36 w-full border-0 opacity-90 [filter:grayscale(1)_invert(0.9)_contrast(0.9)]"
+              />
+
+              <div className="flex items-center justify-between gap-3 p-3.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-[#E4E0D6]">Civil Lines, Kanpur</p>
+                  <p className="text-xs text-[#77766E]">Open Mon – Sat</p>
+                </div>
+                <a
+                  href={MAP_DIRECTIONS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#B49A70] px-3.5 text-xs font-semibold text-[#161916] transition hover:brightness-110"
+                >
+                  Directions <ArrowUpRight size={13} />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ───────── Contact strip ───────── */}
         <div className="grid grid-cols-1 gap-3 border-t border-[#262B26] py-8 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { Icon: MapPin, label: 'Visit us', value: 'Civil Lines & Swaroop Nagar, Kanpur, Uttar Pradesh 208001' },
-            { Icon: Phone, label: 'Call us', value: '+91 99563 46155', href: 'tel:+919956346155' },
-            { Icon: Mail, label: 'Email us', value: 'kanpur@plutoplat.com', href: 'mailto:kanpur@plutoplat.com' },
-            { Icon: Clock, label: 'Office hours', value: 'Mon – Sat, 10:00 AM – 7:00 PM' },
-          ].map(({ Icon, label, value, href }) => {
+          {contactItems.map(({ Icon, label, value, href }) => {
             const body = (
               <>
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#B49A70]/30 bg-[#B49A70]/10 text-[#C9B287]">
@@ -246,16 +284,6 @@ const Footer = () => {
           </button>
         </div>
       </div>
-
-      {/* Brand watermark */}
-      {/* <div aria-hidden="true" className="pointer-events-none relative select-none overflow-hidden text-center leading-none">
-        <span
-          className="font-serif block translate-y-[28%] whitespace-nowrap text-[22vw] font-normal tracking-tight sm:text-[16vw]"
-          style={{ color: 'rgba(201,178,135,0.06)' }}
-        >
-          PlutoPlat
-        </span>
-      </div> */}
     </footer>
   );
 };

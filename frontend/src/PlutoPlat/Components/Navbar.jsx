@@ -404,6 +404,7 @@ const Navbar = () => {
                   <NavLink
                     key={item.label}
                     to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={`group flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${
                       active ? 'bg-white text-[#1C201C] shadow-sm' : 'text-[#3F433E] active:bg-white'
                     }`}
@@ -444,6 +445,7 @@ const Navbar = () => {
                   <NavLink
                     key={to}
                     to={to}
+                    onClick={() => setMobileMenuOpen(false)}
                     className="relative flex min-h-[72px] flex-col justify-between rounded-xl border border-[#E4DFD4] bg-white p-3 text-[13px] font-medium leading-tight text-[#1C201C] transition-colors active:bg-[#F1EDE3]"
                   >
                     <Icon size={18} className="text-[#B49A70]" />

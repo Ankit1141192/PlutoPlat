@@ -60,7 +60,8 @@ const PropertyDetail = () => {
     );
   }
 
-  const favorited = isFavorite(property.id);
+  const propId = property._id || property.id;
+  const favorited = isFavorite(propId);
   const galleryImages = property.images && property.images.length > 0 ? property.images : [property.image];
 
   const handleShare = () => {
@@ -71,20 +72,35 @@ const PropertyDetail = () => {
   };
 
   const similarProperties = properties
-    .filter((p) => p.id !== property.id && p.type === property.type)
+    .filter((p) => (p._id || p.id) !== propId && p.type === property.type)
     .slice(0, 3);
 
   return (
     <div className="pt-28 pb-24 px-6 max-w-7xl mx-auto min-h-screen">
       {/* Top Navigation Row */}
       <div className="flex items-center justify-between mb-6 text-xs text-[#6E6D66]">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 hover:text-[#1C201C] transition-colors cursor-pointer font-medium"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Archive</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/properties');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 hover:text-[#1C201C] transition-colors cursor-pointer font-medium"
+          >
+            <ArrowLeft size={15} />
+            <span>Back to Archive</span>
+          </button>
+          <span className="text-[#DDD8CE]">|</span>
+          <Link
+            to="/properties"
+            className="hover:text-[#1C201C] transition-colors font-medium hidden sm:inline"
+          >
+            All Properties
+          </Link>
+        </div>
 
         <div className="flex items-center gap-3">
           <button
@@ -97,7 +113,7 @@ const PropertyDetail = () => {
           </button>
 
           <button
-            onClick={() => toggleFavorite(property.id)}
+            onClick={() => toggleFavorite(propId)}
             className={`p-2 border rounded-xs transition-colors flex items-center gap-1.5 shadow-2xs ${
               favorited
                 ? 'bg-[#C74747] text-white border-[#C74747]'

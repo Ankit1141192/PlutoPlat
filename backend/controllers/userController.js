@@ -265,10 +265,18 @@ const getNotifications = async (req, res, next) => {
     const userRole = req.user?.role || 'user';
     const userId = req.user?._id;
 
+    const rolesToMatch = ['all', userRole];
+    if (userRole === 'user' || userRole === 'admin') {
+      rolesToMatch.push('both', 'user_and_admin');
+    }
+    if (userRole === 'super_admin') {
+      rolesToMatch.push('user', 'admin', 'both', 'user_and_admin');
+    }
+
     const query = {
       $or: [
         { userId: userId },
-        { recipientRole: userRole },
+        { recipientRole: { $in: rolesToMatch } },
         { recipientRole: 'all' },
         { userId: null },
       ],

@@ -104,19 +104,34 @@ export const LeadCard = ({ lead }) => (
   </li>
 );
 
-export const PropertyRow = ({ prop, right }) => (
-  <li className="flex items-center justify-between gap-3 py-3.5">
-    <div className="flex min-w-0 items-center gap-3.5">
-      <img
-        src={prop.image || prop.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=300&q=80'}
-        alt=""
-        className="h-14 w-16 shrink-0 rounded-xl object-cover"
-      />
-      <div className="min-w-0">
-        <p className="truncate font-serif text-base text-[#1C201C]">{prop.title}</p>
-        <p className="truncate text-sm text-[#6E6D66]">{prop.price} · {prop.location}</p>
+export const PropertyRow = ({ prop, right }) => {
+  const locText = typeof prop.location === 'object' && prop.location !== null
+    ? ([prop.location.address, prop.location.city, prop.location.state].filter(Boolean).join(', ') || prop.location.city || 'Kanpur, UP')
+    : (prop.location || 'Kanpur, UP');
+
+  const priceText = typeof prop.price === 'string' && prop.price.length > 0 && isNaN(Number(prop.price))
+    ? prop.price
+    : (() => {
+        const val = Number(prop.numericPrice || prop.price) || 0;
+        if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+        if (val >= 100000) return `₹${(val / 100000).toFixed(2)} Lac`;
+        return `₹${val.toLocaleString('en-IN')}`;
+      })();
+
+  return (
+    <li className="flex items-center justify-between gap-3 py-3.5">
+      <div className="flex min-w-0 items-center gap-3.5">
+        <img
+          src={prop.image || prop.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=300&q=80'}
+          alt=""
+          className="h-14 w-16 shrink-0 rounded-xl object-cover"
+        />
+        <div className="min-w-0">
+          <p className="truncate font-serif text-base text-[#1C201C]">{prop.title}</p>
+          <p className="truncate text-sm text-[#6E6D66]">{priceText} · {locText}</p>
+        </div>
       </div>
-    </div>
-    <div className="flex shrink-0 items-center gap-2">{right}</div>
-  </li>
-);
+      <div className="flex shrink-0 items-center gap-2">{right}</div>
+    </li>
+  );
+};

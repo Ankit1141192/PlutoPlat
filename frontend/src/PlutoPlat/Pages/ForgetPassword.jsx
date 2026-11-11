@@ -1,40 +1,62 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ShieldCheck, ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Mail, ArrowLeft, ArrowRight, MailCheck, Loader2, AlertCircle } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 import { Api } from '../Services/Api';
 
+const RESEND_SECONDS = 60;
+
 const ForgetPassword = () => {
-  const navigate = useNavigate();
   const { showToast } = usePropertyStore();
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [resetToken, setResetToken] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [cooldown, setCooldown] = useState(0);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email) return;
+  // Countdown for the "Resend email" button
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const sendResetLink = async () => {
     setLoading(true);
     setErrorMsg('');
-
     try {
-      const res = await Api.forgotPassword({
+      // The reset token is sent only by email. It is never read or shown here.
+      await Api.forgotPassword({
         email: email.trim().toLowerCase(),
         origin: window.location.origin,
         portal: 'client',
       });
-      const token = res?.data?.resetToken || '';
-      setResetToken(token);
       setSubmitted(true);
-      showToast('Password reset email dispatched successfully.', 'success');
+      setCooldown(RESEND_SECONDS);
+      showToast('Check your inbox for the reset link.', 'success');
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to request password reset. Please verify your email.');
+      setErrorMsg(err?.message || 'We could not send the email. Check the address and try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email.trim() || loading) return;
+    sendResetLink();
+  };
+
+  const handleResend = () => {
+    if (cooldown > 0 || loading) return;
+    sendResetLink();
+  };
+
+  const handleChangeEmail = () => {
+    setSubmitted(false);
+    setErrorMsg('');
+    setCooldown(0);
   };
 
   return (
@@ -49,81 +71,112 @@ const ForgetPassword = () => {
       </Link>
 
       <div className="w-full max-w-md bg-white border border-[#DDD8CE] rounded-sm p-8 sm:p-10 shadow-lg">
-        {/* Brand Link */}
+        {/* Brand */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block mb-3">
             <span className="font-serif text-3xl font-normal text-[#1C201C] tracking-tight">
               Pluto<span className="text-[#B49A70]">Plat</span>.
             </span>
           </Link>
-          <h2 className="font-serif text-2xl text-[#1C201C] font-normal mb-1">
-            Forgot Password?
-          </h2>
-          <p className="text-xs text-[#6E6D66] font-light">
-            Enter your registered email address and we will send you a link to reset your password.
-          </p>
+
+          {!submitted && (
+            <>
+              <h2 className="font-serif text-2xl text-[#1C201C] font-normal mb-1">Forgot password?</h2>
+              <p className="text-xs text-[#6E6D66] font-light">
+                Enter your registered email address and we will send you a link to reset your password.
+              </p>
+            </>
+          )}
         </div>
 
         {errorMsg && (
-          <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2.5">
+          <div
+            role="alert"
+            className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2.5"
+          >
             <AlertCircle size={16} className="shrink-0 text-red-600" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {submitted ? (
-          <div className="text-center py-4 space-y-4">
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-200">
-              <CheckCircle2 size={30} />
+          /* ---------- Check your email ---------- */
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-[#F1ECE1] text-[#8A7348] rounded-full flex items-center justify-center mx-auto border border-[#DDD8CE]">
+              <MailCheck size={28} strokeWidth={1.6} />
             </div>
-            <h3 className="font-serif text-xl text-[#1C201C]">Reset Link Generated</h3>
-            <p className="text-xs text-[#6E6D66] leading-relaxed font-light">
-              Password reset instructions have been generated for <strong className="text-[#1C201C] font-mono">{email}</strong>.
+
+            <h3 className="font-serif text-2xl text-[#1C201C]">Check your email</h3>
+
+            <p className="text-sm text-[#6E6D66] leading-relaxed">
+              If an account exists for{' '}
+              <strong className="text-[#1C201C] font-semibold break-all">{email}</strong>, we have sent a
+              link to reset your password.
             </p>
 
-            {resetToken && (
-              <div className="p-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xs text-left">
-                <div className="text-[10px] uppercase font-semibold text-[#6E6D66] tracking-wider mb-1">
-                  Active Reset Token (15m validity):
-                </div>
-                <div className="text-[11px] font-mono text-[#1C201C] break-all select-all bg-white p-2 border border-[#EAE6DE]">
-                  {resetToken}
-                </div>
-              </div>
-            )}
+            <ul className="text-xs text-[#6E6D66] bg-[#F8F6F2] border border-[#EAE6DE] rounded-xs p-3.5 text-left space-y-1.5">
+              <li>• Open the email and tap the reset link.</li>
+              <li>• The link expires in 15 minutes.</li>
+              <li>• Can’t find it? Check your spam or promotions folder.</li>
+            </ul>
 
-            <div className="pt-4 space-y-3">
+            <div className="pt-2 space-y-3">
               <Link
-                to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs text-center"
+                to="/login"
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors text-center"
               >
-                <span>Reset Password</span>
-                <ArrowRight size={14} className="text-[#B49A70]" />
+                <ArrowLeft size={14} className="text-[#B49A70]" />
+                <span>Back to sign in</span>
               </Link>
+
               <button
                 type="button"
-                onClick={() => setSubmitted(false)}
-                className="text-xs text-[#B49A70] hover:underline cursor-pointer"
+                onClick={handleResend}
+                disabled={cooldown > 0 || loading}
+                className="w-full py-3 border border-[#DDD8CE] text-[#1C201C] hover:bg-[#F8F6F2] text-xs font-semibold rounded-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
               >
-                Need another token? Request again
+                {loading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Sending…</span>
+                  </>
+                ) : cooldown > 0 ? (
+                  <span>Resend email in {cooldown}s</span>
+                ) : (
+                  <span>Resend email</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                className="text-xs text-[#8A7348] hover:underline cursor-pointer"
+              >
+                Use a different email
               </button>
             </div>
           </div>
         ) : (
+          /* ---------- Email form ---------- */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
-                Registered Email Address
+              <label
+                htmlFor="forgot-email"
+                className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5"
+              >
+                Registered email address
               </label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#77766E]" />
                 <input
+                  id="forgot-email"
                   type="email"
                   required
+                  autoComplete="email"
                   placeholder="rahul.sharma@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
+                  className="w-full pl-10 pr-3.5 py-3 bg-[#F8F6F2] border border-[#DDD8CE] text-sm rounded-xs focus:outline-none focus:border-[#B49A70] focus:ring-2 focus:ring-[#B49A70]/20"
                 />
               </div>
             </div>
@@ -136,28 +189,27 @@ const ForgetPassword = () => {
               {loading ? (
                 <>
                   <Loader2 size={14} className="animate-spin text-white" />
-                  <span>Sending Link...</span>
+                  <span>Sending link…</span>
                 </>
               ) : (
                 <>
-                  <span>Send Reset Link</span>
+                  <span>Send reset link</span>
                   <ArrowRight size={14} />
                 </>
               )}
             </button>
+
+            <div className="mt-8 pt-5 border-t border-[#EAE6DE] text-center">
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 text-xs text-[#1C201C] font-semibold hover:text-[#B49A70] transition-colors"
+              >
+                <ArrowLeft size={13} />
+                <span>Return to sign in</span>
+              </Link>
+            </div>
           </form>
         )}
-
-        {/* Return to login link */}
-        <div className="mt-8 pt-5 border-t border-[#EAE6DE] text-center">
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1.5 text-xs text-[#1C201C] font-semibold hover:text-[#B49A70] transition-colors"
-          >
-            <ArrowLeft size={13} />
-            <span>Return to Sign In</span>
-          </Link>
-        </div>
       </div>
     </div>
   );

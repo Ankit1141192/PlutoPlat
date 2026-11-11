@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css'; // ← REQUIRED. Without this the map is blank and popups look broken.
 import { MapPin, ArrowUpRight, X, Hash, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 import { WhatsAppIcon } from './RegisterInterestModal';
 
-// ─── MapTiler API key (env fallback to supplied key) ─────────────────────────
+// ─── MapTiler key ────────────────────────────────────────────────────────────
+// Tip: in the MapTiler dashboard, add your site domain (and localhost) under
+// "Allowed HTTP origins", otherwise tiles return 403 and the map stays blank.
 const MAPTILER_KEY = 'wbyPv8NSVlYAesaoNStK';
 
 // ─── Suppress Leaflet's default icon ─────────────────────────────────────────
@@ -13,19 +16,33 @@ delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl: '', shadowUrl: '' });
 
 const REGIONS = [
-  { label: 'Kanpur & UP', center: [26.4740, 80.3350], zoom: 12 },
+  { label: 'Kanpur & UP', center: [26.474, 80.335], zoom: 12 },
   { label: 'Global View', center: [28.5, -30.0], zoom: 3 },
-  { label: 'Dubai & UAE', center: [25.18, 55.30], zoom: 11 },
+  { label: 'Dubai & UAE', center: [25.18, 55.3], zoom: 11 },
   { label: 'California', center: [34.05, -118.45], zoom: 11 },
   { label: 'New York', center: [40.74, -73.98], zoom: 12 },
   { label: 'Miami Beach', center: [25.82, -80.13], zoom: 13 },
   { label: 'Aspen & Tahoe', center: [39.19, -106.82], zoom: 11 },
 ];
 
-export const getPropertyCode = (id) =>
-  `PP-${String(id).replace(/\D/g, '').padStart(4, '0')}`;
+export const getPropertyCode = (id) => {
+  if (!id) return 'PP-0001';
+  const clean = String(id).replace(/[^a-zA-Z0-9]/g, '');
+  return `PP-${clean.slice(-4).toUpperCase()}`;
+};
 
-// ─── Custom Teardrop Drop-Pin Icon ───────────────────────────────────────────
+const escapeHtml = (v) =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const isDesktop = () =>
+  typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
+
+// ─── Teardrop drop-pin icon ──────────────────────────────────────────────────
 const buildDropPin = (property, isActive) => {
   const bg = isActive ? '#B49A70' : '#1C201C';
   const border = isActive ? '#1C201C' : '#B49A70';
@@ -37,7 +54,7 @@ const buildDropPin = (property, isActive) => {
   const svgH = Math.round(size * 1.35);
 
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;overflow:visible">
       <ellipse cx="${half}" cy="${svgH - 2}" rx="${half * 0.55}" ry="3" fill="rgba(0,0,0,0.28)" />
       <path d="M${half},${svgH - 4}
                C${half},${svgH - 4} ${3},${half + r * 0.55}
@@ -58,46 +75,34 @@ const buildDropPin = (property, isActive) => {
 };
 
 // ─── Popup HTML ──────────────────────────────────────────────────────────────
-const buildPopupHtml = (p) => `
-  <div style="width:250px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;">
-    <div style="position:relative;height:120px;overflow:hidden;border-radius:12px 12px 0 0;background:#e5e0d8;">
-      <img src="${p.image}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover;" />
-      <div style="position:absolute;top:8px;left:8px;background:rgba(28,32,28,.88);color:#E8D9BF;
-                  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
-                  padding:3px 8px;border-radius:4px;border:1px solid rgba(180,154,112,.4);">
-        ✦ Listed by PlutoPlat
-      </div>
-      <div style="position:absolute;bottom:8px;right:8px;background:#fff;color:#1C201C;
-                  font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:3px;">
-        ${p.purpose || 'Exclusive'}
-      </div>
+const buildPopupHtml = (p) => {
+  const pId = p._id || p.id;
+  const title = escapeHtml(p.title);
+  const location = escapeHtml(typeof p.location === 'string' ? p.location : p.location?.city || '');
+  const img = escapeHtml(p.image || p.images?.[0]);
+  const meta = [p.beds ? `${escapeHtml(p.beds)} Beds` : '', p.sqft ? `${escapeHtml(p.sqft)} sq.ft` : '']
+    .filter(Boolean)
+    .join(' &bull; ');
+
+  return `
+  <div class="pp-card">
+    <div class="pp-card-img">
+      <img src="${img}" alt="${title}" onerror="this.style.display='none'" />
+      <span class="pp-badge">✦ Listed by PlutoPlat</span>
+      <span class="pp-purpose">${escapeHtml(p.purpose || 'Exclusive')}</span>
+      <button type="button" class="pp-close" data-pp-close aria-label="Close">✕</button>
     </div>
-    <div style="padding:12px 14px;background:#fff;border-radius:0 0 12px 12px;">
-      <div style="display:inline-block;background:#FAF6EE;color:#8E7448;
-                  border:1px solid rgba(180,154,112,.35);border-radius:999px;
-                  font-size:10px;font-weight:700;padding:2px 9px;margin-bottom:8px;">
-        Property ID: ${getPropertyCode(p.id)}
-      </div>
-      <div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:600;
-                  color:#1C201C;line-height:1.25;margin-bottom:4px;
-                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        ${p.title}
-      </div>
-      <div style="font-size:11px;color:#77766E;margin-bottom:6px;">📍 ${p.location}</div>
-      <div style="font-size:11px;color:#B49A70;font-weight:600;margin-bottom:10px;">
-        ${p.beds ? `${p.beds} Beds &bull; ` : ''}${p.sqft ? `${p.sqft} sq.ft` : ''}
-      </div>
-      <a href="/property/${p.id}"
-         style="display:block;text-align:center;background:#1C201C;color:#fff;
-                text-decoration:none;font-size:11px;font-weight:700;text-transform:uppercase;
-                letter-spacing:.5px;padding:8px 0;border-radius:8px;">
+    <div class="pp-card-body">
+      <div class="pp-id">Property ID: ${getPropertyCode(pId)}</div>
+      <div class="pp-title" title="${title}">${title}</div>
+      <div class="pp-loc">📍 ${location}</div>
+      ${meta ? `<div class="pp-meta">${meta}</div>` : ''}
+      <a class="pp-cta" href="/property/${encodeURIComponent(pId)}" data-pp-nav="/property/${encodeURIComponent(pId)}">
         View Property &rarr;
       </a>
-      <div style="text-align:center;font-size:9px;color:#9A998F;margin-top:8px;">
-        Click pin again to close
-      </div>
     </div>
   </div>`;
+};
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const PlutoMapExplorer = ({
@@ -112,69 +117,121 @@ const PlutoMapExplorer = ({
   const markersRef = useRef({});
   const popupRef = useRef(null);
   const activeIdRef = useRef(null);
+  const toggleRef = useRef(null);
+  const listOpenRef = useRef(true);
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   const { properties } = usePropertyStore();
   const [purposeFilter, setPurposeFilter] = useState('All');
   const [activeProperty, setActiveProperty] = useState(null);
   const [activeRegion, setActiveRegion] = useState('Global View');
   const [pinsVisible, setPinsVisible] = useState(true);
-  const [listOpen, setListOpen] = useState(true); // Dropdown / collapse state of right sidebar
+  const [listOpen, setListOpen] = useState(true);
+  listOpenRef.current = listOpen;
 
   const displayProperties = useMemo(
     () =>
-      properties.filter((p) => {
-        if (!p.coordinates?.lat || !p.coordinates?.lng) return false;
-        if (singlePropertyMode && selectedPropertyId)
-          return p.id === parseInt(selectedPropertyId, 10);
-        if (purposeFilter === 'Buy') return p.purpose === 'Buy';
-        if (purposeFilter === 'Rent') return p.purpose === 'Rent';
-        if (purposeFilter === 'Off-Plan') return p.yearBuilt && p.yearBuilt >= 2026;
-        return true;
-      }),
+      properties
+        .map((p) => {
+          let lat = Number(p.coordinates?.lat ?? p.coordinates?.latitude);
+          let lng = Number(p.coordinates?.lng ?? p.coordinates?.longitude);
+          if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+            const locStr = (
+              typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`
+            ).toLowerCase();
+            if (locStr.includes('swaroop')) { lat = 26.482; lng = 80.315; }
+            else if (locStr.includes('civil')) { lat = 26.474; lng = 80.335; }
+            else if (locStr.includes('vip')) { lat = 26.479; lng = 80.342; }
+            else if (locStr.includes('delhi')) { lat = 28.6139; lng = 77.209; }
+            else if (locStr.includes('mumbai')) { lat = 19.076; lng = 72.8777; }
+            else if (locStr.includes('dubai')) { lat = 25.2048; lng = 55.2708; }
+            else { lat = 26.474; lng = 80.335; }
+          }
+          return { ...p, id: p.id || p._id, coordinates: { lat, lng } };
+        })
+        .filter((p) => {
+          const propId = String(p.id || p._id);
+          if (singlePropertyMode && selectedPropertyId) {
+            return propId === String(selectedPropertyId);
+          }
+          if (purposeFilter === 'Buy') return p.purpose === 'Buy';
+          if (purposeFilter === 'Rent') return p.purpose === 'Rent';
+          if (purposeFilter === 'Off-Plan') return p.yearBuilt && p.yearBuilt >= 2026;
+          return true;
+        }),
     [properties, purposeFilter, singlePropertyMode, selectedPropertyId]
   );
 
-  /* ── toggle popup when clicking a pin or list card ─────────────────────── */
+  /* ── close whatever is open (popup on desktop, drawer on mobile) ───────── */
+  const closeActive = () => {
+    mapInstanceRef.current?.closePopup();
+    popupRef.current = null;
+    activeIdRef.current = null;
+    setActiveProperty(null);
+  };
+
+  /* ── open / close popup for a property ─────────────────────────────────── */
   const togglePropertyPopup = (property) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // If same pin clicked while open -> close popup (do NOT delete marker)
+    // Same pin clicked again → close
     if (activeIdRef.current === property.id) {
-      map.closePopup();
+      closeActive();
       return;
     }
 
     const { lat, lng } = property.coordinates;
-    const popup = L.popup({
-      maxWidth: 270,
-      minWidth: 250,
-      className: 'pp-popup',
-      offset: [0, -4],
-      closeButton: false,
-      autoPan: true,
-    })
-      .setLatLng([lat, lng])
-      .setContent(buildPopupHtml(property));
+    const targetZoom = Math.max(map.getZoom(), 13);
 
-    popup.openOn(map);
-    popupRef.current = popup;
+    // Shift the view so the popup (which opens ABOVE the pin) is fully visible
+    // and not hidden behind the top bar or right sidebar.
+    const desktop = isDesktop();
+    const pt = map.project([lat, lng], targetZoom);
+    pt.y -= desktop ? 130 : 40;
+    if (desktop && listOpenRef.current && !singlePropertyMode) pt.x += 170;
+    const center = map.unproject(pt, targetZoom);
+
+    // Desktop: Leaflet popup.  Mobile: bottom drawer (rendered by React).
+    if (desktop) {
+      const popup = L.popup({
+        maxWidth: 270,
+        minWidth: 250,
+        className: 'pp-popup',
+        offset: [0, -4],
+        closeButton: false,
+        autoPan: false, // we already positioned the map ourselves
+      })
+        .setLatLng([lat, lng])
+        .setContent(buildPopupHtml(property));
+
+      popup.openOn(map); // closes any previous popup first
+      popupRef.current = popup;
+    } else {
+      map.closePopup();
+      popupRef.current = null;
+    }
+
     activeIdRef.current = property.id;
     setActiveProperty(property);
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 12), { duration: 0.8 });
+    map.flyTo(center, targetZoom, { duration: 0.8 });
   };
+  toggleRef.current = togglePropertyPopup;
 
-  /* ── Initialize Map & Layer Group ──────────────────────────────────────── */
+  /* ── Initialize map ────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     let center = [28.5, -20.0];
     let zoom = 3;
     if (singlePropertyMode && selectedPropertyId) {
-      const target = properties.find((p) => p.id === parseInt(selectedPropertyId, 10));
-      if (target?.coordinates) {
-        center = [target.coordinates.lat, target.coordinates.lng];
+      const target = properties.find((p) => String(p.id || p._id) === String(selectedPropertyId));
+      const lat = Number(target?.coordinates?.lat ?? target?.coordinates?.latitude);
+      const lng = Number(target?.coordinates?.lng ?? target?.coordinates?.longitude);
+      if (lat && lng) {
+        center = [lat, lng];
         zoom = 14;
       }
     }
@@ -182,40 +239,40 @@ const PlutoMapExplorer = ({
     const map = L.map(mapContainerRef.current, {
       center,
       zoom,
-      zoomControl: false, // We add custom left-side zoom control below
+      zoomControl: false,
       scrollWheelZoom: !singlePropertyMode,
     });
 
-    // High-reliability tile layer with multiple CDN endpoints:
-    // CartoDB Voyager: clean luxury tone, zero API key required, works reliably on all deployed domains
-    const tileLayer = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    // Primary: MapTiler. Fallback: CARTO Voyager (no key needed).
+    const mapTiler = L.tileLayer(
+      `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
       {
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
+          '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 20,
         tileSize: 256,
       }
     );
 
-    tileLayer.on('tileerror', () => {
-      // Fallback to OSM in the rare case CartoDB has any network hiccup
-      if (!map._osmFallback) {
-        map._osmFallback = true;
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors'
+    let tileErrors = 0;
+    let usingFallback = false;
+    mapTiler.on('tileerror', () => {
+      tileErrors += 1;
+      if (tileErrors >= 3 && !usingFallback) {
+        usingFallback = true;
+        map.removeLayer(mapTiler);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20,
         }).addTo(map);
       }
     });
+    mapTiler.addTo(map);
 
-    tileLayer.addTo(map);
-
-    // Zoom control placed on top-left to avoid right sidebar overlap
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
-    // Layer group for all property pins
     const layerGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = layerGroup;
 
@@ -227,54 +284,60 @@ const PlutoMapExplorer = ({
       }
     });
 
+    // Popup buttons: SPA navigation (no full page reload) + close button
+    map.on('popupopen', (e) => {
+      const el = e.popup.getElement();
+      if (!el) return;
+      const nav = el.querySelector('[data-pp-nav]');
+      const close = el.querySelector('[data-pp-close]');
+      if (nav) {
+        nav.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          navigateRef.current(nav.getAttribute('data-pp-nav'));
+        });
+      }
+      if (close) {
+        close.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          map.closePopup();
+        });
+      }
+    });
+
     mapInstanceRef.current = map;
 
-    // Fix for production deployments: force Leaflet to recalculate container geometry
-    // after CSS hydration, Framer Motion animations, and DOM rendering
-    const triggerInvalidate = () => {
-      if (map) {
-        map.invalidateSize();
-      }
-    };
+    // Make sure Leaflet measures the container correctly after layout/animations
+    const invalidate = () => map.invalidateSize();
+    const timers = [100, 350, 800, 1500].map((ms) => setTimeout(invalidate, ms));
 
-    const t1 = setTimeout(triggerInvalidate, 100);
-    const t2 = setTimeout(triggerInvalidate, 350);
-    const t3 = setTimeout(triggerInvalidate, 800);
-    const t4 = setTimeout(triggerInvalidate, 1500);
-
-    // ResizeObserver catches container size changes (grid/flex re-layouts)
     let ro = null;
-    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
-      ro = new ResizeObserver(() => triggerInvalidate());
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(invalidate);
       ro.observe(mapContainerRef.current);
     }
-
-    // IntersectionObserver triggers invalidateSize when scrolling into view
     let io = null;
-    if (typeof IntersectionObserver !== 'undefined' && mapContainerRef.current) {
+    if (typeof IntersectionObserver !== 'undefined') {
       io = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) {
-          triggerInvalidate();
-        }
+        if (entries[0]?.isIntersecting) invalidate();
       });
       io.observe(mapContainerRef.current);
     }
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      if (ro) ro.disconnect();
-      if (io) io.disconnect();
+      timers.forEach(clearTimeout);
+      ro?.disconnect();
+      io?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
       markersLayerRef.current = null;
+      markersRef.current = {};
+      popupRef.current = null;
+      activeIdRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [singlePropertyMode, selectedPropertyId]);
 
-  /* ── Build / update pins inside the LayerGroup ─────────────────────────── */
+  /* ── Build / update pins ───────────────────────────────────────────────── */
   useEffect(() => {
     const layerGroup = markersLayerRef.current;
     const map = mapInstanceRef.current;
@@ -286,43 +349,36 @@ const PlutoMapExplorer = ({
     displayProperties.forEach((property) => {
       const { lat, lng } = property.coordinates;
       const marker = L.marker([lat, lng], {
-        icon: buildDropPin(property, activeProperty?.id === property.id),
+        icon: buildDropPin(property, activeIdRef.current === property.id),
       });
-
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
-        togglePropertyPopup(property);
+        toggleRef.current?.(property);
       });
-
       marker.addTo(layerGroup);
       markersRef.current[property.id] = marker;
     });
 
     if (!singlePropertyMode && displayProperties.length > 0 && activeRegion === 'Global View') {
-      const bounds = L.latLngBounds(
-        displayProperties.map((p) => [p.coordinates.lat, p.coordinates.lng])
-      );
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+      const bounds = L.latLngBounds(displayProperties.map((p) => [p.coordinates.lat, p.coordinates.lng]));
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayProperties, singlePropertyMode]);
 
-  /* ── Handle show/hide pins toggling cleanly without destroying positions ── */
+  /* ── Show / hide pins ──────────────────────────────────────────────────── */
   useEffect(() => {
     const map = mapInstanceRef.current;
     const layerGroup = markersLayerRef.current;
     if (!map || !layerGroup) return;
 
     if (pinsVisible) {
-      if (!map.hasLayer(layerGroup)) {
-        map.addLayer(layerGroup);
-      }
+      if (!map.hasLayer(layerGroup)) map.addLayer(layerGroup);
     } else {
-      map.closePopup();
-      if (map.hasLayer(layerGroup)) {
-        map.removeLayer(layerGroup);
-      }
+      closeActive();
+      if (map.hasLayer(layerGroup)) map.removeLayer(layerGroup);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinsVisible]);
 
   /* ── Highlight active pin ──────────────────────────────────────────────── */
@@ -333,28 +389,85 @@ const PlutoMapExplorer = ({
   }, [activeProperty, displayProperties]);
 
   const handleRegionSelect = (region) => {
+    closeActive();
     setActiveRegion(region.label);
     mapInstanceRef.current?.flyTo(region.center, region.zoom, { duration: 1.2 });
   };
 
-  const handleTogglePins = () => {
-    setPinsVisible((v) => !v);
-  };
+  const handleTogglePins = () => setPinsVisible((v) => !v);
 
   /* ── Render ────────────────────────────────────────────────────────────── */
   return (
-    <div className="relative w-full bg-[#F8F6F2] border border-[#E5E0D8] rounded-3xl overflow-hidden shadow-xl">
+    <div className="relative w-full bg-[#F8F6F2] border border-[#E5E0D8] rounded-3xl overflow-hidden shadow-xl isolate">
       <style>{`
+        /* ---------- Popup shell ---------- */
         .pp-popup .leaflet-popup-content-wrapper {
           border-radius: 14px;
           padding: 0;
+          background: #fff;
           box-shadow: 0 22px 44px -12px rgba(0,0,0,.35);
           overflow: hidden;
           animation: ppFadeIn .2s ease-out;
         }
-        .pp-popup .leaflet-popup-content { margin: 0; }
+        .pp-popup .leaflet-popup-content {
+          margin: 0 !important;
+          width: 250px !important;
+          line-height: 1.3;
+          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
         .pp-popup .leaflet-popup-tip { background: #fff; }
+
+        /* ---------- Popup card ---------- */
+        .pp-card { width: 250px; background: #fff; }
+        .pp-card-img { position: relative; height: 120px; overflow: hidden; background: #e5e0d8; }
+        .pp-card-img img {
+          display: block; width: 100% !important; height: 100% !important;
+          max-width: none !important; object-fit: cover;
+        }
+        .pp-badge {
+          position: absolute; top: 8px; left: 8px;
+          background: rgba(28,32,28,.9); color: #E8D9BF;
+          font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+          padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(180,154,112,.4);
+        }
+        .pp-purpose {
+          position: absolute; bottom: 8px; left: 8px;
+          background: #fff; color: #1C201C;
+          font-size: 9px; font-weight: 700; text-transform: uppercase;
+          padding: 2px 6px; border-radius: 3px;
+        }
+        .pp-close {
+          position: absolute; top: 6px; right: 6px;
+          width: 24px; height: 24px; border-radius: 999px; border: none; cursor: pointer;
+          background: rgba(255,255,255,.92); color: #1C201C; font-size: 11px; font-weight: 700;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .pp-close:hover { background: #fff; }
+        .pp-card-body { padding: 12px 14px 14px; }
+        .pp-id {
+          display: inline-block; background: #FAF6EE; color: #8E7448;
+          border: 1px solid rgba(180,154,112,.35); border-radius: 999px;
+          font-size: 10px; font-weight: 700; padding: 2px 9px; margin-bottom: 8px;
+        }
+        .pp-title {
+          font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 600;
+          color: #1C201C; line-height: 1.25; margin-bottom: 4px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .pp-loc { font-size: 11px; color: #77766E; margin-bottom: 6px; }
+        .pp-meta { font-size: 11px; color: #B49A70; font-weight: 600; margin-bottom: 10px; }
+        .leaflet-container a.pp-cta {
+          display: block; text-align: center; background: #1C201C; color: #fff !important;
+          text-decoration: none; font-size: 11px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: .5px; padding: 9px 0; border-radius: 8px; margin-top: 10px;
+        }
+        .leaflet-container a.pp-cta:hover { background: #000; }
+
+        /* ---------- Pins ---------- */
         .pp-drop-pin { background: transparent !important; border: none !important; }
+        .pp-drop-pin svg { transition: transform .15s ease; }
+        .pp-drop-pin:hover svg { transform: translateY(-2px); }
+
         @keyframes ppFadeIn {
           from { opacity: 0; transform: translateY(-6px) scale(.97); }
           to   { opacity: 1; transform: none; }
@@ -365,37 +478,28 @@ const PlutoMapExplorer = ({
         }
         .pp-list-anim { animation: ppListIn .25s ease-out; }
 
-        /* Zoom +/- : positioned neatly on the left side, unobstructed by right sidebar */
+        /* ---------- Zoom control (left side) ---------- */
         .leaflet-top.leaflet-left .leaflet-control-zoom {
-          margin-left: 18px;
-          margin-top: 130px;
-          border: none !important;
-          border-radius: 12px !important;
-          overflow: hidden;
+          margin-left: 18px; margin-top: 130px;
+          border: none !important; border-radius: 12px !important; overflow: hidden;
           box-shadow: 0 8px 24px -6px rgba(0,0,0,.35) !important;
         }
         @media (min-width: 768px) {
-          .leaflet-top.leaflet-left .leaflet-control-zoom {
-            margin-top: 86px;
-          }
+          .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 86px; }
         }
         .leaflet-control-zoom a {
-          background: #1C201C !important;
-          color: #B49A70 !important;
-          border-color: #2E342E !important;
-          font-weight: 700 !important;
-          font-size: 16px !important;
-          width: 36px !important;
-          height: 36px !important;
-          line-height: 36px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
+          background: #1C201C !important; color: #B49A70 !important;
+          border-color: #2E342E !important; font-weight: 700 !important; font-size: 16px !important;
+          width: 36px !important; height: 36px !important; line-height: 36px !important;
+          display: flex !important; align-items: center !important; justify-content: center !important;
           transition: all .2s;
         }
-        .leaflet-control-zoom a:hover {
-          background: #252A25 !important;
-          color: #E8D9BF !important;
+        .leaflet-control-zoom a:hover { background: #252A25 !important; color: #E8D9BF !important; }
+
+        /* Keep attribution readable & out of the way of the filter bar */
+        .leaflet-control-attribution { font-size: 10px !important; }
+        @media (min-width: 640px) {
+          .leaflet-bottom.leaflet-right .leaflet-control-attribution { margin-right: 0; }
         }
       `}</style>
 
@@ -432,15 +536,13 @@ const PlutoMapExplorer = ({
 
       {/* ── Purpose filter (bottom-left) ── */}
       {showControls && !singlePropertyMode && (
-        <div className="absolute bottom-5 left-5 z-20 hidden sm:flex items-center gap-1 p-1.5 bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] shadow-xl">
+        <div className="absolute bottom-8 left-5 z-20 hidden sm:flex items-center gap-1 p-1.5 bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] shadow-xl">
           {['All', 'Buy', 'Rent', 'Off-Plan'].map((type) => (
             <button
               key={type}
               onClick={() => setPurposeFilter(type)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                purposeFilter === type
-                  ? 'bg-[#1C201C] text-white'
-                  : 'text-[#6E6D66] hover:text-[#1C201C]'
+                purposeFilter === type ? 'bg-[#1C201C] text-white' : 'text-[#6E6D66] hover:text-[#1C201C]'
               }`}
             >
               {type === 'All' ? 'All Portfolios' : type}
@@ -460,26 +562,21 @@ const PlutoMapExplorer = ({
         </button>
       )}
 
-      {/* ── The map canvas ── */}
+      {/* ── Map canvas ── */}
       <div
         ref={mapContainerRef}
-        style={{ height: height || '620px', minHeight: '340px' }}
+        style={{ height: height || '620px', minHeight: '340px', width: '100%' }}
         className="w-full z-10 relative cursor-grab active:cursor-grabbing bg-[#F4F1EA]"
       />
 
-      {/* ── Desktop sidebar (with Dropdown / Collapse '>' and Pin Hide/Show Button) ── */}
+      {/* ── Desktop sidebar ── */}
       {showControls && !singlePropertyMode && (
         <div
           className={`hidden lg:flex flex-col absolute top-20 right-5 z-20 w-80 bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] shadow-2xl p-4 overflow-hidden transition-all duration-300 ${
-            listOpen ? 'bottom-5' : 'max-h-[76px]'
+            listOpen ? 'bottom-8' : 'max-h-[76px]'
           }`}
         >
-          {/* Header with Title + Pin Toggle Button + Dropdown '>' Collapse Icon */}
-          <div
-            className={`flex items-center justify-between gap-2 select-none ${
-              listOpen ? 'pb-3 border-b border-[#EAE6DE] mb-3' : ''
-            }`}
-          >
+          <div className={`flex items-center justify-between gap-2 select-none ${listOpen ? 'pb-3 border-b border-[#EAE6DE] mb-3' : ''}`}>
             <div
               onClick={() => setListOpen((v) => !v)}
               className="min-w-0 cursor-pointer flex-1"
@@ -488,13 +585,10 @@ const PlutoMapExplorer = ({
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#B49A70] block">
                 PlutoPlat Listings &bull; {displayProperties.length}
               </span>
-              <h4 className="font-serif text-sm font-semibold text-[#1C201C] truncate">
-                Explore Verified Estates
-              </h4>
+              <h4 className="font-serif text-sm font-semibold text-[#1C201C] truncate">Explore Verified Estates</h4>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Button: Hide Pin / Show Pin */}
               <button
                 type="button"
                 onClick={handleTogglePins}
@@ -502,7 +596,7 @@ const PlutoMapExplorer = ({
                 title={pinsVisible ? 'Click to hide map pins' : 'Click to show map pins'}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
                   pinsVisible
-                    ? 'bg-[#1C201C] text-white border-[#1C201C] hover:bg-black shadow-xs'
+                    ? 'bg-[#1C201C] text-white border-[#1C201C] hover:bg-black'
                     : 'bg-[#F8F6F2] text-[#8E7448] border-[#B49A70]/50 hover:bg-white'
                 }`}
               >
@@ -519,7 +613,6 @@ const PlutoMapExplorer = ({
                 )}
               </button>
 
-              {/* Drop / Collapse Icon button */}
               <button
                 type="button"
                 onClick={() => setListOpen((v) => !v)}
@@ -531,7 +624,6 @@ const PlutoMapExplorer = ({
             </div>
           </div>
 
-          {/* List of properties (rendered when expanded) */}
           {listOpen && (
             <>
               <div className="pp-list-anim flex-1 overflow-y-auto space-y-2.5 pr-1">
@@ -542,7 +634,8 @@ const PlutoMapExplorer = ({
                       key={p.id}
                       onClick={() => {
                         if (!pinsVisible) setPinsVisible(true);
-                        togglePropertyPopup(p);
+                        // wait one tick so the layer is re-added before the popup opens
+                        setTimeout(() => toggleRef.current?.(p), pinsVisible ? 0 : 50);
                       }}
                       className={`p-2.5 rounded-xl border transition-all duration-200 cursor-pointer flex gap-3 items-center ${
                         isSelected
@@ -554,7 +647,9 @@ const PlutoMapExplorer = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 text-[10px] text-[#77766E] truncate">
                           <MapPin size={11} className="text-[#B49A70] shrink-0" />
-                          <span className="truncate">{p.location}</span>
+                          <span className="truncate">
+                            {typeof p.location === 'string' ? p.location : p.location?.city}
+                          </span>
                         </div>
                         <h5 className="font-serif text-xs font-bold text-[#1C201C] truncate mb-0.5">{p.title}</h5>
                         <div className="flex items-center justify-between text-xs">
@@ -584,26 +679,18 @@ const PlutoMapExplorer = ({
         </div>
       )}
 
-      {/* ── Mobile bottom drawer ── */}
+      {/* ── Mobile bottom drawer (popup is desktop-only) ── */}
       {activeProperty && (
         <div className="lg:hidden absolute bottom-3 left-3 right-3 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] p-3 shadow-2xl flex gap-3 items-center">
-          <img
-            src={activeProperty.image}
-            alt={activeProperty.title}
-            className="w-20 h-20 rounded-xl object-cover shrink-0"
-          />
+          <img src={activeProperty.image} alt={activeProperty.title} className="w-20 h-20 rounded-xl object-cover shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-bold text-[#B49A70] tracking-wider">
-                Listed by PlutoPlat
-              </span>
-              <button onClick={() => mapInstanceRef.current?.closePopup()} className="text-[#6E6D66] p-1">
+              <span className="text-[10px] uppercase font-bold text-[#B49A70] tracking-wider">Listed by PlutoPlat</span>
+              <button onClick={closeActive} className="text-[#6E6D66] p-1" aria-label="Close">
                 <X size={15} />
               </button>
             </div>
-            <h5 className="font-serif text-sm font-bold text-[#1C201C] truncate leading-tight">
-              {activeProperty.title}
-            </h5>
+            <h5 className="font-serif text-sm font-bold text-[#1C201C] truncate leading-tight">{activeProperty.title}</h5>
             <div className="text-xs font-bold text-[#8E7448] mt-0.5">
               Property ID: {getPropertyCode(activeProperty.id)}
             </div>

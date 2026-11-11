@@ -10,6 +10,8 @@ const testimonialRoutes = require('./testimonialRoutes');
 const visitRoutes = require('./visitRoutes');
 const dealRoutes = require('./dealRoutes');
 const agentRoutes = require('./agentRoutes');
+const userController = require('../../controllers/userController');
+const { optionalAuthenticate } = require('../../middlewares/auth');
 
 // Mount V1 API sub-routers (User / Buyer Panel Workflow)
 router.use('/auth', authRoutes);
@@ -21,5 +23,11 @@ router.use('/deals', dealRoutes);
 router.use('/agents', agentRoutes);
 router.use('/audits', auditRoutes);
 router.use('/testimonials', testimonialRoutes);
+
+// Direct notifications endpoints for client panel
+router.get('/notifications', optionalAuthenticate, userController.getNotifications);
+router.patch('/notifications/read-all', optionalAuthenticate, userController.markAllNotificationsRead);
+router.patch('/notifications/:id/read', optionalAuthenticate, userController.markNotificationRead);
+router.delete('/notifications/:id', optionalAuthenticate, userController.deleteNotification);
 
 module.exports = router;

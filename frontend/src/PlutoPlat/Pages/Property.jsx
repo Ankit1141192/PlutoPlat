@@ -40,7 +40,7 @@ const Property = () => {
     if (newLocation) params.set('location', newLocation);
     if (newType && newType !== 'All') params.set('type', newType);
     if (newPurpose && newPurpose !== 'All') params.set('purpose', newPurpose);
-    setSearchParams(params);
+    setSearchParams(params, { replace: true });
   };
 
   const handleResetFilters = () => {
@@ -51,7 +51,7 @@ const Property = () => {
     setMaxPrice('');
     setSelectedBeds('Any');
     setSortBy('featured');
-    setSearchParams(new URLSearchParams());
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   // Filtered & Sorted Properties computation
@@ -387,7 +387,7 @@ const Property = () => {
               }
             >
               {filteredProperties.map((prop) => (
-                <PropertyCard key={prop.id} property={prop} />
+                <PropertyCard key={prop._id || prop.id} property={prop} />
               ))}
             </div>
           )}

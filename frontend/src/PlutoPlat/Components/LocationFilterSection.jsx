@@ -1,94 +1,8 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { MapPin, ArrowRight, Building2, PlusCircle } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
-
-/* ─────────────────────────────────────────────
-   Location data — curated city images
-───────────────────────────────────────────── */
-const LOCATIONS = [
-  {
-    id: 'civil-lines',
-    city: 'Civil Lines',
-    region: 'Kanpur, Uttar Pradesh',
-    locationKey: 'Civil Lines',
-    image:
-      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'swaroop-nagar',
-    city: 'Swaroop Nagar',
-    region: 'Kanpur, Uttar Pradesh',
-    locationKey: 'Swaroop Nagar',
-    image:
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'vip-road',
-    city: 'VIP Road & Ganga',
-    region: 'Kanpur, Uttar Pradesh',
-    locationKey: 'VIP Road',
-    image:
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'tilak-nagar',
-    city: 'Tilak Nagar',
-    region: 'Kanpur, Uttar Pradesh',
-    locationKey: 'Tilak Nagar',
-    image:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'dubai',
-    city: 'Dubai',
-    region: 'UAE',
-    locationKey: 'Dubai',
-    image:
-      'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'palm-jumeirah',
-    city: 'Palm Jumeirah',
-    region: 'Dubai, UAE',
-    locationKey: 'Palm Jumeirah',
-    image:
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'beverly-hills',
-    city: 'Beverly Hills',
-    region: 'California, USA',
-    locationKey: 'Beverly Hills',
-    image:
-      'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'manhattan',
-    city: 'Manhattan',
-    region: 'New York, USA',
-    locationKey: 'Manhattan',
-    image:
-      'https://images.unsplash.com/photo-1470723710355-95304d8aece4?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'malibu',
-    city: 'Malibu',
-    region: 'California, USA',
-    locationKey: 'Malibu',
-    image:
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'miami-beach',
-    city: 'Miami Beach',
-    region: 'Florida, USA',
-    locationKey: 'Miami Beach',
-    image:
-      'https://images.unsplash.com/photo-1533106418989-88406c7cc8ca?auto=format&fit=crop&w=800&q=80',
-  },
-];
 
 /* ─────────────────────────────────────────────
    Single location card
@@ -144,40 +58,65 @@ const LocationFilterSection = () => {
   const { properties } = usePropertyStore();
   const trackRef = useRef(null);
   const animRef = useRef(null);
-  const posRef = useRef(0);        // current translateX (negative = scrolled left)
+  const posRef = useRef(0);
   const pausedRef = useRef(false);
-  const SPEED = 0.6;               // px per frame
+  const SPEED = 0.6;
 
-  /* Count properties per location */
-  const countByLocation = useMemo(() => {
-    const map = {};
-    LOCATIONS.forEach(({ locationKey }) => {
-      const key = locationKey.toLowerCase();
-      map[locationKey] = properties.filter((p) => {
-        const locStr = (
-          typeof p.location === 'string'
-            ? p.location
-            : `${p.location?.city || ''} ${p.location?.state || ''} ${p.location?.address || ''}`
-        ).toLowerCase();
-        const titleStr = (p.title || '').toLowerCase();
-        return locStr.includes(key) || titleStr.includes(key);
-      }).length;
+  /* Derive locations dynamically from real properties added by SuperAdmin or Admin */
+  const locations = useMemo(() => {
+    if (!properties || properties.length === 0) return [];
+
+    const cityMap = new Map();
+
+    properties.forEach((p) => {
+      let city = '';
+      let region = '';
+
+      if (p.locationDetails && typeof p.locationDetails === 'object') {
+        city = p.locationDetails.city || '';
+        region = [p.locationDetails.state, p.locationDetails.country].filter(Boolean).join(', ');
+      }
+      if (!city && typeof p.location === 'string') {
+        const parts = p.location.split(',').map((s) => s.trim());
+        city = parts[0] || 'Prime Enclave';
+        region = parts.slice(1).join(', ') || 'Metropolitan';
+      }
+      if (!city) city = 'Prime Corridor';
+
+      const key = city.trim();
+      const normKey = key.toLowerCase();
+
+      if (!cityMap.has(normKey)) {
+        cityMap.set(normKey, {
+          id: normKey.replace(/\s+/g, '-'),
+          city: key,
+          region: region || 'Exclusive Enclave',
+          locationKey: key,
+          image:
+            p.image ||
+            (p.images && p.images[0]) ||
+            'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
+          count: 1,
+        });
+      } else {
+        const item = cityMap.get(normKey);
+        item.count += 1;
+      }
     });
-    return map;
+
+    return Array.from(cityMap.values());
   }, [properties]);
 
   /* Infinite marquee loop */
   useEffect(() => {
     const track = trackRef.current;
-    if (!track) return;
+    if (!track || locations.length === 0) return;
 
-    // Width of one set of cards (half the total duplicated track)
     const getHalfWidth = () => track.scrollWidth / 2;
 
     const tick = () => {
-      if (!pausedRef.current) {
+      if (!pausedRef.current && track) {
         posRef.current -= SPEED;
-        // Reset seamlessly when the first copy has fully scrolled off
         if (Math.abs(posRef.current) >= getHalfWidth()) {
           posRef.current = 0;
         }
@@ -188,17 +127,23 @@ const LocationFilterSection = () => {
 
     animRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animRef.current);
-  }, []);
+  }, [locations]);
 
   const handleCardClick = (loc) => {
     navigate(`/properties?location=${encodeURIComponent(loc.locationKey)}`);
   };
 
-  /* Duplicate locations for seamless infinite loop */
-  const loopedLocations = [...LOCATIONS, ...LOCATIONS];
+  /* Duplicate locations for continuous loop */
+  const loopedLocations = useMemo(() => {
+    if (locations.length === 0) return [];
+    if (locations.length < 5) {
+      return [...locations, ...locations, ...locations, ...locations];
+    }
+    return [...locations, ...locations];
+  }, [locations]);
 
   return (
-    <section className="py-20 overflow-hidden">
+    <section className="py-20 overflow-hidden bg-transparent">
       {/* ── Header ── */}
       <div className="px-4 sm:px-6 max-w-7xl mx-auto mb-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -233,75 +178,55 @@ const LocationFilterSection = () => {
             transition={{ duration: 0.55, delay: 0.12 }}
             className="text-sm text-[#6E6D66] max-w-sm font-light leading-relaxed"
           >
-            From Kanpur&apos;s royal enclaves and Dubai&apos;s iconic skyline to
-            California&apos;s coastal estates — filter by prime destination.
+            Real-time verified destinations populated directly from platform listings submitted by authorized agents and platform administration.
           </motion.p>
         </div>
       </div>
 
-      {/* ── Marquee carousel ── */}
-      {/*
-        Outer wrapper: clips overflow, fades edges with mask
-        pb accounts for the 48px vertical card offset at the bottom
-      */}
-      <div
-        className="relative w-full"
-        style={{
-          maskImage:
-            'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
-          WebkitMaskImage:
-            'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
-        }}
-        onMouseEnter={() => { pausedRef.current = true; }}
-        onMouseLeave={() => { pausedRef.current = false; }}
-      >
-        {/* pb-12 = space for the down-shifted cards */}
-        <div className="pb-12 pt-2">
-          {/* Moving track — duplicated for seamless loop */}
+      {/* ── Dynamic Locations Marquee or Empty State ── */}
+      {locations.length === 0 ? (
+        <div className="max-w-xl mx-auto px-6 py-12 text-center bg-white border border-[#E7E3DA] rounded-2xl shadow-sm space-y-3">
+          <Building2 size={36} className="mx-auto text-[#B49A70]" />
+          <h4 className="font-serif text-xl font-semibold text-[#1C201C]">
+            Awaiting Location Listings
+          </h4>
+          <p className="text-xs sm:text-sm text-[#6E6D66] font-light">
+            When SuperAdmin or Admin adds properties to the platform, their locations and photography will appear dynamically in this destination carousel.
+          </p>
+        </div>
+      ) : (
+        <div
+          className="relative w-full"
+          style={{
+            maskImage:
+              'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+          }}
+          onMouseEnter={() => {
+            pausedRef.current = true;
+          }}
+          onMouseLeave={() => {
+            pausedRef.current = false;
+          }}
+        >
           <div
             ref={trackRef}
-            className="flex gap-5 will-change-transform"
+            className="flex items-start gap-6 pb-12 will-change-transform"
             style={{ width: 'max-content' }}
           >
-            {loopedLocations.map((loc, idx) => {
-              // Every odd index is shifted DOWN — creates the staggered up/down look
-              const isDown = idx % 2 !== 0;
-              const count = countByLocation[loc.locationKey] ?? 0;
-              return (
-                <LocationCard
-                  key={`${loc.id}-${idx}`}
-                  loc={loc}
-                  count={count}
-                  offset={isDown}
-                  onClick={() => handleCardClick(loc)}
-                />
-              );
-            })}
+            {loopedLocations.map((loc, index) => (
+              <LocationCard
+                key={`${loc.id}-${index}`}
+                loc={loc}
+                count={loc.count}
+                offset={index % 2 === 1}
+                onClick={() => handleCardClick(loc)}
+              />
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* ── View all link ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mt-8 flex justify-center"
-      >
-        <button
-          onClick={() => navigate('/properties')}
-          className="group inline-flex items-center gap-2 text-sm font-semibold text-[#B49A70] hover:text-[#1C201C] transition-colors duration-200"
-        >
-          <span className="underline underline-offset-4 decoration-[#B49A70]/40 group-hover:decoration-[#1C201C]/40 transition-colors duration-200">
-            View all properties
-          </span>
-          <ArrowRight
-            size={15}
-            className="transition-transform duration-200 group-hover:translate-x-1"
-          />
-        </button>
-      </motion.div>
+      )}
     </section>
   );
 };

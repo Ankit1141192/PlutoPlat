@@ -27,19 +27,16 @@ import RecentlyViewed from './PlutoPlat/Pages/RecentlyViewed';
 import ContactAgents from './PlutoPlat/Pages/ContactAgents';
 import ChangePassword from './PlutoPlat/Pages/ChangePassword';
 import DealProcess from './PlutoPlat/Pages/DealProcess';
+import MoreHub from './PlutoPlat/Pages/MoreHub';
 // import TestApiPage from './PlutoPlat/Pages/testapi';
 
 // Scroll to top on route change helper
 const ScrollToTop = () => {
-  const { pathname, search } = useLocation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'smooth'
-    });
-  }, [pathname, search]);
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return null;
 };
@@ -80,6 +77,7 @@ export default function App() {
               <Route path="/search" element={<SearchResults />} />
               <Route path="/search-results" element={<SearchResults />} />
               <Route path="/about" element={<About />} />
+              <Route path="/more" element={<MoreHub />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/favorites" element={<Favorites />} />

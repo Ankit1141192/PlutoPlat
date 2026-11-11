@@ -50,8 +50,8 @@ const DEFAULT_NOTIFICATIONS = [
 ];
 
 const Notifications = () => {
-  const { showToast } = useAdminStore();
-  const [notificationsList, setNotificationsList] = useState(DEFAULT_NOTIFICATIONS);
+  const { showToast, notifications: storeNotifs } = useAdminStore();
+  const [notificationsList, setNotificationsList] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ const Notifications = () => {
       try {
         setLoading(true);
         const res = await AdminApi.getNotifications();
-        if (res?.data?.notifications && res.data.notifications.length > 0) {
+        if (res?.data?.notifications) {
           const mapped = res.data.notifications.map((n) => ({
             id: n._id || n.id,
             type: n.type || 'lead',
@@ -71,7 +71,7 @@ const Notifications = () => {
           setNotificationsList(mapped);
         }
       } catch (err) {
-        // Fallback to default list
+        // Fallback
       } finally {
         setLoading(false);
       }
@@ -79,6 +79,21 @@ const Notifications = () => {
 
     fetchNotifs();
   }, []);
+
+  // Sync real-time socket notifications
+  useEffect(() => {
+    if (storeNotifs && storeNotifs.length > 0) {
+      const mapped = storeNotifs.map((n) => ({
+        id: n._id || n.id,
+        type: n.type || 'lead',
+        title: n.title,
+        message: n.message || n.description,
+        time: n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent',
+        read: n.read !== undefined ? n.read : !n.isUnread,
+      }));
+      setNotificationsList(mapped);
+    }
+  }, [storeNotifs]);
 
   const handleMarkAllRead = async () => {
     try {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { io } from 'socket.io-client';
 import { PROPERTIES } from '../data/propertiesData';
 import { CATEGORIES } from '../data/categoriesData';
 import { AGENTS, TESTIMONIALS, STATS, FAQS } from '../data/testimonialsData';
@@ -479,7 +480,55 @@ export const PropertyProvider = ({ children }) => {
     }
   }, [notifications]);
 
-  // Sync session on mount/refresh if token exists & fetch backend properties / testimonials
+  // Real-Time Socket.IO Integration for Buyer/User Portal
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect', () => {
+      console.log('[Socket.IO] Frontend connected to server:', socket.id);
+      socket.emit('register', {
+        role: user?.role || 'user',
+        userId: user?.id || user?._id || null,
+      });
+    });
+
+    socket.on('new_notification', (notif) => {
+      console.log('[Socket.IO] Frontend received real-time notification:', notif);
+      setNotifications((prev) => [notif, ...prev.filter((n) => (n._id || n.id) !== (notif._id || notif.id))]);
+      showToast(`📢 ${notif.title}`, 'info');
+    });
+
+    socket.on('property_created', (prop) => {
+      console.log('[Socket.IO] Real-time property published:', prop);
+      setProperties((prev) => {
+        if (prev.some((p) => (p.id || p._id) === (prop.id || prop._id))) return prev;
+        return [prop, ...prev];
+      });
+      showToast(`✦ New Luxury Estate Listed: ${prop.title}`, 'success');
+    });
+
+    socket.on('property_updated', (prop) => {
+      setProperties((prev) =>
+        prev.map((p) => ((p.id || p._id) === (prop.id || prop._id) ? { ...p, ...prop } : p))
+      );
+    });
+
+    socket.on('property_deleted', ({ id, _id }) => {
+      const targetId = id || _id;
+      setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  // Sync session on mount/refresh if token exists & fetch backend properties / testimonials / notifications
   useEffect(() => {
     // 1. Fetch properties from backend MongoDB
     Api.getProperties()
@@ -499,7 +548,16 @@ export const PropertyProvider = ({ children }) => {
       })
       .catch((err) => console.warn('Testimonials load notice (local dataset active):', err.message));
 
-    // 3. User session & saved properties sync
+    // 3. Fetch notifications from backend MongoDB
+    Api.getNotifications()
+      .then((res) => {
+        if (res?.data?.notifications && res.data.notifications.length > 0) {
+          setNotifications(res.data.notifications);
+        }
+      })
+      .catch(() => {});
+
+    // 4. User session & saved properties sync
     const token = localStorage.getItem('pluto_token');
     if (token) {
       Api.getMe()

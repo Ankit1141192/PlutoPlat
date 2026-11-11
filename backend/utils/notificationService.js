@@ -1,8 +1,10 @@
 const Notification = require('../models/Notifications');
+const { emitNotification } = require('./socketService');
 
 /**
  * Universal Notification Dispatcher
  * Persists high-priority alerts for Users, Agents (Admins), and SuperAdmins
+ * and dispatches them in real-time over Socket.IO to connected panels
  */
 const sendNotification = async ({
   userId = null,
@@ -29,6 +31,14 @@ const sendNotification = async ({
       read: false,
       isUnread: true,
     });
+
+    // Real-time Socket.IO emission to target panel(s)
+    try {
+      emitNotification(notif.toObject ? notif.toObject() : notif);
+    } catch (socketErr) {
+      console.warn('[Socket.IO Dispatch Warning]:', socketErr.message);
+    }
+
     return notif;
   } catch (err) {
     console.error('Notification dispatch notice:', err.message);

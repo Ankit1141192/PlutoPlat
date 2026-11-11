@@ -65,31 +65,39 @@ const Dashboard = () => {
             <EmptyState title="Nothing to review" text="All submissions have been verified." />
           ) : (
             <ul className="divide-y divide-[#EAE6DE]">
-              {pending.slice(0, 4).map((prop) => (
-                <PropertyRow
-                  key={prop.id}
-                  prop={{ ...prop, location: `${prop.location} · by ${prop.ownerName || 'Unknown seller'}` }}
-                  right={
-                    <>
-                      <button
-                        onClick={() => approveProperty(prop.id)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
-                      >
-                        <CheckCircle2 size={15} /> Approve
-                      </button>
-                      <button
-                        onClick={() => rejectProperty(prop.id, 'Documentation incomplete')}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                      >
-                        <XCircle size={15} /> Reject
-                      </button>
-                      <Link to="/properties" title="Open listing" className="rounded-xl border border-[#DDD8CE] p-2 text-[#8A887F] hover:text-[#1C201C]">
-                        <ExternalLink size={15} />
-                      </Link>
-                    </>
-                  }
-                />
-              ))}
+              {pending.slice(0, 4).map((prop) => {
+                const propId = prop._id || prop.id;
+                const locText = typeof prop.location === 'object' && prop.location !== null
+                  ? ([prop.location.address, prop.location.city, prop.location.state].filter(Boolean).join(', ') || prop.location.city || 'Kanpur, UP')
+                  : (prop.location || 'Kanpur, UP');
+                const ownerName = prop.ownerName || prop.owner?.name || 'Unknown seller';
+
+                return (
+                  <PropertyRow
+                    key={propId}
+                    prop={{ ...prop, location: `${locText} · by ${ownerName}` }}
+                    right={
+                      <>
+                        <button
+                          onClick={() => approveProperty(propId)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                        >
+                          <CheckCircle2 size={15} /> Approve
+                        </button>
+                        <button
+                          onClick={() => rejectProperty(propId, 'Documentation incomplete')}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          <XCircle size={15} /> Reject
+                        </button>
+                        <Link to="/properties" title="Open listing" className="rounded-xl border border-[#DDD8CE] p-2 text-[#8A887F] hover:text-[#1C201C]">
+                          <ExternalLink size={15} />
+                        </Link>
+                      </>
+                    }
+                  />
+                );
+              })}
             </ul>
           )}
         </Panel>

@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { authenticate, authorize } = require('../../middlewares/auth');
 const ApiResponse = require('../../utils/apiResponse');
@@ -9,6 +10,8 @@ const AuditLog = require('../../models/AuditLog');
 const { logAudit } = require('../../utils/auditLogger');
 const { sendNotification } = require('../../utils/notificationService');
 const userController = require('../../controllers/userController');
+const { normalizeProperty } = require('../../controllers/propertyController');
+const { emitPropertyEvent } = require('../../utils/socketService');
 const testimonialRoutes = require('../v1/testimonialRoutes');
 const authRoutes = require('../v1/authRoutes');
 
@@ -27,9 +30,11 @@ router.use(authenticate, authorize('super_admin'));
 // Master property directory for SuperAdmin
 router.get('/properties', async (req, res, next) => {
   try {
-    const properties = await Property.find({})
+    const rawProperties = await Property.find({})
       .populate('owner', 'name email phone role')
       .sort({ createdAt: -1 });
+
+    const properties = rawProperties.map(normalizeProperty);
 
     return ApiResponse.success(res, 'All properties retrieved successfully.', { properties });
   } catch (error) {
@@ -75,10 +80,15 @@ router.post('/properties', async (req, res, next) => {
       link: `/property/${property._id}`,
     });
 
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_created', normalized);
+    } catch (e) {}
+
     return ApiResponse.success(
       res,
       'Property created and published to live catalog.',
-      { property },
+      { property: normalized },
       201
     );
   } catch (error) {
@@ -89,6 +99,9 @@ router.post('/properties', async (req, res, next) => {
 // SuperAdmin updates any property
 router.put('/properties/:id', async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return ApiResponse.error(res, 'Property not found.', 404);
+    }
     const property = await Property.findByIdAndUpdate(
       req.params.id,
       { ...req.body },
@@ -96,7 +109,12 @@ router.put('/properties/:id', async (req, res, next) => {
     );
     if (!property) return ApiResponse.error(res, 'Property not found.', 404);
 
-    return ApiResponse.success(res, 'Property updated successfully.', { property });
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
+
+    return ApiResponse.success(res, 'Property updated successfully.', { property: normalized });
   } catch (error) {
     next(error);
   }
@@ -105,8 +123,15 @@ router.put('/properties/:id', async (req, res, next) => {
 // SuperAdmin deletes any property
 router.delete('/properties/:id', async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return ApiResponse.error(res, 'Property not found.', 404);
+    }
     const property = await Property.findByIdAndDelete(req.params.id);
     if (!property) return ApiResponse.error(res, 'Property not found.', 404);
+
+    try {
+      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+    } catch (e) {}
 
     return ApiResponse.success(res, 'Property listing permanently removed.');
   } catch (error) {
@@ -117,9 +142,11 @@ router.delete('/properties/:id', async (req, res, next) => {
 // Moderation queue: all pending properties awaiting review
 router.get('/properties/moderation-queue', async (req, res, next) => {
   try {
-    const pendingProperties = await Property.find({ status: 'pending' })
+    const rawPending = await Property.find({ status: 'pending' })
       .populate('owner', 'name email phone role')
       .sort({ createdAt: -1 });
+
+    const pendingProperties = rawPending.map(normalizeProperty);
 
     return ApiResponse.success(res, 'Moderation queue fetched.', {
       count: pendingProperties.length,
@@ -134,6 +161,9 @@ router.get('/properties/moderation-queue', async (req, res, next) => {
 router.patch('/properties/:id/moderate', async (req, res, next) => {
   try {
     const { action, reason, status } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return ApiResponse.error(res, 'Property not found.', 404);
+    }
     const property = await Property.findById(req.params.id);
     if (!property) return ApiResponse.error(res, 'Property not found.', 404);
 
@@ -187,10 +217,15 @@ router.patch('/properties/:id/moderate', async (req, res, next) => {
       }
     }
 
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
+
     return ApiResponse.success(
       res,
       `Property "${property.title}" moderation complete (${property.status}).`,
-      { property }
+      { property: normalized }
     );
   } catch (error) {
     next(error);
@@ -208,6 +243,11 @@ router.patch('/properties/:id/approve', async (req, res, next) => {
     property.isVerified = true;
     property.status = 'approved';
     await property.save();
+
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
 
     await logAudit({
       actor: req.user._id,
@@ -244,7 +284,7 @@ router.patch('/properties/:id/approve', async (req, res, next) => {
     });
 
     return ApiResponse.success(res, `Property "${property.title}" is now verified and live.`, {
-      property,
+      property: normalized,
     });
   } catch (error) {
     next(error);
@@ -263,6 +303,11 @@ router.patch('/properties/:id/reject', async (req, res, next) => {
     property.isVerified = false;
     property.status = 'rejected';
     await property.save();
+
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
 
     await logAudit({
       actor: req.user._id,

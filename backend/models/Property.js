@@ -107,6 +107,18 @@ const propertySchema = new mongoose.Schema(
       }),
     },
 
+    // Geo Coordinates for Leaflet Map
+    coordinates: {
+      lat: {
+        type: Number,
+        default: 26.474,
+      },
+      lng: {
+        type: Number,
+        default: 80.335,
+      },
+    },
+
     isAvailable: {
       type: Boolean,
       default: true,

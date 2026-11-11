@@ -15,6 +15,8 @@ import Subscriptions from './Pages/Subscriptions';
 import AuditLogs from './Pages/AuditLogs';
 import Profile from './Pages/Profile';
 import Testimonials from './Pages/Testimonials';
+import Notifications from './Pages/Notifications';
+import MoreHub from './Pages/MoreHub';
 
 export default function App() {
   return (
@@ -93,10 +95,42 @@ export default function App() {
             }
           />
           <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/more"
+            element={
+              <ProtectedRoute>
+                <MoreHub />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/more"
+            element={
+              <ProtectedRoute>
+                <MoreHub />
               </ProtectedRoute>
             }
           />

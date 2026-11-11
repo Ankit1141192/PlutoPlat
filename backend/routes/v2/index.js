@@ -8,6 +8,8 @@ const User = require('../../models/User');
 const { logAudit } = require('../../utils/auditLogger');
 const { sendNotification } = require('../../utils/notificationService');
 const userController = require('../../controllers/userController');
+const { normalizeProperty } = require('../../controllers/propertyController');
+const { emitPropertyEvent } = require('../../utils/socketService');
 const testimonialRoutes = require('../v1/testimonialRoutes');
 const authRoutes = require('../v1/authRoutes');
 
@@ -104,10 +106,15 @@ router.post('/properties', async (req, res, next) => {
       link: `/property/${property._id}`,
     });
 
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_created', normalized);
+    } catch (e) {}
+
     return ApiResponse.success(
       res,
       'Property submitted and published successfully. Visible on the public portal.',
-      { property },
+      { property: normalized },
       201
     );
   } catch (error) {
@@ -131,7 +138,12 @@ router.put('/properties/:id', async (req, res, next) => {
     }
 
     await property.save();
-    return ApiResponse.success(res, 'Property updated and queued for review.', { property });
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
+
+    return ApiResponse.success(res, 'Property updated and queued for review.', { property: normalized });
   } catch (error) {
     next(error);
   }
@@ -144,6 +156,9 @@ router.delete('/properties/:id', async (req, res, next) => {
     if (!property) {
       return ApiResponse.error(res, 'Property not found or unauthorized.', 404);
     }
+    try {
+      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+    } catch (e) {}
     return ApiResponse.success(res, 'Property listing removed.');
   } catch (error) {
     next(error);

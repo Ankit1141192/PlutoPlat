@@ -1,10 +1,12 @@
 const path = require('path');
+const http = require('http');
 const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = require('./app');
 const connectDB = require('./config/db');
 const { seedInitialData } = require('./utils/seedData');
+const { initSocket } = require('./utils/socketService');
 
 const PORT = process.env.PORT || 5000;
 
@@ -24,11 +26,16 @@ const startServer = async () => {
     // Auto seed initial dataset if empty
     await seedInitialData();
 
-    server = app.listen(PORT, () => {
+    // Create HTTP Server & Bind Socket.IO
+    server = http.createServer(app);
+    initSocket(server);
+
+    server.listen(PORT, () => {
       console.log(`===============================================`);
-      console.log(` PlutoPlat API Server Running on Port: ${PORT}`);
+      console.log(` PlutoPlat API & Real-Time Socket Server Running on Port: ${PORT}`);
       console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(` API Base URL: http://localhost:${PORT}/api/v1`);
+      console.log(` Socket.IO Server: http://localhost:${PORT}`);
       console.log(` Health Check: http://localhost:${PORT}/health`);
       console.log(`===============================================`);
     });

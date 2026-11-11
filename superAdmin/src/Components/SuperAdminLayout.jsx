@@ -13,7 +13,9 @@ import {
   ExternalLink,
   LogOut,
   Menu,
-  X
+  X,
+  Bell,
+  MoreHorizontal
 } from 'lucide-react';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
@@ -49,10 +51,10 @@ const SuperAdminLayout = ({ children, title = 'SuperAdmin Control Panel' }) => {
       badgeColor: 'bg-emerald-500/20 text-emerald-300'
     },
     { name: 'Users & agents', path: '/users', altPath: '/superadmin/users', icon: Users },
+    { name: 'Notifications & Broadcast', path: '/notifications', altPath: '/superadmin/notifications', icon: Bell },
     { name: 'Testimonials', path: '/testimonials', altPath: '/superadmin/testimonials', icon: MessageSquareQuote },
     { name: 'Membership plans', path: '/subscriptions', altPath: '/superadmin/subscriptions', icon: CreditCard },
-    { name: 'Audit log', path: '/audits', altPath: '/superadmin/audits', icon: History },
-    { name: 'My profile', path: '/profile', altPath: '/superadmin/profile', icon: User }
+    { name: 'More & Extensions', path: '/more', altPath: '/superadmin/more', icon: MoreHorizontal }
   ];
 
   const isActive = (item) => {

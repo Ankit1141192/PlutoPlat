@@ -69,14 +69,20 @@ const PropertyList = () => {
     e.preventDefault();
     if (!form.title) return;
 
+    const numPrice = Number(form.numericPrice) || 8500000;
+    const formattedPrice = numPrice >= 10000000 
+      ? `₹${(numPrice / 10000000).toFixed(2)} Cr` 
+      : `₹${(numPrice / 100000).toFixed(2)} Lac`;
+
     addProperty({
       ...form,
-      price: `₹${(Number(form.numericPrice || 5000000) * 83.5).toLocaleString('en-IN')}`,
+      numericPrice: numPrice,
+      price: formattedPrice,
       images: [form.image],
       ownerEmail: user?.email || 'm.sharma@plutoplat.com',
       ownerName: user?.name || 'Michael Sharma',
-      verified: false,
-      status: 'pending'
+      verified: true,
+      status: 'approved'
     });
 
     setModalOpen(false);

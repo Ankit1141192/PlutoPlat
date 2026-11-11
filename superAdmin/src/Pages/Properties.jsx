@@ -21,6 +21,26 @@ import {
 import SuperAdminLayout from '../Components/SuperAdminLayout';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
+const getLocationText = (loc) => {
+  if (!loc) return 'Kanpur, Uttar Pradesh';
+  if (typeof loc === 'string') return loc;
+  if (typeof loc === 'object') {
+    const parts = [loc.address, loc.city, loc.state].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : (loc.city || 'Kanpur, Uttar Pradesh');
+  }
+  return String(loc);
+};
+
+const getPriceText = (price, numPrice) => {
+  if (typeof price === 'string' && price.length > 0 && isNaN(Number(price))) {
+    return price;
+  }
+  const val = Number(numPrice || price) || 0;
+  if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+  if (val >= 100000) return `₹${(val / 100000).toFixed(2)} Lac`;
+  return `₹${val.toLocaleString('en-IN')}`;
+};
+
 const Properties = () => {
   const { properties, approveProperty, rejectProperty, deleteProperty, addProperty } = useSuperAdminStore();
 
@@ -33,7 +53,7 @@ const Properties = () => {
   const [newProp, setNewProp] = useState({
     title: '',
     subtitle: '',
-    location: 'Beverly Hills, CA',
+    location: 'Civil Lines, Kanpur, UP',
     address: '',
     price: '',
     numericPrice: 12000000,
@@ -64,10 +84,14 @@ const Properties = () => {
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesTitle = p.title?.toLowerCase().includes(q);
-        const matchesLoc = p.location?.toLowerCase().includes(q);
-        const matchesOwner = p.ownerName?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesLoc && !matchesOwner) return false;
+        const matchesTitle = (p.title || '').toLowerCase().includes(q);
+        const locString = getLocationText(p.location).toLowerCase();
+        const matchesLoc = locString.includes(q);
+        const ownerString = (p.ownerName || p.owner?.name || '').toLowerCase();
+        const emailString = (p.ownerEmail || p.owner?.email || '').toLowerCase();
+        if (!matchesTitle && !matchesLoc && !ownerString.includes(q) && !emailString.includes(q)) {
+          return false;
+        }
       }
 
       return true;
@@ -78,9 +102,15 @@ const Properties = () => {
     e.preventDefault();
     if (!newProp.title) return;
 
+    const numPrice = Number(newProp.numericPrice) || 8500000;
+    const formattedPrice = numPrice >= 10000000 
+      ? `₹${(numPrice / 10000000).toFixed(2)} Cr` 
+      : `₹${(numPrice / 100000).toFixed(2)} Lac`;
+
     addProperty({
       ...newProp,
-      price: `$${Number(newProp.numericPrice || 5000000).toLocaleString()}`,
+      numericPrice: numPrice,
+      price: formattedPrice,
       images: [newProp.image],
     });
 
@@ -88,7 +118,7 @@ const Properties = () => {
     setNewProp({
       title: '',
       subtitle: '',
-      location: 'Beverly Hills, CA',
+      location: 'Civil Lines, Kanpur, UP',
       address: '',
       price: '',
       numericPrice: 12000000,
@@ -224,12 +254,13 @@ const Properties = () => {
                   </tr>
                 ) : (
                   filteredProperties.map((prop) => {
+                    const propId = prop._id || prop.id;
                     const isPending = !prop.verified || prop.status === 'pending';
                     const isApproved = prop.verified && prop.status !== 'rejected';
                     const isRejected = prop.status === 'rejected';
 
                     return (
-                      <tr key={prop.id} className="hover:bg-[#FAF8F5] transition-colors">
+                      <tr key={propId} className="hover:bg-[#FAF8F5] transition-colors">
                         {/* Listing */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-3.5">
@@ -243,9 +274,9 @@ const Properties = () => {
                               <div className="flex items-center gap-2 text-[11px] text-[#8A887F] mt-0.5">
                                 <span className="text-[#B49A70] font-medium">{prop.type}</span>
                                 <span>•</span>
-                                <span>{prop.beds} Beds / {prop.baths} Baths</span>
+                                <span>{prop.beds || 3} Beds / {prop.baths || 3} Baths</span>
                                 <span>•</span>
-                                <span>{prop.sqft} sqft</span>
+                                <span>{prop.sqft ? (typeof prop.sqft === 'number' ? `${prop.sqft} sqft` : prop.sqft) : '4,500 sqft'}</span>
                               </div>
                             </div>
                           </div>
@@ -253,17 +284,19 @@ const Properties = () => {
 
                         {/* Price & Location */}
                         <td className="py-4 px-5">
-                          <p className="font-serif text-sm font-semibold text-[#1C201C]">{prop.price}</p>
+                          <p className="font-serif text-sm font-semibold text-[#1C201C]">
+                            {getPriceText(prop.formattedPrice || prop.price, prop.numericPrice || prop.price)}
+                          </p>
                           <p className="text-xs text-[#6E6D66] truncate flex items-center gap-1 mt-0.5">
-                            <MapPin size={11} className="text-[#8A887F]" />
-                            {prop.location}
+                            <MapPin size={11} className="text-[#8A887F] shrink-0" />
+                            <span>{getLocationText(prop.location)}</span>
                           </p>
                         </td>
 
                         {/* Submitter */}
                         <td className="py-4 px-5">
-                          <p className="font-medium text-xs text-[#1C201C]">{prop.ownerName || 'Julian Beaumont'}</p>
-                          <p className="text-[11px] text-[#8A887F] mt-0.5">{prop.ownerEmail || 'agent@plutoplat.com'}</p>
+                          <p className="font-medium text-xs text-[#1C201C]">{prop.ownerName || prop.owner?.name || 'Julian Beaumont'}</p>
+                          <p className="text-[11px] text-[#8A887F] mt-0.5">{prop.ownerEmail || prop.owner?.email || 'agent@plutoplat.com'}</p>
                         </td>
 
                         {/* Status */}
@@ -291,14 +324,14 @@ const Properties = () => {
                             {isPending && (
                               <>
                                 <button
-                                  onClick={() => approveProperty(prop.id)}
+                                  onClick={() => approveProperty(propId)}
                                   className="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors cursor-pointer"
                                   title="Approve for public view"
                                 >
                                   Approve
                                 </button>
                                 <button
-                                  onClick={() => rejectProperty(prop.id, 'Non-compliant documents')}
+                                  onClick={() => rejectProperty(propId, 'Non-compliant documents')}
                                   className="px-3 py-1.5 text-xs font-semibold border border-red-200 text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                   title="Reject listing"
                                 >
@@ -309,7 +342,7 @@ const Properties = () => {
 
                             {isApproved && (
                               <button
-                                onClick={() => rejectProperty(prop.id, 'Unpublished by SuperAdmin')}
+                                onClick={() => rejectProperty(propId, 'Unpublished by SuperAdmin')}
                                 className="px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50 rounded-lg border border-amber-200 transition-colors cursor-pointer"
                                 title="Unpublish / Suspend"
                               >
@@ -319,7 +352,7 @@ const Properties = () => {
 
                             {isRejected && (
                               <button
-                                onClick={() => approveProperty(prop.id)}
+                                onClick={() => approveProperty(propId)}
                                 className="px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-50 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
                               >
                                 Re-Approve
@@ -329,7 +362,7 @@ const Properties = () => {
                             <button
                               onClick={() => {
                                 if (window.confirm(`Delete property "${prop.title}" permanently?`)) {
-                                  deleteProperty(prop.id);
+                                  deleteProperty(propId);
                                 }
                               }}
                               className="p-1.5 text-[#8A887F] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -401,11 +434,12 @@ const Properties = () => {
                   </div>
                   <div>
                     <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
-                      Numeric Price (USD) <span className="text-red-500">*</span>
+                      Numeric Price (INR ₹) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
                       required
+                      placeholder="e.g. 12000000"
                       value={newProp.numericPrice}
                       onChange={(e) => setNewProp({ ...newProp, numericPrice: Number(e.target.value) })}
                       className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"

@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema(
     },
     recipientRole: {
       type: String,
-      enum: ['all', 'user', 'admin', 'super_admin'],
+      enum: ['all', 'user', 'admin', 'super_admin', 'both', 'user_and_admin'],
       default: 'all',
     },
     title: {

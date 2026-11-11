@@ -110,7 +110,7 @@ const ResetPassword = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            {/* <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">
                 Reset Verification Token
               </label>
@@ -125,7 +125,7 @@ const ResetPassword = () => {
                   className="w-full pl-10 pr-3.5 py-3 bg-[#F8F6F2] border border-[#DDD8CE] font-mono text-xs rounded-xs focus:outline-none focus:border-[#B49A70]"
                 />
               </div>
-            </div>
+            </div> */}
 
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#6E6D66] tracking-wider mb-1.5">

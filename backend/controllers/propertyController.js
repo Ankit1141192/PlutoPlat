@@ -2,6 +2,68 @@ const Property = require('../models/Property');
 const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
 const { sendNotification } = require('../utils/notificationService');
+const { emitPropertyEvent } = require('../utils/socketService');
+
+const KNOWN_GEO = {
+  'civil lines': { lat: 26.4740, lng: 80.3350 },
+  'swaroop nagar': { lat: 26.4820, lng: 80.3150 },
+  'vip road': { lat: 26.4790, lng: 80.3420 },
+  'tilak nagar': { lat: 26.4710, lng: 80.3200 },
+  'kanpur': { lat: 26.4499, lng: 80.3319 },
+  'delhi': { lat: 28.6139, lng: 77.2090 },
+  'new delhi': { lat: 28.6015, lng: 77.2285 },
+  'golf links': { lat: 28.5990, lng: 77.2340 },
+  'mumbai': { lat: 19.0760, lng: 72.8777 },
+  'worli': { lat: 19.0178, lng: 72.8178 },
+  'bandra': { lat: 19.0596, lng: 72.8295 },
+  'dubai': { lat: 25.2048, lng: 55.2708 },
+  'palm jumeirah': { lat: 25.1124, lng: 55.1390 },
+  'marina': { lat: 25.0805, lng: 55.1403 },
+  'hyderabad': { lat: 17.3850, lng: 78.4867 },
+  'jubilee hills': { lat: 17.4319, lng: 78.4073 },
+  'goa': { lat: 15.2993, lng: 74.1240 },
+  'bangalore': { lat: 12.9716, lng: 77.5946 },
+  'bengaluru': { lat: 12.9716, lng: 77.5946 },
+  'california': { lat: 34.0522, lng: -118.2437 },
+  'beverly hills': { lat: 34.0736, lng: -118.4004 },
+  'new york': { lat: 40.7128, lng: -74.0060 },
+  'manhattan': { lat: 40.7831, lng: -73.9712 },
+  'miami': { lat: 25.7617, lng: -80.1918 },
+  'miami beach': { lat: 25.7907, lng: -80.1300 },
+  'aspen': { lat: 39.1911, lng: -106.8175 },
+};
+
+const resolveCoordinates = (location, explicitCoords) => {
+  if (explicitCoords && typeof explicitCoords === 'object') {
+    const lat = Number(explicitCoords.lat || explicitCoords.latitude);
+    const lng = Number(explicitCoords.lng || explicitCoords.longitude);
+    if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return { lat, lng };
+    }
+  }
+  const locStr = (
+    typeof location === 'string'
+      ? location
+      : `${location?.city || ''} ${location?.address || ''} ${location?.state || ''}`
+  ).toLowerCase();
+
+  for (const [key, coords] of Object.entries(KNOWN_GEO)) {
+    if (locStr.includes(key)) {
+      const jitterLat = (Math.random() - 0.5) * 0.008;
+      const jitterLng = (Math.random() - 0.5) * 0.008;
+      return {
+        lat: Number((coords.lat + jitterLat).toFixed(6)),
+        lng: Number((coords.lng + jitterLng).toFixed(6)),
+      };
+    }
+  }
+  const jitterLat = (Math.random() - 0.5) * 0.015;
+  const jitterLng = (Math.random() - 0.5) * 0.015;
+  return {
+    lat: Number((26.474 + jitterLat).toFixed(6)),
+    lng: Number((80.335 + jitterLng).toFixed(6)),
+  };
+};
 
 /**
  * Format property document for clean frontend consumption
@@ -19,6 +81,7 @@ const normalizeProperty = (prop) => {
   }
 
   const primaryImage = p.image || (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+  const coords = resolveCoordinates(p.location, p.coordinates);
 
   return {
     ...p,
@@ -26,6 +89,7 @@ const normalizeProperty = (prop) => {
     _id: id,
     location: locStr,
     locationDetails: p.location,
+    coordinates: coords,
     image: primaryImage,
     images: p.images && p.images.length > 0 ? p.images : [primaryImage],
     type: p.type || p.propertyType || 'Villas',
@@ -56,6 +120,7 @@ const createProperty = async (req, res, next) => {
     const isSuperAdmin = userRole === 'super_admin';
     const status = isSuperAdmin ? (req.body.status || 'active') : (req.body.status || 'approved');
     const isVerified = isSuperAdmin ? (req.body.isVerified !== undefined ? req.body.isVerified : true) : true;
+    const coordinates = resolveCoordinates(req.body.location, req.body.coordinates);
 
     const propertyData = {
       ...req.body,
@@ -63,9 +128,11 @@ const createProperty = async (req, res, next) => {
       postedBy: req.user._id,
       status,
       isVerified,
+      coordinates,
     };
 
     const property = await Property.create(propertyData);
+    const normalized = normalizeProperty(property);
 
     await logAudit({
       actor: req.user._id,
@@ -101,9 +168,14 @@ const createProperty = async (req, res, next) => {
       link: `/property/${property._id}`,
     });
 
+    // Broadcast property_created over Socket.IO to update catalogs dynamically
+    try {
+      emitPropertyEvent('property_created', normalized);
+    } catch (e) {}
+
     const message = 'Property created and published successfully. Visible on the public portal.';
 
-    return ApiResponse.success(res, message, { property: normalizeProperty(property) }, 201);
+    return ApiResponse.success(res, message, { property: normalized }, 201);
   } catch (error) {
     next(error);
   }
@@ -342,8 +414,13 @@ const moderateProperty = async (req, res, next) => {
       req,
     });
 
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
+
     return ApiResponse.success(res, `Property status updated to ${finalStatus}.`, {
-      property: normalizeProperty(property),
+      property: normalized,
     });
   } catch (error) {
     next(error);
@@ -374,6 +451,10 @@ const updateProperty = async (req, res, next) => {
       req.body.verified = false;
     }
 
+    if (req.body.location || req.body.coordinates) {
+      property.coordinates = resolveCoordinates(req.body.location || property.location, req.body.coordinates);
+    }
+
     Object.assign(property, req.body);
     await property.save();
 
@@ -388,8 +469,13 @@ const updateProperty = async (req, res, next) => {
       req,
     });
 
+    const normalized = normalizeProperty(property);
+    try {
+      emitPropertyEvent('property_updated', normalized);
+    } catch (e) {}
+
     return ApiResponse.success(res, 'Property updated successfully.', {
-      property: normalizeProperty(property),
+      property: normalized,
     });
   } catch (error) {
     next(error);
@@ -415,6 +501,10 @@ const deleteProperty = async (req, res, next) => {
     }
 
     await Property.findByIdAndDelete(req.params.id);
+
+    try {
+      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+    } catch (e) {}
 
     await logAudit({
       actor: req.user._id,
