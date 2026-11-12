@@ -12,9 +12,11 @@ import {
   Sparkles,
   FileCheck,
   Calendar,
-  Loader2
+  Loader2,
+  Camera
 } from 'lucide-react';
 import AdminLayout from '../Components/AdminLayout';
+import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { useAdminStore } from '../context/AdminContext';
 import { AdminApi } from '../services/Api';
 
@@ -31,10 +33,11 @@ const Profile = () => {
     city: user?.location?.city || user?.city || '',
     tier: user?.role === 'super_admin' ? 'SuperAdmin Executive' : 'Licensed Agent & Broker',
     bio: user?.bio || 'Authorized real estate representative for verified luxury properties and buyer advisory.',
+    profileImage: user?.profileImage || user?.avatar || '',
   });
 
   useEffect(() => {
-    if (localStorage.getItem('pluto_admin_token')) {
+    if (sessionStorage.getItem('pluto_admin_token')) {
       AdminApi.getMe()
         .then((res) => {
           if (res?.data?.user) {
@@ -45,6 +48,7 @@ const Profile = () => {
               email: u.email || prev.email,
               phone: u.phone || prev.phone,
               city: u.location?.city || prev.city,
+              profileImage: u.profileImage || u.avatar || prev.profileImage,
             }));
           }
         })
@@ -62,6 +66,7 @@ const Profile = () => {
         city: user.location?.city || user.city || prev.city,
         agency: user.agency || prev.agency,
         rera: user.rera || prev.rera,
+        profileImage: user.profileImage || user.avatar || prev.profileImage,
       }));
     }
   }, [user]);
@@ -79,6 +84,10 @@ const Profile = () => {
             name: formData.name,
             phone: formData.phone,
             location: { city: formData.city },
+            profileImage: formData.profileImage,
+            avatar: formData.profileImage,
+            agency: formData.agency,
+            rera: formData.rera,
           });
         }
         showToast('Agent profile credentials & dossier updated successfully.', 'success');
@@ -105,9 +114,20 @@ const Profile = () => {
             {/* Header Identity Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#EAE6DE]">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#101411] to-[#1E251E] text-[#D9C49B] flex items-center justify-center font-serif text-2xl font-bold shadow-md ring-4 ring-[#B49A70]/20">
-                  {formData.name?.charAt(0) || 'A'}
-                </div>
+                {formData.profileImage ? (
+                  <img
+                    src={formData.profileImage}
+                    alt={formData.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-[#B49A70] shadow-md ring-4 ring-[#B49A70]/20"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#101411] to-[#1E251E] text-[#D9C49B] flex items-center justify-center font-serif text-2xl font-bold shadow-md ring-4 ring-[#B49A70]/20">
+                    {formData.name?.charAt(0) || 'A'}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-serif font-medium text-[#1C201C]">{formData.name || 'Agent'}</h3>
                   <div className="flex items-center gap-2 mt-1">
@@ -138,6 +158,16 @@ const Profile = () => {
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Profile Avatar Photo Uploader / Link */}
+            <div className="rounded-xl border border-[#DDD8CE] bg-[#FAF8F5] p-4">
+              <ImageUploadOrLink
+                label="Agent Profile Photo"
+                value={formData.profileImage}
+                onChange={(val) => setFormData({ ...formData, profileImage: val })}
+                helperText="Upload your official agent photograph from your device or paste a hosted image URL."
+              />
             </div>
 
             {/* Form Fields Grid */}

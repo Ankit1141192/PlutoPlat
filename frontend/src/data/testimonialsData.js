@@ -41,28 +41,100 @@ export const TESTIMONIALS = [
   {
     id: 1,
     client: 'Julian & Genevieve Beaumont',
+    name: 'Julian & Genevieve Beaumont',
     role: 'Private Equity Principal, London & New York',
     property: 'Acquired Central Park Penthouse',
     content: 'PlutoPlat redefined our expectations of what real estate brokerage can be. Their confidential advisory and access to off-market estates secured our family dream penthouse in Manhattan without any media friction.',
+    message: 'PlutoPlat redefined our expectations of what real estate brokerage can be. Their confidential advisory and access to off-market estates secured our family dream penthouse in Manhattan without any media friction.',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     rating: 5
   },
   {
     id: 2,
     client: 'Arthur K. Vance',
+    name: 'Arthur K. Vance',
     role: 'Tech Founder & Art Patron, San Francisco',
     property: 'Acquired Modern Cliffside Haven, Malibu',
     content: 'The architectural curation on PlutoPlat is second to none. Every property listed is vetted down to the structural engineering and title integrity. Working with their team felt like consulting with trusted private family office partners.',
+    message: 'The architectural curation on PlutoPlat is second to none. Every property listed is vetted down to the structural engineering and title integrity. Working with their team felt like consulting with trusted private family office partners.',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
     rating: 5
   },
   {
     id: 3,
     client: 'Claire Montgomerie',
+    name: 'Claire Montgomerie',
     role: 'Architectural Historian & Designer',
     property: 'Acquired The Solstice Villa & Vineyard',
     content: 'The level of detail—from high-definition video walkthroughs to zoning and environmental disclosures—saved us countless weeks. PlutoPlat sets the benchmark for international luxury real estate.',
+    message: 'The level of detail—from high-definition video walkthroughs to zoning and environmental disclosures—saved us countless weeks. PlutoPlat sets the benchmark for international luxury real estate.',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 4,
+    client: 'Rajesh Singhania',
+    name: 'Rajesh Singhania',
+    role: 'Industrialist & Family Office Trustee',
+    property: 'Civil Lines Heritage Bungalow, Kanpur',
+    content: 'Purchasing an ancestral colonial estate in Civil Lines required utmost legal diligence and discretion. The PlutoPlat team handled title verification, municipal sanction reviews, and escrow settlement with consummate perfection.',
+    message: 'Purchasing an ancestral colonial estate in Civil Lines required utmost legal diligence and discretion. The PlutoPlat team handled title verification, municipal sanction reviews, and escrow settlement with consummate perfection.',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 5,
+    client: 'Elena Rostova',
+    name: 'Elena Rostova',
+    role: 'Contemporary Art Collector, Zurich',
+    property: 'Acquired Waterfront Residence, Miami Beach',
+    content: 'As an overseas buyer, navigating cross-border escrow and foreign exchange protocols can be daunting. PlutoPlat provided an exceptional white-glove advisory team who orchestrated every detail seamlessly.',
+    message: 'As an overseas buyer, navigating cross-border escrow and foreign exchange protocols can be daunting. PlutoPlat provided an exceptional white-glove advisory team who orchestrated every detail seamlessly.',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 6,
+    client: 'Marcus Thorne',
+    name: 'Marcus Thorne',
+    role: 'Managing Partner, Sovereign Capital',
+    property: 'Acquired Triplex Penthouse, Mayfair',
+    content: 'Unrivaled access to off-market trophy assets. The discreet representation and bespoke negotiation strategy executed by PlutoPlat saved us significant capital while securing an irreplaceable London asset.',
+    message: 'Unrivaled access to off-market trophy assets. The discreet representation and bespoke negotiation strategy executed by PlutoPlat saved us significant capital while securing an irreplaceable London asset.',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 7,
+    client: 'Dr. Ananya Sharma',
+    name: 'Dr. Ananya Sharma',
+    role: 'Biotech Founder & Angel Investor',
+    property: 'Acquired Eco-Luxury Villa, Goa',
+    content: 'The architectural diligence dossier provided by PlutoPlat was far superior to any traditional agency report. Every ecological sustainability credential and soil survey was independently authenticated.',
+    message: 'The architectural diligence dossier provided by PlutoPlat was far superior to any traditional agency report. Every ecological sustainability credential and soil survey was independently authenticated.',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 8,
+    client: 'David & Sarah Chen',
+    name: 'David & Sarah Chen',
+    role: 'Fintech Executives, Singapore',
+    property: 'Acquired Sky Residence, Sydney Harbour',
+    content: 'From the initial chauffeured inspection to the closing banquet, the experience was peerless. PlutoPlat truly understands the discerning expectations of international ultra-high-net-worth investors.',
+    message: 'From the initial chauffeured inspection to the closing banquet, the experience was peerless. PlutoPlat truly understands the discerning expectations of international ultra-high-net-worth investors.',
+    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=200&q=80',
+    rating: 5
+  },
+  {
+    id: 9,
+    client: 'Vikramaditya Roy',
+    name: 'Vikramaditya Roy',
+    role: 'Real Estate Developer & Investor',
+    property: 'Commercial Landmark Parcel, Swaroop Nagar',
+    content: 'Their forensic legal clearance and municipal clearance checks gave us total confidence in executing a multi-crore land parcel acquisition in record time. PlutoPlat is our gold standard advisory partner.',
+    message: 'Their forensic legal clearance and municipal clearance checks gave us total confidence in executing a multi-crore land parcel acquisition in record time. PlutoPlat is our gold standard advisory partner.',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=80',
     rating: 5
   }
 ];

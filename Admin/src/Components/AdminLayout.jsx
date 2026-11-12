@@ -22,7 +22,7 @@ const BUYER_SITE_URL = import.meta.env.VITE_BUYER_SITE_URL || 'http://localhost:
 const AdminLayout = ({ children, title = 'Agent & Partner Workstation' }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, properties, leads } = useAdminStore();
+  const { user, logout, properties, leads, notifications } = useAdminStore();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const seesAll = user?.role === 'admin' || user?.role === 'super_admin';
@@ -36,6 +36,7 @@ const AdminLayout = ({ children, title = 'Agent & Partner Workstation' }) => {
     (l) => l.agentEmail === user?.email || l.agentName === user?.name || seesAll
   );
   const newLeadsCount = myLeads.filter((l) => l.status === 'New').length;
+  const unreadNotifsCount = (notifications || []).filter((n) => !n.read && n.isUnread !== false).length;
 
   const navLinks = [
     { name: 'Dashboard', path: '/', altPath: '/admin', icon: LayoutDashboard },
@@ -55,7 +56,14 @@ const AdminLayout = ({ children, title = 'Agent & Partner Workstation' }) => {
       badge: newLeadsCount > 0 ? `${newLeadsCount} new` : null,
       badgeColor: 'bg-emerald-500/20 text-emerald-300'
     },
-    { name: 'Notifications', path: '/notifications', altPath: '/admin/notifications', icon: Bell },
+    {
+      name: 'Notifications',
+      path: '/notifications',
+      altPath: '/admin/notifications',
+      icon: Bell,
+      badge: unreadNotifsCount > 0 ? `${unreadNotifsCount}` : null,
+      badgeColor: 'bg-[#B49A70] text-[#121612]'
+    },
     { name: 'My profile', path: '/profile', altPath: '/admin/profile', icon: User }
   ];
 

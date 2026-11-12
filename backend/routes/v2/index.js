@@ -51,9 +51,15 @@ router.get('/properties/:id', async (req, res, next) => {
 // Agent submits new property (Published & live on user panel)
 router.post('/properties', async (req, res, next) => {
   try {
+    const lat = Number(req.body.latitude !== undefined ? req.body.latitude : (req.body.coordinates?.lat || 26.474)) || 26.474;
+    const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : (req.body.coordinates?.lng || 80.335))) || 80.335;
+
     const propertyData = {
       ...req.body,
       owner: req.user._id,
+      latitude: lat,
+      longitude: lng,
+      coordinates: { lat, lng },
       isVerified: req.body.isVerified !== undefined ? req.body.isVerified : true,
       status: req.body.status || 'approved',
     };
@@ -122,20 +128,30 @@ router.post('/properties', async (req, res, next) => {
   }
 });
 
-// Agent updates their own listing
+// Agent updates listing
 router.put('/properties/:id', async (req, res, next) => {
   try {
-    const property = await Property.findOne({ _id: req.params.id, owner: req.user._id });
+    const filter = (req.user.role === 'admin' || req.user.role === 'super_admin')
+      ? { _id: req.params.id }
+      : { _id: req.params.id, owner: req.user._id };
+
+    const property = await Property.findOne(filter);
     if (!property) {
       return ApiResponse.error(res, 'Property not found or unauthorized.', 404);
     }
 
-    Object.assign(property, req.body);
-    // Any edit by an agent returns property to pending verification
-    if (req.user.role !== 'super_admin') {
-      property.isVerified = false;
-      property.status = 'pending';
+    if (req.body.latitude !== undefined || req.body.longitude !== undefined || req.body.langitude !== undefined) {
+      const lat = Number(req.body.latitude !== undefined ? req.body.latitude : (property.latitude || property.coordinates?.lat)) || 26.474;
+      const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : (property.longitude || property.coordinates?.lng))) || 80.335;
+      req.body.latitude = lat;
+      req.body.longitude = lng;
+      req.body.coordinates = { lat, lng };
     }
+
+    Object.assign(property, req.body);
+    // Keep verified & approved if updated by admin/super_admin
+    property.isVerified = true;
+    property.status = 'approved';
 
     await property.save();
     const normalized = normalizeProperty(property);
@@ -143,23 +159,29 @@ router.put('/properties/:id', async (req, res, next) => {
       emitPropertyEvent('property_updated', normalized);
     } catch (e) {}
 
-    return ApiResponse.success(res, 'Property updated and queued for review.', { property: normalized });
+    return ApiResponse.success(res, 'Property updated successfully.', { property: normalized });
   } catch (error) {
     next(error);
   }
 });
 
-// Agent deletes their own listing
+// Agent deletes listing
 router.delete('/properties/:id', async (req, res, next) => {
   try {
-    const property = await Property.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
+    const filter = (req.user.role === 'admin' || req.user.role === 'super_admin')
+      ? { _id: req.params.id }
+      : { _id: req.params.id, owner: req.user._id };
+
+    const property = await Property.findOneAndDelete(filter);
     if (!property) {
       return ApiResponse.error(res, 'Property not found or unauthorized.', 404);
     }
+
     try {
       emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
     } catch (e) {}
-    return ApiResponse.success(res, 'Property listing removed.');
+
+    return ApiResponse.success(res, 'Property listing permanently removed.');
   } catch (error) {
     next(error);
   }

@@ -35,8 +35,8 @@ const KNOWN_GEO = {
 
 const resolveCoordinates = (location, explicitCoords) => {
   if (explicitCoords && typeof explicitCoords === 'object') {
-    const lat = Number(explicitCoords.lat || explicitCoords.latitude);
-    const lng = Number(explicitCoords.lng || explicitCoords.longitude);
+    const lat = Number(explicitCoords.lat !== undefined ? explicitCoords.lat : explicitCoords.latitude);
+    const lng = Number(explicitCoords.lng !== undefined ? explicitCoords.lng : (explicitCoords.longitude !== undefined ? explicitCoords.longitude : explicitCoords.langitude));
     if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
       return { lat, lng };
     }
@@ -81,7 +81,10 @@ const normalizeProperty = (prop) => {
   }
 
   const primaryImage = p.image || (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
-  const coords = resolveCoordinates(p.location, p.coordinates);
+  const coords = resolveCoordinates(p.location, {
+    lat: p.latitude !== undefined ? p.latitude : p.coordinates?.lat,
+    lng: p.longitude !== undefined ? p.longitude : (p.langitude !== undefined ? p.langitude : p.coordinates?.lng),
+  });
 
   return {
     ...p,
@@ -89,6 +92,9 @@ const normalizeProperty = (prop) => {
     _id: id,
     location: locStr,
     locationDetails: p.location,
+    latitude: coords.lat,
+    longitude: coords.lng,
+    langitude: coords.lng,
     coordinates: coords,
     image: primaryImage,
     images: p.images && p.images.length > 0 ? p.images : [primaryImage],
@@ -440,19 +446,29 @@ const updateProperty = async (req, res, next) => {
 
     const isOwner = property.owner && property.owner.toString() === req.user._id.toString();
     const isSuperAdmin = req.user.role === 'super_admin';
+    const isAdmin = req.user.role === 'admin';
 
-    if (!isOwner && !isSuperAdmin) {
+    if (!isOwner && !isSuperAdmin && !isAdmin) {
       return ApiResponse.error(res, 'Forbidden: You can only edit your own listings.', 403);
     }
 
-    if (!isSuperAdmin) {
+    if (!isSuperAdmin && !isAdmin) {
       req.body.status = 'pending';
       req.body.isVerified = false;
       req.body.verified = false;
     }
 
-    if (req.body.location || req.body.coordinates) {
+    // Sync explicit coordinates or latitude/longitude
+    if (req.body.latitude !== undefined || req.body.longitude !== undefined || req.body.langitude !== undefined) {
+      const lat = Number(req.body.latitude !== undefined ? req.body.latitude : (property.latitude || property.coordinates?.lat)) || 26.474;
+      const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : (property.longitude || property.coordinates?.lng))) || 80.335;
+      req.body.latitude = lat;
+      req.body.longitude = lng;
+      req.body.coordinates = { lat, lng };
+    } else if (req.body.location || req.body.coordinates) {
       property.coordinates = resolveCoordinates(req.body.location || property.location, req.body.coordinates);
+      req.body.latitude = property.coordinates.lat;
+      req.body.longitude = property.coordinates.lng;
     }
 
     Object.assign(property, req.body);

@@ -102,9 +102,19 @@ const emitPropertyEvent = (eventType, property) => {
   io.to('all').emit(eventType, property);
 };
 
+/**
+ * Emit Testimonial events so all connected panels update dynamically
+ */
+const emitTestimonialEvent = (eventType, testimonial) => {
+  if (!io) return;
+  console.log(`[Socket.IO] Broadcasting testimonial event: ${eventType}`);
+  io.to('all').emit(eventType, testimonial);
+};
+
 module.exports = {
   initSocket,
   getIO,
   emitNotification,
   emitPropertyEvent,
+  emitTestimonialEvent,
 };

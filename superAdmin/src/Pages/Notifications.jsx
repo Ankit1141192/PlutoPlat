@@ -40,9 +40,12 @@ const NotificationsPage = () => {
       const res = await SuperAdminApi.getNotifications();
       if (res?.data?.notifications) {
         setNotificationsList(res.data.notifications);
+      } else {
+        setNotificationsList([]);
       }
     } catch (err) {
       console.warn('Failed to load notifications:', err.message);
+      setNotificationsList([]);
     } finally {
       setLoading(false);
     }
@@ -54,7 +57,7 @@ const NotificationsPage = () => {
 
   // Sync when new socket notification arrives
   useEffect(() => {
-    if (storeNotifications && storeNotifications.length > 0) {
+    if (storeNotifications) {
       setNotificationsList(storeNotifications);
     }
   }, [storeNotifications]);
@@ -80,14 +83,18 @@ const NotificationsPage = () => {
       const res = await SuperAdminApi.broadcastNotification(payload);
       if (res?.success) {
         showToast(
-          `Notification dispatched via Socket.IO to [${
+          `Notification dispatched to [${
             recipientRole === 'both' ? 'Both Panels (Users & Admins)' : recipientRole === 'user' ? 'User Panel' : 'Admin Panel'
-          }]!`,
+          }] and saved in database!`,
           'success'
         );
         // Prepend created notification to local list
         if (res.data?.notification) {
-          setNotificationsList((prev) => [res.data.notification, ...prev]);
+          const newNotif = res.data.notification;
+          setNotificationsList((prev) => [
+            newNotif,
+            ...prev.filter((n) => (n._id || n.id) !== (newNotif._id || newNotif.id))
+          ]);
         }
         // Reset form
         setTitle('');

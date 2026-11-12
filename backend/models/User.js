@@ -53,6 +53,24 @@ const userSchema = new mongoose.Schema(
         'https://res.cloudinary.com/dxjv6gq3f/image/upload/v1698250910/PlutoPlat/user-icon-1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1.png',
     },
 
+    agency: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    rera: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    bio: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
@@ -161,6 +179,20 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // Maximum 2 concurrent device sessions tracking
+    activeSessions: {
+      type: [
+        {
+          sessionId: { type: String, required: true },
+          deviceInfo: { type: String, default: '' },
+          ip: { type: String, default: '' },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -237,20 +269,22 @@ userSchema.methods.handleSuccessfulLogin = async function () {
   );
 };
 
-// Generate signed JWT token
-userSchema.methods.generateAuthToken = function () {
+// Generate signed JWT token with optional sessionId for concurrent device control
+userSchema.methods.generateAuthToken = function (sessionId = null) {
   const secret = process.env.JWT_SECRET || 'PlutoPlatSecureSecretKey2026';
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
-  return jwt.sign(
-    {
-      id: this._id,
-      email: this.email,
-      role: this.role,
-    },
-    secret,
-    { expiresIn }
-  );
+  const payload = {
+    id: this._id,
+    email: this.email,
+    role: this.role,
+  };
+
+  if (sessionId) {
+    payload.sessionId = sessionId;
+  }
+
+  return jwt.sign(payload, secret, { expiresIn });
 };
 
 // Exclude sensitive data from JSON output

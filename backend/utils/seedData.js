@@ -325,41 +325,28 @@ const seedInitialData = async () => {
       console.log(`[Seed] Seeded ${INITIAL_TESTIMONIALS.length} client testimonials to MongoDB.`);
     }
 
-    // 6. Seed Notifications if none exist
-    const notifCount = await Notification.countDocuments();
-    if (notifCount === 0) {
-      await Notification.insertMany([
-        {
-          recipientRole: 'all',
-          title: 'PlutoPlat Sovereign Real Estate Network Active',
-          message: 'Direct portfolio acquisitions and advisory telemetry are live.',
-          description: 'Institutional-grade listings in Civil Lines and Swaroop Nagar are verified and available.',
-          type: 'system',
-          category: 'Security Alerts',
-          read: false,
-          isUnread: true,
-        },
-        {
-          recipientRole: 'admin',
-          title: 'Broker Workstation Provisioned',
-          message: 'Licensed agents may submit property listings directly for public catalog publication.',
-          type: 'approval',
-          category: 'Listing Updates',
-          read: false,
-          isUnread: true,
-        },
-        {
-          recipientRole: 'user',
-          title: 'Exclusive Off-Market Collection Open',
-          message: 'Private advisory viewings for trophy residences can be scheduled with dedicated advisors.',
-          type: 'property',
-          category: 'Off-Market',
-          read: false,
-          isUnread: true,
-        },
-      ]);
-      console.log('[Seed] Seeded initial platform notifications to MongoDB.');
-    }
+    // 6. Notifications - Clean up any default mock notifications; start with empty notification feed
+    const defaultTitles = [
+      'PlutoPlat Sovereign Real Estate Network Active',
+      'Broker Workstation Provisioned',
+      'Exclusive Off-Market Collection Open',
+      'Welcome to PlutoPlat Private Advisory Stream',
+      'Direct Agent Concierge Established',
+      'Chauffeured On-Site Visit Confirmed for The Imperial Villa',
+      'Site Visit Completed for The Imperial Villa Deal',
+      'Sea View Penthouse, Worli valuation revised',
+      'Property Listing Live on Public Portal',
+      'New VIP Buyer Inquiry Received',
+      'SuperAdmin Policy Notice',
+      'Listing Under Active Representation',
+    ];
+    await Notification.deleteMany({
+      $or: [
+        { title: { $in: defaultTitles } },
+        { isDefault: true },
+      ],
+    });
+    console.log('[Seed] Default mock notifications purged. System ready for live SuperAdmin broadcasts.');
   } catch (err) {
     console.warn('[Seed Warning] Data seeding notice:', err.message);
   }
@@ -367,4 +354,5 @@ const seedInitialData = async () => {
 
 module.exports = {
   seedInitialData,
+  INITIAL_TESTIMONIALS,
 };

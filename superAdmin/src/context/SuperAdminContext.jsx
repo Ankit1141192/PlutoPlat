@@ -227,7 +227,8 @@ const INITIAL_AUDITS = [
 export const SuperAdminProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('plutoplat_superadmin_user');
+      // Use sessionStorage so closing tab automatically clears SuperAdmin session
+      const saved = sessionStorage.getItem('plutoplat_superadmin_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -316,6 +317,40 @@ export const SuperAdminProvider = ({ children }) => {
       setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
     });
 
+    socket.on('testimonial_created', (item) => {
+      console.log('[Socket.IO SuperAdmin] Testimonial created:', item);
+      try {
+        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
+        const list = cached ? JSON.parse(cached) : [];
+        if (!list.some((t) => (t.id || t._id) === (item.id || item._id))) {
+          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify([item, ...list]));
+        }
+      } catch {}
+    });
+
+    socket.on('testimonial_updated', (item) => {
+      try {
+        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
+        if (cached) {
+          const list = JSON.parse(cached);
+          const next = list.map((t) => ((t.id || t._id) === (item.id || item._id) ? { ...t, ...item } : t));
+          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
+        }
+      } catch {}
+    });
+
+    socket.on('testimonial_deleted', ({ id, _id }) => {
+      const targetId = id || _id;
+      try {
+        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
+        if (cached) {
+          const list = JSON.parse(cached);
+          const next = list.filter((t) => t.id !== targetId && t._id !== targetId);
+          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
+        }
+      } catch {}
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -324,8 +359,10 @@ export const SuperAdminProvider = ({ children }) => {
   useEffect(() => {
     try {
       if (user) {
-        localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(user));
+        sessionStorage.setItem('plutoplat_superadmin_user', JSON.stringify(user));
+        localStorage.removeItem('plutoplat_superadmin_user');
       } else {
+        sessionStorage.removeItem('plutoplat_superadmin_user');
         localStorage.removeItem('plutoplat_superadmin_user');
       }
     } catch (e) {
@@ -365,9 +402,9 @@ export const SuperAdminProvider = ({ children }) => {
     }
   }, [auditLogs]);
 
-  // Sync SuperAdmin session on mount/refresh if token exists
+  // Sync SuperAdmin session on mount/refresh if token exists in sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('pluto_superadmin_token');
+    const token = sessionStorage.getItem('pluto_superadmin_token');
     if (token) {
       SuperAdminApi.getMe()
         .then((res) => {
@@ -375,11 +412,11 @@ export const SuperAdminProvider = ({ children }) => {
             const authUser = res.data.user;
             if (authUser.role === 'super_admin') {
               setUser(authUser);
-              localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
+              sessionStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
             } else {
               SuperAdminApi.logout();
               setUser(null);
-              localStorage.removeItem('plutoplat_superadmin_user');
+              sessionStorage.removeItem('plutoplat_superadmin_user');
             }
           }
         })
@@ -387,7 +424,7 @@ export const SuperAdminProvider = ({ children }) => {
           if (err?.status === 401) {
             SuperAdminApi.logout();
             setUser(null);
-            localStorage.removeItem('plutoplat_superadmin_user');
+            sessionStorage.removeItem('plutoplat_superadmin_user');
           }
         });
 
@@ -478,7 +515,7 @@ export const SuperAdminProvider = ({ children }) => {
       }
 
       setUser(authUser);
-      localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
+      sessionStorage.setItem('plutoplat_superadmin_user', JSON.stringify(authUser));
 
       addAuditLog({
         actorName: authUser.name,
@@ -508,6 +545,7 @@ export const SuperAdminProvider = ({ children }) => {
     });
     setUser(null);
     try {
+      sessionStorage.removeItem('plutoplat_superadmin_user');
       localStorage.removeItem('plutoplat_superadmin_user');
     } catch (e) {
       console.error(e);
@@ -517,11 +555,13 @@ export const SuperAdminProvider = ({ children }) => {
 
   const updateProfile = async (formData) => {
     const userId = user?._id || user?.id;
-    if (userId && localStorage.getItem('pluto_superadmin_token')) {
+    const photo = formData.profileImage || formData.avatar;
+    if (userId && sessionStorage.getItem('pluto_superadmin_token')) {
       await SuperAdminApi.updateProfile(userId, {
         name: formData.name,
         phone: formData.phone,
         location: { city: formData.city },
+        ...(photo ? { profileImage: photo, avatar: photo } : {}),
       });
     }
 
@@ -530,11 +570,13 @@ export const SuperAdminProvider = ({ children }) => {
       name: formData.name,
       phone: formData.phone,
       city: formData.city,
+      ...(photo ? { profileImage: photo, avatar: photo } : {}),
       location: { ...(user?.location || {}), city: formData.city },
     };
     setUser(nextUser);
     try {
-      localStorage.setItem('plutoplat_superadmin_user', JSON.stringify(nextUser));
+      sessionStorage.setItem('plutoplat_superadmin_user', JSON.stringify(nextUser));
+      localStorage.removeItem('plutoplat_superadmin_user');
     } catch (e) {
       console.error(e);
     }
@@ -657,8 +699,11 @@ export const SuperAdminProvider = ({ children }) => {
   };
 
   // Lead Actions
-  const updateLeadStatus = (leadId, newStatus) => {
-    setLeads(prev => prev.map(l => (l.id === leadId ? { ...l, status: newStatus } : l)));
+  const updateLeadStatus = async (leadId, newStatus) => {
+    try {
+      await SuperAdminApi.updateEnquiryStatus(leadId, { status: newStatus });
+    } catch (e) {}
+    setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, status: newStatus } : l)));
     addAuditLog({
       module: 'ENQUIRY',
       action: 'STATUS_UPDATE',
@@ -668,9 +713,90 @@ export const SuperAdminProvider = ({ children }) => {
     showToast(`Lead status updated to: ${newStatus}`, 'success');
   };
 
+  const deleteLead = async (leadId) => {
+    try {
+      await SuperAdminApi.deleteEnquiry(leadId);
+    } catch (e) {}
+    setLeads(prev => prev.filter(l => l.id !== leadId && l._id !== leadId));
+    addAuditLog({
+      module: 'ENQUIRY',
+      action: 'ARCHIVE',
+      target: `Lead ID: ${leadId}`,
+      description: `SuperAdmin archived inquiry ${leadId}`
+    });
+    showToast('Inquiry archived / removed.', 'info');
+  };
+
+  const addLead = async (leadData) => {
+    try {
+      const res = await SuperAdminApi.createEnquiry(leadData);
+      const created = res?.data?.enquiry || {
+        id: `INQ-${Math.floor(1000 + Math.random() * 9000)}`,
+        date: new Date().toISOString().slice(0, 10),
+        status: 'New',
+        ...leadData,
+      };
+      setLeads(prev => [created, ...prev]);
+      showToast('Inquiry logged successfully.', 'success');
+      return created;
+    } catch (err) {
+      const fallback = {
+        id: `INQ-${Math.floor(1000 + Math.random() * 9000)}`,
+        date: new Date().toISOString().slice(0, 10),
+        status: 'New',
+        ...leadData,
+      };
+      setLeads(prev => [fallback, ...prev]);
+      showToast('Inquiry recorded locally.', 'info');
+      return fallback;
+    }
+  };
+
   // User Management
-  const updateUserRole = (userId, newRole) => {
-    setUsersList(prev => prev.map(u => (u.id === userId ? { ...u, role: newRole } : u)));
+  const addUser = async (userData) => {
+    try {
+      const res = await SuperAdminApi.createUser(userData);
+      const created = res?.data?.user || {
+        id: `USR-${Math.floor(100 + Math.random() * 900)}`,
+        status: 'active',
+        ...userData,
+      };
+      setUsersList(prev => [created, ...prev]);
+      showToast(`User account created for ${userData.email}`, 'success');
+      return created;
+    } catch (err) {
+      showToast(err.message || 'Failed to create user account.', 'error');
+      throw err;
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    try {
+      await SuperAdminApi.deleteUser(userId);
+    } catch (e) {}
+    setUsersList(prev => prev.filter(u => u.id !== userId && u._id !== userId));
+    addAuditLog({
+      module: 'USER',
+      action: 'DELETE',
+      target: `User ID: ${userId}`,
+      description: `SuperAdmin deleted user account ${userId}`
+    });
+    showToast('User account permanently deleted.', 'info');
+  };
+
+  const updateUserDetails = async (userId, data) => {
+    try {
+      await SuperAdminApi.updateUser(userId, data);
+    } catch (e) {}
+    setUsersList(prev => prev.map(u => (u.id === userId || u._id === userId ? { ...u, ...data } : u)));
+    showToast('User details updated successfully.', 'success');
+  };
+
+  const updateUserRole = async (userId, newRole) => {
+    try {
+      await SuperAdminApi.updateUserRole(userId, newRole);
+    } catch (e) {}
+    setUsersList(prev => prev.map(u => (u.id === userId || u._id === userId ? { ...u, role: newRole } : u)));
     addAuditLog({
       module: 'USER',
       action: 'ROLE_UPDATE',
@@ -680,29 +806,36 @@ export const SuperAdminProvider = ({ children }) => {
     showToast(`User role updated to ${newRole}`, 'success');
   };
 
-  const toggleUserStatus = (userId) => {
+  const toggleUserStatus = async (userId) => {
+    const target = usersList.find(u => u.id === userId || u._id === userId);
+    const nextStatus = target?.status === 'active' ? 'suspended' : 'active';
+    try {
+      await SuperAdminApi.updateUserStatus(userId, { status: nextStatus });
+    } catch (e) {}
     setUsersList(prev =>
       prev.map(u => {
-        if (u.id === userId) {
-          const nextStatus = u.status === 'active' ? 'suspended' : 'active';
+        if (u.id === userId || u._id === userId) {
           addAuditLog({
             module: 'USER',
             action: nextStatus === 'active' ? 'ACTIVATE' : 'SUSPEND',
             target: u.name,
             description: `SuperAdmin changed account status of ${u.email} to ${nextStatus}`
           });
-          return { ...u, status: nextStatus };
+          return { ...u, status: nextStatus, isActive: nextStatus === 'active' };
         }
         return u;
       })
     );
-    showToast('User account status updated.', 'info');
+    showToast(`User status set to ${nextStatus}.`, 'info');
   };
 
-  const unlockUser = (userId) => {
+  const unlockUser = async (userId) => {
+    try {
+      await SuperAdminApi.unlockUser(userId);
+    } catch (e) {}
     setUsersList(prev =>
       prev.map(u => {
-        if (u.id === userId) {
+        if (u.id === userId || u._id === userId) {
           addAuditLog({
             module: 'SECURITY',
             action: 'UNLOCK',
@@ -718,7 +851,7 @@ export const SuperAdminProvider = ({ children }) => {
   };
 
   const updateUserSubscription = (userId, newTier) => {
-    setUsersList(prev => prev.map(u => (u.id === userId ? { ...u, subscriptionTier: newTier } : u)));
+    setUsersList(prev => prev.map(u => (u.id === userId || u._id === userId ? { ...u, subscriptionTier: newTier } : u)));
     addAuditLog({
       module: 'BILLING',
       action: 'SUBSCRIPTION_UPDATE',
@@ -757,7 +890,12 @@ export const SuperAdminProvider = ({ children }) => {
     updateProperty,
     leads,
     updateLeadStatus,
+    deleteLead,
+    addLead,
     usersList,
+    addUser,
+    deleteUser,
+    updateUserDetails,
     updateUserRole,
     toggleUserStatus,
     unlockUser,

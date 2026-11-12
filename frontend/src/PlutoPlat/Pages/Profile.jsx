@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 import { Api } from '../Services/Api';
+import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { WhatsAppIcon } from '../Components/RegisterInterestModal';
 
 const TABS = [
@@ -68,6 +69,7 @@ const Profile = () => {
     preferredTypes: ['Palatial Mansions', 'Sky Penthouses', 'Waterfront Villas', 'Heritage Plots'],
     kycStatus: 'Accredited & Legally Verified',
     ndaStatus: 'Active Mutual NDA (#PLP-UP-2026-441)',
+    profileImage: user?.profileImage || user?.avatar || '',
   });
 
   useEffect(() => {
@@ -123,11 +125,13 @@ const Profile = () => {
 
     try {
       const userId = user?._id || user?.id;
+      const photo = formData.profileImage;
       if (userId && localStorage.getItem('pluto_token')) {
         await Api.updateUserProfile(userId, {
           name: formData.fullName,
           phone: formData.phone,
           location: { city: formData.city },
+          ...(photo ? { profileImage: photo, avatar: photo } : {}),
         });
       }
 
@@ -137,6 +141,7 @@ const Profile = () => {
           email: formData.email,
           phone: formData.phone,
           city: formData.city,
+          ...(photo ? { profileImage: photo, avatar: photo } : {}),
           location: { ...(user?.location || {}), city: formData.city },
         });
       }
@@ -420,6 +425,17 @@ const Profile = () => {
                       <input type="text" disabled readOnly value={user?.role || 'Principal Purchaser'} className={inputCls} />
                     </Field>
                   </div>
+
+                  {isEditing && (
+                    <div className="p-4 rounded-2xl border border-[#DDD8CE] bg-[#FAF8F5]">
+                      <ImageUploadOrLink
+                        label="Client Profile Photograph"
+                        value={formData.profileImage}
+                        onChange={(val) => handleInputChange('profileImage', val)}
+                        helperText="Paste your portrait image URL or upload directly from your device."
+                      />
+                    </div>
+                  )}
 
                   {isEditing ? (
                     <div className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">

@@ -18,6 +18,9 @@ const authRoutes = require('../v1/authRoutes');
 // Mount public auth endpoints for SuperAdmin portal
 router.use('/auth', authRoutes);
 
+// Public/transparent read endpoint for testimonials
+router.get('/testimonials', require('../../controllers/testimonialController').getAllTestimonials);
+
 // All other v3 routes strictly require authentication as 'super_admin'
 router.use(authenticate, authorize('super_admin'));
 
@@ -45,9 +48,15 @@ router.get('/properties', async (req, res, next) => {
 // SuperAdmin creates a property (Auto-approved and verified for user portal)
 router.post('/properties', async (req, res, next) => {
   try {
+    const lat = Number(req.body.latitude !== undefined ? req.body.latitude : (req.body.coordinates?.lat || 26.474)) || 26.474;
+    const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : (req.body.coordinates?.lng || 80.335))) || 80.335;
+
     const propertyData = {
       ...req.body,
       owner: req.user._id,
+      latitude: lat,
+      longitude: lng,
+      coordinates: { lat, lng },
       isVerified: true,
       status: 'approved',
       featured: req.body.featured !== undefined ? req.body.featured : true,
@@ -102,10 +111,20 @@ router.put('/properties/:id', async (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
+
+    const updates = { ...req.body };
+    if (req.body.latitude !== undefined || req.body.longitude !== undefined || req.body.langitude !== undefined) {
+      const lat = Number(req.body.latitude !== undefined ? req.body.latitude : 26.474) || 26.474;
+      const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : 80.335)) || 80.335;
+      updates.latitude = lat;
+      updates.longitude = lng;
+      updates.coordinates = { lat, lng };
+    }
+
     const property = await Property.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
-      { new: true }
+      updates,
+      { new: true, runValidators: true }
     );
     if (!property) return ApiResponse.error(res, 'Property not found.', 404);
 
@@ -421,6 +440,129 @@ router.patch('/users/:id/unlock', async (req, res, next) => {
   }
 });
 
+// SuperAdmin creates a new User or Admin
+router.post('/users', async (req, res, next) => {
+  try {
+    const { name, email, password, phone, role, city, subscriptionTier } = req.body;
+    if (!name || !email || !password) {
+      return ApiResponse.error(res, 'Name, email, and password are required.', 400);
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) {
+      return ApiResponse.error(res, 'A user account with this email already exists.', 400);
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: cleanEmail,
+      password,
+      phone: phone ? String(phone).trim() : '',
+      role: role || 'user',
+      subscriptionTier: subscriptionTier || 'Standard Buyer (Free)',
+      location: { city: city || 'Kanpur', state: 'Uttar Pradesh', country: 'India' },
+      isVerified: true,
+      isActive: true,
+    });
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'CREATE',
+      module: 'USER',
+      targetId: user._id,
+      targetType: 'User',
+      description: `SuperAdmin provisioned ${user.role.toUpperCase()} account for ${user.email}`,
+      req,
+    });
+
+    return ApiResponse.success(res, 'User account created successfully.', { user }, 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin updates User or Admin
+router.put('/users/:id', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return ApiResponse.error(res, 'User not found.', 404);
+
+    const { name, email, phone, role, city, subscriptionTier, password } = req.body;
+    if (name) user.name = name.trim();
+    if (email) user.email = email.toLowerCase().trim();
+    if (phone !== undefined) user.phone = String(phone).trim();
+    if (role && ['user', 'admin', 'super_admin'].includes(role)) user.role = role;
+    if (subscriptionTier) user.subscriptionTier = subscriptionTier;
+    if (city) user.location = { ...user.location, city };
+    if (password && password.trim().length >= 6) user.password = password;
+
+    await user.save();
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'UPDATE',
+      module: 'USER',
+      targetId: user._id,
+      targetType: 'User',
+      description: `SuperAdmin updated user profile for ${user.email}`,
+      req,
+    });
+
+    return ApiResponse.success(res, 'User account updated successfully.', { user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin toggles User status (active / suspended)
+router.patch('/users/:id/status', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return ApiResponse.error(res, 'User not found.', 404);
+
+    if (req.body.status) {
+      user.isActive = req.body.status === 'active';
+      user.status = req.body.status;
+    } else {
+      user.isActive = !user.isActive;
+      user.status = user.isActive ? 'active' : 'suspended';
+    }
+    await user.save();
+
+    return ApiResponse.success(res, `User status updated to ${user.status}.`, { user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin permanently deletes a User or Admin
+router.delete('/users/:id', async (req, res, next) => {
+  try {
+    if (req.params.id === req.user._id.toString()) {
+      return ApiResponse.error(res, 'You cannot delete your own active SuperAdmin account.', 400);
+    }
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return ApiResponse.error(res, 'User not found.', 404);
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'DELETE',
+      module: 'USER',
+      targetId: user._id,
+      targetType: 'User',
+      description: `SuperAdmin deleted user ${user.email}`,
+      req,
+    });
+
+    return ApiResponse.success(res, 'User account permanently removed.');
+  } catch (error) {
+    next(error);
+  }
+});
+
 /**
  * ══════════════════════════════════════════
  * 3. GLOBAL LEADS MATRIX & AUDIT TELEMETRY
@@ -462,6 +604,36 @@ router.patch('/enquiries/:id/status', async (req, res, next) => {
     if (adminNotes !== undefined) enquiry.adminNotes = adminNotes;
     await enquiry.save();
     return ApiResponse.success(res, 'Enquiry status updated.', { enquiry });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin logs a new enquiry/lead
+router.post('/enquiries', async (req, res, next) => {
+  try {
+    const { name, email, phone, message, propertyId, status } = req.body;
+    const enquiry = await Enquiry.create({
+      name: name || req.body.buyerName || 'Private Client',
+      email: email || req.body.buyerEmail || 'client@plutoplat.com',
+      phone: phone || req.body.buyerPhone || '+91 98765 43210',
+      message: message || 'Direct private inquiry logged by SuperAdmin.',
+      property: propertyId || null,
+      buyer: req.user._id,
+      status: status || 'New',
+    });
+    return ApiResponse.success(res, 'Enquiry created successfully.', { enquiry }, 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin deletes/archives an enquiry
+router.delete('/enquiries/:id', async (req, res, next) => {
+  try {
+    const enquiry = await Enquiry.findByIdAndDelete(req.params.id);
+    if (!enquiry) return ApiResponse.error(res, 'Enquiry not found.', 404);
+    return ApiResponse.success(res, 'Enquiry archived / removed successfully.');
   } catch (error) {
     next(error);
   }
@@ -541,17 +713,18 @@ router.delete('/notifications/:id', userController.deleteNotification);
 // SuperAdmin broadcast custom notification
 router.post('/notifications', async (req, res, next) => {
   try {
-    const { title, message, recipientRole = 'all', type = 'system', category = 'Security Alerts', link = '' } = req.body;
+    const { title, message, recipientRole = 'both', type = 'system', category = 'Platform Broadcast', link = '/properties' } = req.body;
     if (!title || !message) {
       return ApiResponse.error(res, 'Title and message are required for platform dispatch.', 400);
     }
     const notif = await sendNotification({
       recipientRole,
-      title,
-      message,
+      title: title.trim(),
+      message: message.trim(),
+      description: message.trim(),
       type,
       category,
-      link,
+      link: link ? link.trim() : '/properties',
     });
     return ApiResponse.success(res, 'Platform notification broadcast successfully.', { notification: notif }, 201);
   } catch (error) {

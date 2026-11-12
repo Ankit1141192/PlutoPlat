@@ -138,8 +138,14 @@ export const Api = {
   },
 
   // ───────── Testimonials ─────────
-  getTestimonials() {
-    return request('GET', '/testimonials');
+  getTestimonials(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    const path = q ? `/testimonials?${q}` : '/testimonials';
+    return request('GET', path);
+  },
+
+  createTestimonial(payload) {
+    return request('POST', '/testimonials', { body: payload, auth: true });
   },
 };
 

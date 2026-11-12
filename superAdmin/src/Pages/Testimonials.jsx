@@ -11,21 +11,33 @@ import {
   Building2,
   Loader2,
   X,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 import SuperAdminLayout from '../Components/SuperAdminLayout';
+import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { SuperAdminApi } from '../services/Api';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
 const Testimonials = () => {
   const { showToast } = useSuperAdminStore();
 
-  const [testimonials, setTestimonials] = useState([]);
+  const [testimonials, setTestimonials] = useState(() => {
+    try {
+      const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
   const [form, setForm] = useState({
     client: '',
@@ -40,8 +52,11 @@ const Testimonials = () => {
     try {
       setLoading(true);
       const res = await SuperAdminApi.getTestimonials();
-      if (res?.data) {
+      if (res?.data && Array.isArray(res.data)) {
         setTestimonials(res.data);
+        try {
+          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(res.data));
+        } catch {}
       }
     } catch (err) {
       console.warn('Testimonials load notice:', err.message);
@@ -54,7 +69,35 @@ const Testimonials = () => {
     fetchTestimonials();
   }, []);
 
-  const handleCreate = async (e) => {
+  const openCreateModal = () => {
+    setEditingId(null);
+    setFormError('');
+    setForm({
+      client: '',
+      role: 'Private Investor',
+      company: 'Trophy Estate Acquisition',
+      rating: 5,
+      message: '',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    });
+    setModalOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setEditingId(item._id || item.id);
+    setFormError('');
+    setForm({
+      client: item.client || item.name || '',
+      role: item.role || 'Private Investor',
+      company: item.property || item.company || 'Trophy Estate Acquisition',
+      rating: Number(item.rating) || 5,
+      message: item.content || item.message || '',
+      avatar: item.avatar || item.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
     setFormError('');
 
@@ -66,7 +109,7 @@ const Testimonials = () => {
     setSubmitting(true);
 
     try {
-      const res = await SuperAdminApi.createTestimonial({
+      const payload = {
         client: form.client.trim(),
         name: form.client.trim(),
         role: form.role.trim(),
@@ -77,26 +120,43 @@ const Testimonials = () => {
         message: form.message.trim(),
         avatar: form.avatar.trim(),
         imageUrl: form.avatar.trim(),
-      });
-
-      const created = res?.data || {
-        ...form,
-        id: Date.now(),
-        client: form.client,
-        content: form.message,
       };
 
-      setTestimonials((prev) => [created, ...prev]);
-      showToast('Verified testimonial added to database and live in User panel!', 'success');
+      if (editingId) {
+        // UPDATE
+        const res = await SuperAdminApi.updateTestimonial(editingId, payload);
+        const updated = res?.data || { ...payload, id: editingId, _id: editingId };
+        setTestimonials((prev) => {
+          const next = prev.map((t) => (t._id === editingId || t.id === editingId ? { ...t, ...updated } : t));
+          try {
+            localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        showToast('Testimonial updated successfully in database!', 'success');
+      } else {
+        // CREATE
+        const res = await SuperAdminApi.createTestimonial(payload);
+        const created = res?.data || {
+          ...payload,
+          id: Date.now(),
+          client: form.client,
+          content: form.message,
+        };
+        setTestimonials((prev) => {
+          const next = [created, ...prev.filter((t) => (t._id || t.id) !== (created._id || created.id))];
+          try {
+            localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        showToast('Verified testimonial saved to database and live in User panel!', 'success');
+      }
+
       setModalOpen(false);
-      setForm({
-        client: '',
-        role: 'Private Investor',
-        company: 'Trophy Estate Acquisition',
-        rating: 5,
-        message: '',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      });
+      setEditingId(null);
+      // Re-fetch to guarantee database sync
+      fetchTestimonials();
     } catch (err) {
       setFormError(err.message || 'Failed to submit testimonial.');
     } finally {
@@ -108,8 +168,15 @@ const Testimonials = () => {
     if (!window.confirm('Are you sure you want to remove this client review?')) return;
     try {
       await SuperAdminApi.deleteTestimonial(id);
-      setTestimonials((prev) => prev.filter((t) => (t._id !== id && t.id !== id)));
-      showToast('Testimonial removed from platform.', 'info');
+      setTestimonials((prev) => {
+        const next = prev.filter((t) => t._id !== id && t.id !== id);
+        try {
+          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Testimonial removed from database.', 'info');
+      fetchTestimonials();
     } catch (err) {
       showToast(err.message || 'Failed to delete testimonial.', 'error');
     }
@@ -136,7 +203,7 @@ const Testimonials = () => {
           </div>
 
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto"
           >
             <Plus size={16} />
@@ -191,7 +258,7 @@ const Testimonials = () => {
                   className="bg-white border border-[#E8E3D8] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow relative group"
                 >
                   <div>
-                    {/* Stars & delete */}
+                    {/* Stars, edit & delete */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
@@ -203,13 +270,22 @@ const Testimonials = () => {
                         ))}
                       </div>
 
-                      <button
-                        onClick={() => handleDelete(id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-[#999] hover:text-red-600 transition-opacity"
-                        title="Delete Testimonial"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="p-1 text-[#999] hover:text-[#B49A70] transition-colors cursor-pointer"
+                          title="Edit Testimonial"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(id)}
+                          className="p-1 text-[#999] hover:text-red-600 transition-colors cursor-pointer"
+                          title="Delete Testimonial"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-[#333] italic leading-relaxed mb-4">
@@ -244,8 +320,14 @@ const Testimonials = () => {
             <div className="bg-white border border-[#E8E3D8] rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-[#EAE6DE] mb-5">
                 <div>
-                  <h3 className="font-serif text-xl font-normal text-[#1C201C]">Add Verified Client Review</h3>
-                  <p className="text-xs text-[#6E6D66] mt-0.5">Saves to MongoDB and displays on User panel homepage.</p>
+                  <h3 className="font-serif text-xl font-normal text-[#1C201C]">
+                    {editingId ? 'Edit Verified Client Review' : 'Add Verified Client Review'}
+                  </h3>
+                  <p className="text-xs text-[#6E6D66] mt-0.5">
+                    {editingId
+                      ? 'Updates this testimonial in MongoDB and syncs with the live User panel.'
+                      : 'Saves to MongoDB and displays on User panel homepage and reviews portal.'}
+                  </p>
                 </div>
                 <button
                   onClick={() => setModalOpen(false)}
@@ -262,7 +344,7 @@ const Testimonials = () => {
                 </div>
               )}
 
-              <form onSubmit={handleCreate} className="space-y-4 text-xs">
+              <form onSubmit={handleSave} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-[11px] font-medium text-[#3F433E] mb-1">
                     Client Full Name <span className="text-red-500">*</span>
@@ -322,15 +404,11 @@ const Testimonials = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-[#3F433E] mb-1">
-                      Avatar Photo URL
-                    </label>
-                    <input
-                      type="text"
+                    <ImageUploadOrLink
+                      label="Client Avatar Photo"
                       value={form.avatar}
-                      onChange={(e) => setForm({ ...form, avatar: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#DDD8CE] rounded-lg text-xs text-[#1C201C] focus:outline-none focus:border-[#B49A70]"
+                      onChange={(val) => setForm({ ...form, avatar: val })}
+                      helperText="Paste client photo URL or upload an image file."
                     />
                   </div>
                 </div>
@@ -365,12 +443,12 @@ const Testimonials = () => {
                     {submitting ? (
                       <>
                         <Loader2 size={13} className="animate-spin" />
-                        <span>Publishing to Database...</span>
+                        <span>{editingId ? 'Updating...' : 'Publishing to Database...'}</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 size={13} className="text-[#B49A70]" />
-                        <span>Publish Testimonial</span>
+                        <span>{editingId ? 'Save Changes' : 'Publish Testimonial'}</span>
                       </>
                     )}
                   </button>

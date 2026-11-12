@@ -11,16 +11,27 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  Download
+  Download,
+  Plus,
+  X
 } from 'lucide-react';
 import SuperAdminLayout from '../Components/SuperAdminLayout';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
 const Leads = () => {
-  const { leads, updateLeadStatus, deleteLead } = useSuperAdminStore();
+  const { leads, updateLeadStatus, deleteLead, addLead } = useSuperAdminStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    buyerName: '',
+    buyerEmail: '',
+    buyerPhone: '',
+    propertyTitle: '',
+    message: '',
+    status: 'New'
+  });
 
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
@@ -68,13 +79,22 @@ const Leads = () => {
             </p>
           </div>
 
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold bg-white border border-[#E8E3D8] hover:bg-[#FAF8F5] text-[#1C201C] rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto"
-          >
-            <Download size={15} className="text-[#B49A70]" />
-            <span>Export Pipeline (CSV)</span>
-          </button>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold bg-[#1C201C] hover:bg-[#2C302C] text-[#FAF8F5] rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              <Plus size={15} className="text-[#B49A70]" />
+              <span>Log Inquiry</span>
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold bg-white border border-[#E8E3D8] hover:bg-[#FAF8F5] text-[#1C201C] rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              <Download size={15} className="text-[#B49A70]" />
+              <span>Export CSV</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter & Search Bar */}
@@ -208,6 +228,128 @@ const Leads = () => {
             </table>
           </div>
         </div>
+        {/* Log Inquiry Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white border border-[#E8E3D8] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E3D8] bg-[#FAF8F5]">
+                <h3 className="font-serif text-lg text-[#1C201C] font-semibold">Log Inward Client Inquiry</h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1 text-[#8A887F] hover:text-[#1C201C] rounded-lg hover:bg-[#EAE6DE] transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!formData.buyerName.trim()) return;
+                  await addLead(formData);
+                  setFormData({
+                    buyerName: '',
+                    buyerEmail: '',
+                    buyerPhone: '',
+                    propertyTitle: '',
+                    message: '',
+                    status: 'New'
+                  });
+                  setIsModalOpen(false);
+                }}
+                className="p-6 space-y-4"
+              >
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C201C] mb-1">Prospective Client Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.buyerName}
+                    onChange={(e) => setFormData({ ...formData, buyerName: e.target.value })}
+                    placeholder="e.g. Rahul Kapoor"
+                    className="w-full h-10 px-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C201C] mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.buyerEmail}
+                      onChange={(e) => setFormData({ ...formData, buyerEmail: e.target.value })}
+                      placeholder="client@example.com"
+                      className="w-full h-10 px-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C201C] mb-1">Phone</label>
+                    <input
+                      type="text"
+                      value={formData.buyerPhone}
+                      onChange={(e) => setFormData({ ...formData, buyerPhone: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      className="w-full h-10 px-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C201C] mb-1">Target Property</label>
+                  <input
+                    type="text"
+                    value={formData.propertyTitle}
+                    onChange={(e) => setFormData({ ...formData, propertyTitle: e.target.value })}
+                    placeholder="e.g. Royal Greens Penthouse"
+                    className="w-full h-10 px-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C201C] mb-1">Inquiry / Requirements Brief</label>
+                  <textarea
+                    rows={3}
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    placeholder="Buyer looking for high floor with park view..."
+                    className="w-full p-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C201C] mb-1">Initial Pipeline Stage</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full h-10 px-3 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70]"
+                  >
+                    <option value="New">🟢 New Inquiry</option>
+                    <option value="Contacted">🔵 Contacted</option>
+                    <option value="In Progress">🟡 In Progress</option>
+                    <option value="Scheduled Viewing">🟣 Scheduled Viewing</option>
+                    <option value="Closed">⚫ Closed Deal</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E8E3D8]">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold text-[#6E6D66] hover:bg-[#FAF8F5] border border-[#DDD8CE] rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-semibold bg-[#1C201C] text-[#FAF8F5] rounded-xl hover:bg-[#2C302C] transition-colors cursor-pointer"
+                  >
+                    Save Inquiry
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </SuperAdminLayout>
   );

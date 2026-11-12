@@ -41,8 +41,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Find user in DB
-    const user = await User.findById(decoded.id).select('+lockUntil');
+    // Find user in DB with lock status and active session records
+    const user = await User.findById(decoded.id).select('+lockUntil +activeSessions');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -63,6 +63,19 @@ const authenticate = async (req, res, next) => {
         success: false,
         message: `Account is temporarily locked. Please try again after ${remainingMinutes} minutes.`,
       });
+    }
+
+    // Enforce 2-device concurrent login limit:
+    // If the token carries a sessionId, check that it is still present in activeSessions
+    if (decoded.sessionId && Array.isArray(user.activeSessions) && user.activeSessions.length > 0) {
+      const isSessionActive = user.activeSessions.some((s) => s.sessionId === decoded.sessionId);
+      if (!isSessionActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expired: Maximum 2 concurrent devices allowed with these credentials. You were signed out because another device logged in.',
+          sessionExpired: true,
+        });
+      }
     }
 
     req.user = user;

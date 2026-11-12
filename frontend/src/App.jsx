@@ -28,6 +28,7 @@ import ContactAgents from './PlutoPlat/Pages/ContactAgents';
 import ChangePassword from './PlutoPlat/Pages/ChangePassword';
 import DealProcess from './PlutoPlat/Pages/DealProcess';
 import MoreHub from './PlutoPlat/Pages/MoreHub';
+import Testimonials from './PlutoPlat/Pages/Testimonials';
 // import TestApiPage from './PlutoPlat/Pages/testapi';
 
 // Scroll to top on route change helper
@@ -77,6 +78,8 @@ export default function App() {
               <Route path="/search" element={<SearchResults />} />
               <Route path="/search-results" element={<SearchResults />} />
               <Route path="/about" element={<About />} />
+              <Route path="/testimonials" element={<Testimonials />} />
+              <Route path="/reviews" element={<Testimonials />} />
               <Route path="/more" element={<MoreHub />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />

@@ -5,7 +5,8 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v3';
 
-const getToken = () => localStorage.getItem('pluto_superadmin_token');
+// Use sessionStorage with fallback to localStorage
+const getToken = () => sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');
 
 const buildHeaders = (auth = false) => {
   const headers = { 'Content-Type': 'application/json' };
@@ -47,7 +48,8 @@ export const SuperAdminApi = {
   async register(payload) {
     const data = await request('POST', '/auth/register', { body: payload });
     if (data?.data?.token) {
-      localStorage.setItem('pluto_superadmin_token', data.data.token);
+      sessionStorage.setItem('pluto_superadmin_token', data.data.token);
+      localStorage.removeItem('pluto_superadmin_token');
     }
     return data;
   },
@@ -55,7 +57,8 @@ export const SuperAdminApi = {
   async login(payload) {
     const data = await request('POST', '/auth/login', { body: payload });
     if (data?.data?.token) {
-      localStorage.setItem('pluto_superadmin_token', data.data.token);
+      sessionStorage.setItem('pluto_superadmin_token', data.data.token);
+      localStorage.removeItem('pluto_superadmin_token');
     }
     return data;
   },
@@ -69,6 +72,7 @@ export const SuperAdminApi = {
   },
 
   logout() {
+    sessionStorage.removeItem('pluto_superadmin_token');
     localStorage.removeItem('pluto_superadmin_token');
   },
 
@@ -86,8 +90,28 @@ export const SuperAdminApi = {
     return request('GET', `/users${q ? `?${q}` : ''}`, { auth: true });
   },
 
+  async createUser(payload) {
+    return request('POST', '/users', { body: payload, auth: true });
+  },
+
+  async updateUser(id, payload) {
+    return request('PUT', `/users/${id}`, { body: payload, auth: true });
+  },
+
   async updateUserStatus(id, payload) {
     return request('PATCH', `/users/${id}/status`, { body: payload, auth: true });
+  },
+
+  async updateUserRole(id, role) {
+    return request('PATCH', `/users/${id}/role`, { body: { role }, auth: true });
+  },
+
+  async unlockUser(id) {
+    return request('PATCH', `/users/${id}/unlock`, { auth: true });
+  },
+
+  async deleteUser(id) {
+    return request('DELETE', `/users/${id}`, { auth: true });
   },
 
   // Property Moderation
@@ -118,8 +142,16 @@ export const SuperAdminApi = {
     return request('GET', `/enquiries/my${q ? `?${q}` : ''}`, { auth: true });
   },
 
+  async createEnquiry(payload) {
+    return request('POST', '/enquiries', { body: payload, auth: true });
+  },
+
   async updateEnquiryStatus(id, payload) {
     return request('PATCH', `/enquiries/${id}/status`, { body: payload, auth: true });
+  },
+
+  async deleteEnquiry(id) {
+    return request('DELETE', `/enquiries/${id}`, { auth: true });
   },
 
   // Audit Logs & Platform Analytics
@@ -150,12 +182,18 @@ export const SuperAdminApi = {
   },
 
   // Testimonials
-  async getTestimonials() {
-    return request('GET', '/testimonials');
+  async getTestimonials(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    const endpoint = q ? `/testimonials?${q}` : '/testimonials';
+    return request('GET', endpoint, { auth: true });
   },
 
   async createTestimonial(payload) {
-    return request('POST', '/testimonials', { body: payload });
+    return request('POST', '/testimonials', { body: payload, auth: true });
+  },
+
+  async updateTestimonial(id, payload) {
+    return request('PUT', `/testimonials/${id}`, { body: payload, auth: true });
   },
 
   async deleteTestimonial(id) {

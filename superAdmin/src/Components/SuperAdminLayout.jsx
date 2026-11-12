@@ -26,11 +26,12 @@ const BUYER_SITE_URL = import.meta.env.VITE_BUYER_SITE_URL || 'http://localhost:
 const SuperAdminLayout = ({ children, title = 'SuperAdmin Control Panel' }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, properties, leads } = useSuperAdminStore();
+  const { user, logout, properties, leads, notifications } = useSuperAdminStore();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const pendingCount = (properties || []).filter((p) => !p.verified || p.status === 'pending').length;
   const newLeadsCount = (leads || []).filter((l) => l.status === 'New').length;
+  const unreadNotifsCount = (notifications || []).filter((n) => !n.read && n.isUnread !== false).length;
 
   const navLinks = [
     { name: 'Overview', path: '/', altPath: '/superadmin', icon: LayoutDashboard },
@@ -51,7 +52,14 @@ const SuperAdminLayout = ({ children, title = 'SuperAdmin Control Panel' }) => {
       badgeColor: 'bg-emerald-500/20 text-emerald-300'
     },
     { name: 'Users & agents', path: '/users', altPath: '/superadmin/users', icon: Users },
-    { name: 'Notifications & Broadcast', path: '/notifications', altPath: '/superadmin/notifications', icon: Bell },
+    {
+      name: 'Notifications & Broadcast',
+      path: '/notifications',
+      altPath: '/superadmin/notifications',
+      icon: Bell,
+      badge: unreadNotifsCount > 0 ? `${unreadNotifsCount}` : null,
+      badgeColor: 'bg-[#B49A70] text-[#121612]'
+    },
     { name: 'Testimonials', path: '/testimonials', altPath: '/superadmin/testimonials', icon: MessageSquareQuote },
     { name: 'Membership plans', path: '/subscriptions', altPath: '/superadmin/subscriptions', icon: CreditCard },
     { name: 'More & Extensions', path: '/more', altPath: '/superadmin/more', icon: MoreHorizontal }

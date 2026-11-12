@@ -135,8 +135,8 @@ const PlutoMapExplorer = ({
     () =>
       properties
         .map((p) => {
-          let lat = Number(p.coordinates?.lat ?? p.coordinates?.latitude);
-          let lng = Number(p.coordinates?.lng ?? p.coordinates?.longitude);
+          let lat = Number(p.latitude ?? p.coordinates?.lat ?? p.coordinates?.latitude);
+          let lng = Number(p.longitude ?? p.langitude ?? p.coordinates?.lng ?? p.coordinates?.longitude);
           if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
             const locStr = (
               typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`
@@ -228,8 +228,8 @@ const PlutoMapExplorer = ({
     let zoom = 3;
     if (singlePropertyMode && selectedPropertyId) {
       const target = properties.find((p) => String(p.id || p._id) === String(selectedPropertyId));
-      const lat = Number(target?.coordinates?.lat ?? target?.coordinates?.latitude);
-      const lng = Number(target?.coordinates?.lng ?? target?.coordinates?.longitude);
+      const lat = Number(target?.latitude ?? target?.coordinates?.lat ?? target?.coordinates?.latitude);
+      const lng = Number(target?.longitude ?? target?.langitude ?? target?.coordinates?.lng ?? target?.coordinates?.longitude);
       if (lat && lng) {
         center = [lat, lng];
         zoom = 14;

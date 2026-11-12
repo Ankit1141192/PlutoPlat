@@ -47,6 +47,10 @@ const register = async (req, res, next) => {
     if (targetRole === 'super_admin') subscriptionTier = 'Website Owner';
     else if (targetRole === 'admin') subscriptionTier = 'agent_pro';
 
+    const initialSessionId = crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
     // Create user (password will be hashed via pre-save hook)
     const user = await User.create({
       name: name.trim(),
@@ -56,9 +60,17 @@ const register = async (req, res, next) => {
       role: targetRole,
       subscriptionTier,
       location: location || {},
+      activeSessions: [
+        {
+          sessionId: initialSessionId,
+          deviceInfo: String(req.headers['user-agent'] || 'Unknown Device').substring(0, 100),
+          ip: req.ip || '',
+          createdAt: new Date(),
+        },
+      ],
     });
 
-    const token = user.generateAuthToken();
+    const token = user.generateAuthToken(initialSessionId);
 
     // Audit log
     await logAudit({
@@ -100,9 +112,9 @@ const login = async (req, res, next) => {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // Query user including sensitive security fields
+    // Query user including sensitive security fields and active sessions
     const user = await User.findOne({ email: cleanEmail }).select(
-      '+password +loginAttempts +lockUntil'
+      '+password +loginAttempts +lockUntil +activeSessions'
     );
 
     // If user does not exist, return generic error to prevent account enumeration
@@ -189,7 +201,25 @@ const login = async (req, res, next) => {
     if (typeof user.handleSuccessfulLogin === 'function') {
       await user.handleSuccessfulLogin().catch(() => {});
     }
-    const token = user.generateAuthToken();
+
+    // Concurrent Device Control: Maximum 2 concurrent device sessions allowed
+    const sessionId = crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+    const existingSessions = Array.isArray(user.activeSessions) ? user.activeSessions : [];
+    // Keep at most 1 previous active session so this new session makes it at most 2 devices
+    const updatedSessions = existingSessions.slice(-1);
+    updatedSessions.push({
+      sessionId,
+      deviceInfo: String(req.headers['user-agent'] || 'Unknown Device').substring(0, 100),
+      ip: req.ip || '',
+      createdAt: new Date(),
+    });
+
+    await User.updateOne({ _id: user._id }, { activeSessions: updatedSessions });
+
+    const token = user.generateAuthToken(sessionId);
 
     await logAudit({
       actor: user._id,
@@ -198,7 +228,7 @@ const login = async (req, res, next) => {
       module: 'AUTH',
       targetId: user._id,
       targetType: 'User',
-      description: `User successfully logged in: ${user.email}`,
+      description: `User successfully logged in: ${user.email} (Active sessions: ${updatedSessions.length}/2)`,
       req,
       status: 'SUCCESS',
     }).catch(() => {});
@@ -425,6 +455,33 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+/**
+ * Logout User & Invalidate active session
+ * POST /api/v1/auth/logout
+ */
+const logout = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const jwt = require('jsonwebtoken');
+      const secret = process.env.JWT_SECRET || 'PlutoPlatSecureSecretKey2026';
+      try {
+        const decoded = jwt.verify(token, secret);
+        if (decoded?.id && decoded?.sessionId) {
+          await User.updateOne(
+            { _id: decoded.id },
+            { $pull: { activeSessions: { sessionId: decoded.sessionId } } }
+          );
+        }
+      } catch (_) {}
+    }
+    return ApiResponse.success(res, 'Logged out successfully.');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -432,4 +489,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  logout,
 };

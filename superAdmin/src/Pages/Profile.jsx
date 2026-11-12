@@ -11,9 +11,11 @@ import {
   Activity,
   Terminal,
   KeyRound,
-  Loader2
+  Loader2,
+  Camera
 } from 'lucide-react';
 import SuperAdminLayout from '../Components/SuperAdminLayout';
+import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 import { SuperAdminApi } from '../services/Api';
 
@@ -27,10 +29,11 @@ const Profile = () => {
     phone: user?.phone || '',
     city: user?.location?.city || user?.city || 'Kanpur, Uttar Pradesh',
     tier: 'Platform Owner & Root Controller',
+    profileImage: user?.profileImage || user?.avatar || '',
   });
 
   useEffect(() => {
-    if (localStorage.getItem('pluto_superadmin_token')) {
+    if (sessionStorage.getItem('pluto_superadmin_token')) {
       SuperAdminApi.getMe()
         .then((res) => {
           if (res?.data?.user) {
@@ -41,6 +44,7 @@ const Profile = () => {
               email: u.email || prev.email,
               phone: u.phone || prev.phone,
               city: u.location?.city || prev.city,
+              profileImage: u.profileImage || u.avatar || prev.profileImage,
             }));
           }
         })
@@ -56,6 +60,7 @@ const Profile = () => {
         email: user.email || prev.email,
         phone: user.phone || prev.phone,
         city: user.location?.city || user.city || prev.city,
+        profileImage: user.profileImage || user.avatar || prev.profileImage,
       }));
     }
   }, [user]);
@@ -73,6 +78,8 @@ const Profile = () => {
             name: formData.name,
             phone: formData.phone,
             location: { city: formData.city },
+            profileImage: formData.profileImage,
+            avatar: formData.profileImage,
           });
         }
         showToast('SuperAdmin profile credentials updated.', 'success');
@@ -99,9 +106,20 @@ const Profile = () => {
             {/* Header Identity Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#EAE6DE]">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#121612] to-[#1F2620] text-[#D9C49B] flex items-center justify-center font-serif text-2xl font-bold shadow-md ring-4 ring-[#B49A70]/30">
-                  {formData.name?.charAt(0) || 'Ω'}
-                </div>
+                {formData.profileImage ? (
+                  <img
+                    src={formData.profileImage}
+                    alt={formData.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-[#B49A70] shadow-md ring-4 ring-[#B49A70]/30"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#121612] to-[#1F2620] text-[#D9C49B] flex items-center justify-center font-serif text-2xl font-bold shadow-md ring-4 ring-[#B49A70]/30">
+                    {formData.name?.charAt(0) || 'Ω'}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-serif font-medium text-[#1C201C]">{formData.name || 'SuperAdmin'}</h3>
                   <div className="flex items-center gap-2 mt-1">
@@ -132,6 +150,16 @@ const Profile = () => {
                   </>
                 )}
               </button>
+            </div>
+
+            {/* SuperAdmin Profile Photo (Link OR File Upload) */}
+            <div className="rounded-xl border border-[#DDD8CE] bg-[#FAF8F5] p-4">
+              <ImageUploadOrLink
+                label="SuperAdmin Profile Avatar"
+                value={formData.profileImage}
+                onChange={(val) => setFormData({ ...formData, profileImage: val })}
+                helperText="Upload an executive portrait or paste a hosted image URL."
+              />
             </div>
 
             {/* Form Fields Grid */}

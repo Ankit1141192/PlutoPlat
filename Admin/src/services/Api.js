@@ -5,7 +5,8 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v2';
 
-const getToken = () => localStorage.getItem('pluto_admin_token');
+// Use sessionStorage so closing tab automatically expires session and logs out
+const getToken = () => sessionStorage.getItem('pluto_admin_token');
 
 const buildHeaders = (auth = false) => {
   const headers = { 'Content-Type': 'application/json' };
@@ -47,7 +48,8 @@ export const AdminApi = {
   async register(payload) {
     const data = await request('POST', '/auth/register', { body: payload });
     if (data?.data?.token) {
-      localStorage.setItem('pluto_admin_token', data.data.token);
+      sessionStorage.setItem('pluto_admin_token', data.data.token);
+      localStorage.removeItem('pluto_admin_token');
     }
     return data;
   },
@@ -55,7 +57,8 @@ export const AdminApi = {
   async login(payload) {
     const data = await request('POST', '/auth/login', { body: payload });
     if (data?.data?.token) {
-      localStorage.setItem('pluto_admin_token', data.data.token);
+      sessionStorage.setItem('pluto_admin_token', data.data.token);
+      localStorage.removeItem('pluto_admin_token');
     }
     return data;
   },
@@ -69,6 +72,7 @@ export const AdminApi = {
   },
 
   logout() {
+    sessionStorage.removeItem('pluto_admin_token');
     localStorage.removeItem('pluto_admin_token');
   },
 
@@ -131,12 +135,14 @@ export const AdminApi = {
   },
 
   // Testimonials
-  async getTestimonials() {
-    return request('GET', '/testimonials');
+  async getTestimonials(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    const endpoint = q ? `/testimonials?${q}` : '/testimonials';
+    return request('GET', endpoint, { auth: true });
   },
 
   async createTestimonial(payload) {
-    return request('POST', '/testimonials', { body: payload });
+    return request('POST', '/testimonials', { body: payload, auth: true });
   }
 };
 

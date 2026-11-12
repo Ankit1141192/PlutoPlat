@@ -6,7 +6,9 @@ import { usePropertyStore } from '../../context/PropertyContext';
 
 const MapExplorerSection = () => {
   const { properties } = usePropertyStore();
-  const pinned = properties.filter((p) => p.coordinates?.lat && p.coordinates?.lng);
+  const pinned = properties.filter(
+    (p) => (p.coordinates?.lat || p.latitude) && (p.coordinates?.lng || p.longitude || p.langitude)
+  );
 
   const stats = [
     { icon: MapPin, label: 'Pins on map', value: pinned.length },

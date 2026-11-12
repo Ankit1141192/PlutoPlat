@@ -51,6 +51,7 @@ const linkGroups = [
     title: 'Company',
     links: [
       { to: '/about', label: 'About us' },
+      { to: '/testimonials', label: 'Client Testimonials' },
       { to: '/faq', label: 'FAQ' },
       { to: '/contact', label: 'Contact' },
       { to: '/more', label: 'Platform Extras & More' },

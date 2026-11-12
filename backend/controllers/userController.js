@@ -36,7 +36,7 @@ const updateUserProfile = async (req, res, next) => {
       return ApiResponse.error(res, 'Forbidden: You can only update your own profile.', 403);
     }
 
-    const { name, phone, location, profileImage, avatar, savedProperties } = req.body;
+    const { name, phone, location, profileImage, avatar, savedProperties, agency, rera, bio } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -53,6 +53,9 @@ const updateUserProfile = async (req, res, next) => {
     }
 
     if (name) user.name = name.trim();
+    if (agency !== undefined) user.agency = String(agency).trim();
+    if (rera !== undefined) user.rera = String(rera).trim();
+    if (bio !== undefined) user.bio = String(bio).trim();
 
     // Profile photo update (supports URLs, Base64 data URLs)
     const newPhoto = profileImage || avatar;
@@ -265,53 +268,28 @@ const getNotifications = async (req, res, next) => {
     const userRole = req.user?.role || 'user';
     const userId = req.user?._id;
 
-    const rolesToMatch = ['all', userRole];
-    if (userRole === 'user' || userRole === 'admin') {
-      rolesToMatch.push('both', 'user_and_admin');
-    }
+    let query = {};
     if (userRole === 'super_admin') {
-      rolesToMatch.push('user', 'admin', 'both', 'user_and_admin');
+      // SuperAdmin views all platform notifications / broadcasts in the ledger
+      query = {};
+    } else {
+      const allowedRoles = ['all'];
+      if (userRole === 'user') {
+        allowedRoles.push('user', 'both', 'user_and_admin');
+      } else if (userRole === 'admin') {
+        allowedRoles.push('admin', 'both', 'user_and_admin');
+      }
+
+      const orConditions = [
+        { recipientRole: { $in: allowedRoles } },
+      ];
+      if (userId) {
+        orConditions.push({ userId: userId });
+      }
+      query = { $or: orConditions };
     }
 
-    const query = {
-      $or: [
-        { userId: userId },
-        { recipientRole: { $in: rolesToMatch } },
-        { recipientRole: 'all' },
-        { userId: null },
-      ],
-    };
-
-    let notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(50);
-
-    // If empty, auto-generate default intelligence briefings for smooth experience
-    if (notifications.length === 0) {
-      const initial = await Notification.create([
-        {
-          userId,
-          recipientRole: userRole,
-          title: 'Welcome to PlutoPlat Private Advisory Stream',
-          message: 'Your account is connected to our high-net-worth real estate telemetry network.',
-          description: 'Live alerts regarding off-market acquisitions, client viewings, and moderation updates will appear in this feed.',
-          type: 'system',
-          category: 'Security Alerts',
-          read: false,
-          isUnread: true,
-        },
-        {
-          userId,
-          recipientRole: userRole,
-          title: 'Direct Agent Concierge Established',
-          message: 'Priority scheduling for Civil Lines and Swaroop Nagar trophy estates is active.',
-          description: 'You may directly arrange chauffeured viewings and legal document review through our portal.',
-          type: 'property',
-          category: 'Off-Market',
-          read: false,
-          isUnread: true,
-        },
-      ]);
-      notifications = initial;
-    }
+    const notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(100);
 
     return ApiResponse.success(res, 'Notifications retrieved successfully.', { notifications });
   } catch (error) {
@@ -350,16 +328,24 @@ const markAllNotificationsRead = async (req, res, next) => {
     const userRole = req.user?.role || 'user';
     const userId = req.user?._id;
 
-    await Notification.updateMany(
-      {
-        $or: [
-          { userId: userId },
-          { recipientRole: userRole },
-          { recipientRole: 'all' },
-        ],
-      },
-      { read: true, isUnread: false }
-    );
+    let filter = {};
+    if (userRole === 'super_admin') {
+      filter = {};
+    } else {
+      const allowedRoles = ['all'];
+      if (userRole === 'user') {
+        allowedRoles.push('user', 'both', 'user_and_admin');
+      } else if (userRole === 'admin') {
+        allowedRoles.push('admin', 'both', 'user_and_admin');
+      }
+      const orConditions = [{ recipientRole: { $in: allowedRoles } }];
+      if (userId) {
+        orConditions.push({ userId: userId });
+      }
+      filter = { $or: orConditions };
+    }
+
+    await Notification.updateMany(filter, { read: true, isUnread: false });
 
     return ApiResponse.success(res, 'All notifications marked as read.');
   } catch (error) {

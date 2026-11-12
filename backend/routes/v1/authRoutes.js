@@ -20,4 +20,7 @@ router.post('/reset-password', authRateLimiter, authController.resetPassword);
 // Password change endpoint (Authenticated user)
 router.post('/change-password', authenticate, authController.changePassword);
 
+// User Logout (Terminates current session)
+router.post('/logout', authController.logout);
+
 module.exports = router;

@@ -108,6 +108,16 @@ const propertySchema = new mongoose.Schema(
     },
 
     // Geo Coordinates for Leaflet Map
+    latitude: {
+      type: Number,
+      default: 26.474,
+    },
+
+    longitude: {
+      type: Number,
+      default: 80.335,
+    },
+
     coordinates: {
       lat: {
         type: Number,
@@ -215,8 +225,8 @@ propertySchema.virtual('id').get(function () {
   return this._id ? this._id.toString() : '';
 });
 
-// Sync image, numericPrice, location before save
-propertySchema.pre('save', function () {
+// Sync image, numericPrice, location, coordinates before save
+propertySchema.pre('save', function (next) {
   if (!this.image && this.images && this.images.length > 0) {
     this.image = this.images[0];
   }
@@ -225,6 +235,13 @@ propertySchema.pre('save', function () {
       this.images = [this.image];
     }
   }
+
+  // Sync coordinates & latitude/longitude
+  const lat = Number(this.latitude !== undefined ? this.latitude : (this.coordinates?.lat || 26.474)) || 26.474;
+  const lng = Number(this.longitude !== undefined ? this.longitude : (this.coordinates?.lng || this.langitude || 80.335)) || 80.335;
+  this.latitude = lat;
+  this.longitude = lng;
+  this.coordinates = { lat, lng };
 
   // Sync numericPrice
   if (typeof this.price === 'number') {
@@ -240,12 +257,23 @@ propertySchema.pre('save', function () {
   if (this.isFeatured) this.featured = true;
 
   if (this.status === 'approved') this.status = 'active';
+
+  if (typeof next === 'function') {
+    return next();
+  }
 });
 
 // Format normalized JSON for frontend
 propertySchema.methods.toJSON = function () {
   const obj = this.toObject();
   obj.id = obj._id.toString();
+
+  const lat = Number(obj.latitude !== undefined ? obj.latitude : (obj.coordinates?.lat || 26.474)) || 26.474;
+  const lng = Number(obj.longitude !== undefined ? obj.longitude : (obj.coordinates?.lng || 80.335)) || 80.335;
+  obj.latitude = lat;
+  obj.longitude = lng;
+  obj.langitude = lng;
+  obj.coordinates = { lat, lng };
 
   // Ensure location string for frontend components that expect string
   if (typeof obj.location === 'object' && obj.location !== null) {

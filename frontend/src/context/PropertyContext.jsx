@@ -201,41 +201,7 @@ const INITIAL_DEALS = [
   }
 ];
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'NOTIF-1',
-    category: 'Visit Scheduled',
-    badge: 'VISIT CONFIRMED',
-    title: 'Chauffeured On-Site Visit Confirmed for The Imperial Villa',
-    timestamp: '25 mins ago',
-    isUnread: true,
-    description: 'Your scheduled private viewing has been confirmed for Nov 06 at 11:00 AM. Driver contact and security gate credentials provisioned.',
-    actionLabel: 'View Visit Itinerary',
-    actionLink: '/scheduled-visits'
-  },
-  {
-    id: 'NOTIF-2',
-    category: 'Deal Tracker',
-    badge: 'STAGE ADVANCED',
-    title: 'Site Visit Completed for The Imperial Villa Deal',
-    timestamp: '2 hours ago',
-    isUnread: true,
-    description: 'Stage 3 has been marked complete. Next milestone: Formal offer and terms negotiation with the principal seller.',
-    actionLabel: 'Track Deal Pipeline',
-    actionLink: '/deals'
-  },
-  {
-    id: 'NOTIF-3',
-    category: 'Price Adjustment',
-    badge: 'VALUATION REVISION',
-    title: 'Sea View Penthouse, Worli valuation revised',
-    timestamp: '1 day ago',
-    isUnread: false,
-    description: 'Exclusive 5% price revision on this seafront penthouse. Direct escrow terms available.',
-    actionLabel: 'View Property Detail',
-    actionLink: '/property/3'
-  }
-];
+const INITIAL_NOTIFICATIONS = [];
 
 const INITIAL_AUDITS = [
   {
@@ -326,7 +292,16 @@ export const PropertyProvider = ({ children }) => {
     }
   });
 
-  const [testimonials, setTestimonials] = useState(TESTIMONIALS);
+  const [testimonials, setTestimonials] = useState(() => {
+    try {
+      const cached = localStorage.getItem('pluto_testimonials_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return TESTIMONIALS;
+  });
 
   const [leads, setLeads] = useState(() => {
     try {
@@ -398,13 +373,24 @@ export const PropertyProvider = ({ children }) => {
     }
   });
 
-  // Notifications State
+  // Notifications State (starts empty until SuperAdmin broadcasts or system dispatches)
   const [notifications, setNotifications] = useState(() => {
     try {
       const saved = localStorage.getItem('plutoplat_notifications_db');
-      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (n) =>
+              !n.id?.toString().startsWith('NOTIF-') &&
+              !n.id?.toString().startsWith('notif-') &&
+              !n.id?.toString().startsWith('d')
+          );
+        }
+      }
+      return [];
     } catch {
-      return INITIAL_NOTIFICATIONS;
+      return [];
     }
   });
 
@@ -523,6 +509,39 @@ export const PropertyProvider = ({ children }) => {
       setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
     });
 
+    socket.on('testimonial_created', (item) => {
+      console.log('[Socket.IO] Real-time testimonial received:', item);
+      setTestimonials((prev) => {
+        if (prev.some((t) => (t.id || t._id) === (item.id || item._id))) return prev;
+        const next = [item, ...prev];
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    });
+
+    socket.on('testimonial_updated', (item) => {
+      setTestimonials((prev) => {
+        const next = prev.map((t) => ((t.id || t._id) === (item.id || item._id) ? { ...t, ...item } : t));
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    });
+
+    socket.on('testimonial_deleted', ({ id, _id }) => {
+      const targetId = id || _id;
+      setTestimonials((prev) => {
+        const next = prev.filter((t) => t.id !== targetId && t._id !== targetId);
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -542,8 +561,11 @@ export const PropertyProvider = ({ children }) => {
     // 2. Fetch testimonials from backend MongoDB
     Api.getTestimonials()
       .then((res) => {
-        if (res?.data && res.data.length > 0) {
+        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
           setTestimonials(res.data);
+          try {
+            localStorage.setItem('pluto_testimonials_cache', JSON.stringify(res.data));
+          } catch {}
         }
       })
       .catch((err) => console.warn('Testimonials load notice (local dataset active):', err.message));
@@ -551,7 +573,7 @@ export const PropertyProvider = ({ children }) => {
     // 3. Fetch notifications from backend MongoDB
     Api.getNotifications()
       .then((res) => {
-        if (res?.data?.notifications && res.data.notifications.length > 0) {
+        if (res?.data?.notifications) {
           setNotifications(res.data.notifications);
         }
       })
@@ -1001,12 +1023,25 @@ export const PropertyProvider = ({ children }) => {
     try {
       const res = await Api.createTestimonial(data);
       const created = res?.data || { id: Date.now(), ...data };
-      setTestimonials(prev => [created, ...prev]);
-      showToast('Thank you! Your testimonial has been published.', 'success');
+      setTestimonials((prev) => {
+        const next = [created, ...prev.filter((t) => (t._id || t.id) !== (created._id || created.id))];
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Thank you! Your testimonial has been saved and published.', 'success');
       return created;
     } catch (err) {
+      console.warn('Backend testimonial submission notice:', err.message);
       const fallback = { id: Date.now(), ...data };
-      setTestimonials(prev => [fallback, ...prev]);
+      setTestimonials((prev) => {
+        const next = [fallback, ...prev];
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
       showToast('Testimonial recorded.', 'info');
       return fallback;
     }

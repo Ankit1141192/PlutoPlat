@@ -93,7 +93,8 @@ const INITIAL_LEADS = [
 export const AdminProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('plutoplat_admin_user');
+      // Use sessionStorage so closing tab automatically clears user session
+      const saved = sessionStorage.getItem('plutoplat_admin_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -171,8 +172,10 @@ export const AdminProvider = ({ children }) => {
   useEffect(() => {
     try {
       if (user) {
-        localStorage.setItem('plutoplat_admin_user', JSON.stringify(user));
+        sessionStorage.setItem('plutoplat_admin_user', JSON.stringify(user));
+        localStorage.removeItem('plutoplat_admin_user');
       } else {
+        sessionStorage.removeItem('plutoplat_admin_user');
         localStorage.removeItem('plutoplat_admin_user');
       }
     } catch (e) {
@@ -196,9 +199,9 @@ export const AdminProvider = ({ children }) => {
     }
   }, [leads]);
 
-  // Silently sync session on mount/refresh if token exists without logging out on network failure
+  // Silently sync session on mount/refresh if token exists in sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('pluto_admin_token');
+    const token = sessionStorage.getItem('pluto_admin_token');
     if (token) {
       AdminApi.getMe()
         .then((res) => {
@@ -206,12 +209,12 @@ export const AdminProvider = ({ children }) => {
             const authUser = res.data.user;
             if (authUser.role === 'admin' || authUser.role === 'super_admin') {
               setUser(authUser);
-              localStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
+              sessionStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
             } else {
               // Revoke if role is not authorized
               AdminApi.logout();
               setUser(null);
-              localStorage.removeItem('plutoplat_admin_user');
+              sessionStorage.removeItem('plutoplat_admin_user');
             }
           }
         })
@@ -219,7 +222,7 @@ export const AdminProvider = ({ children }) => {
           if (err?.status === 401) {
             AdminApi.logout();
             setUser(null);
-            localStorage.removeItem('plutoplat_admin_user');
+            sessionStorage.removeItem('plutoplat_admin_user');
           }
         });
 
@@ -276,7 +279,7 @@ export const AdminProvider = ({ children }) => {
       }
 
       setUser(authUser);
-      localStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
+      sessionStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
       showToast(`Welcome back, ${authUser.name}!`, 'success');
       return authUser;
     } finally {
@@ -288,6 +291,7 @@ export const AdminProvider = ({ children }) => {
     AdminApi.logout();
     setUser(null);
     try {
+      sessionStorage.removeItem('plutoplat_admin_user');
       localStorage.removeItem('plutoplat_admin_user');
     } catch (e) {
       console.error(e);
@@ -297,11 +301,15 @@ export const AdminProvider = ({ children }) => {
 
   const updateProfile = async (formData) => {
     const userId = user?._id || user?.id;
-    if (userId && localStorage.getItem('pluto_admin_token')) {
+    const photo = formData.profileImage || formData.avatar;
+    if (userId && sessionStorage.getItem('pluto_admin_token')) {
       await AdminApi.updateProfile(userId, {
         name: formData.name,
         phone: formData.phone,
         location: { city: formData.city },
+        agency: formData.agency,
+        rera: formData.rera,
+        ...(photo ? { profileImage: photo, avatar: photo } : {}),
       });
     }
     const nextUser = {
@@ -311,11 +319,13 @@ export const AdminProvider = ({ children }) => {
       city: formData.city,
       agency: formData.agency || user?.agency,
       rera: formData.rera || user?.rera,
+      ...(photo ? { profileImage: photo, avatar: photo } : {}),
       location: { ...(user?.location || {}), city: formData.city },
     };
     setUser(nextUser);
     try {
-      localStorage.setItem('plutoplat_admin_user', JSON.stringify(nextUser));
+      sessionStorage.setItem('plutoplat_admin_user', JSON.stringify(nextUser));
+      localStorage.removeItem('plutoplat_admin_user');
     } catch (e) {
       console.error(e);
     }

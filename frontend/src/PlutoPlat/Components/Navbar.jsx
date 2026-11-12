@@ -12,6 +12,7 @@ const navLinks = [
   { label: 'Buy', path: '/properties?purpose=Buy' },
   { label: 'Rent', path: '/properties?purpose=Rent' },
   { label: 'About', path: '/about' },
+  { label: 'Testimonials', path: '/testimonials' },
   { label: 'FAQ', path: '/faq' },
   { label: 'Contact', path: '/contact' },
 ];
@@ -30,7 +31,8 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { favorites, currency, setCurrency, user, logout } = usePropertyStore();
+  const { favorites, currency, setCurrency, user, logout, notifications } = usePropertyStore();
+  const unreadNotifsCount = (notifications || []).filter((n) => n.isUnread !== false && !n.read).length;
 
   const isHome = location.pathname === '/';
   const isTransparent = isHome && !isScrolled;
@@ -97,7 +99,7 @@ const Navbar = () => {
     { to: '/my-enquiries', label: 'Enquiries', icon: FileText, badge: 'Track', tone: 'green' },
     { to: '/favorites', label: 'Saved properties', icon: Heart, count: favorites.length },
     { to: '/scheduled-visits', label: 'Property visits', icon: Calendar },
-    { to: '/notifications', label: 'Notifications', icon: Bell, dot: true },
+    { to: '/notifications', label: 'Notifications', icon: Bell, dot: unreadNotifsCount > 0 },
     { to: '/recently-viewed', label: 'Recently viewed', icon: Clock },
     { to: '/contact-agents', label: 'Contact agents', icon: Users },
     { to: '/deals', label: 'Deal tracker', icon: TrendingUp, badge: '7 steps', tone: 'gold' },
@@ -207,7 +209,9 @@ const Navbar = () => {
 
             <Link to="/notifications" className={iconBtn} title="Notifications" aria-label="Notifications">
               <Bell size={18} />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#B49A70] ring-2 ring-white/80" />
+              {unreadNotifsCount > 0 && (
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#B49A70] ring-2 ring-white/80" />
+              )}
             </Link>
 
             <Link to="/favorites" className={iconBtn} title="Saved properties" aria-label="Saved properties">

@@ -14,41 +14,6 @@ import AdminLayout from '../Components/AdminLayout';
 import { AdminApi } from '../services/Api';
 import { useAdminStore } from '../context/AdminContext';
 
-const DEFAULT_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    type: 'approval',
-    title: 'Property Listing Live on Public Portal',
-    message: 'Your listing "The Imperial Villa, Civil Lines" is active and receiving buyer views.',
-    time: '10 minutes ago',
-    read: false,
-  },
-  {
-    id: 'notif-2',
-    type: 'lead',
-    title: 'New VIP Buyer Inquiry Received',
-    message: 'A prospective client requested a confidential prospectus and private viewing.',
-    time: '1 hour ago',
-    read: false,
-  },
-  {
-    id: 'notif-3',
-    type: 'system',
-    title: 'SuperAdmin Policy Notice',
-    message: 'Quarterly compliance update: All property submissions are digitally signed and verified.',
-    time: 'Yesterday',
-    read: true,
-  },
-  {
-    id: 'notif-4',
-    type: 'approval',
-    title: 'Listing Under Active Representation',
-    message: 'Your luxury portfolio listing has been indexed across the PlutoPlat global search matrix.',
-    time: '2 days ago',
-    read: true,
-  },
-];
-
 const Notifications = () => {
   const { showToast, notifications: storeNotifs } = useAdminStore();
   const [notificationsList, setNotificationsList] = useState([]);
@@ -69,9 +34,11 @@ const Notifications = () => {
             read: n.read !== undefined ? n.read : !n.isUnread,
           }));
           setNotificationsList(mapped);
+        } else {
+          setNotificationsList([]);
         }
       } catch (err) {
-        // Fallback
+        setNotificationsList([]);
       } finally {
         setLoading(false);
       }
@@ -82,7 +49,7 @@ const Notifications = () => {
 
   // Sync real-time socket notifications
   useEffect(() => {
-    if (storeNotifs && storeNotifs.length > 0) {
+    if (storeNotifs) {
       const mapped = storeNotifs.map((n) => ({
         id: n._id || n.id,
         type: n.type || 'lead',
@@ -136,48 +103,64 @@ const Notifications = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E8E3D8] rounded-2xl divide-y divide-[#EAE6DE] shadow-sm overflow-hidden">
-          {notificationsList.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleMarkSingleRead(item.id)}
-              className={`p-5 flex items-start gap-4 transition-colors cursor-pointer ${
-                !item.read ? 'bg-[#FAF8F5]' : 'hover:bg-[#FAF8F5]'
-              }`}
-            >
+        {loading ? (
+          <div className="bg-white border border-[#E8E3D8] rounded-2xl p-14 text-center shadow-sm text-sm text-[#6E6D66]">
+            Loading agent notifications...
+          </div>
+        ) : notificationsList.length === 0 ? (
+          <div className="bg-white border border-[#E8E3D8] rounded-2xl p-14 text-center shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-[#FAF8F5] flex items-center justify-center mx-auto mb-3 text-[#B49A70]">
+              <Bell size={22} />
+            </div>
+            <h3 className="font-serif text-lg text-[#1C201C] font-medium">No Notifications Yet</h3>
+            <p className="text-xs text-[#6E6D66] mt-1 max-w-sm mx-auto">
+              Real-time listing approvals, buyer inquiries, and SuperAdmin platform directives will appear here once dispatched.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white border border-[#E8E3D8] rounded-2xl divide-y divide-[#EAE6DE] shadow-sm overflow-hidden">
+            {notificationsList.map((item) => (
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                  item.type === 'approval'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : item.type === 'lead'
-                    ? 'bg-[#B49A70]/15 text-[#B49A70]'
-                    : 'bg-blue-50 text-blue-700'
+                key={item.id}
+                onClick={() => handleMarkSingleRead(item.id)}
+                className={`p-5 flex items-start gap-4 transition-colors cursor-pointer ${
+                  !item.read ? 'bg-[#FAF8F5]' : 'hover:bg-[#FAF8F5]'
                 }`}
               >
-                {item.type === 'approval' ? (
-                  <CheckCircle2 size={17} />
-                ) : item.type === 'lead' ? (
-                  <Inbox size={17} />
-                ) : (
-                  <Bell size={17} />
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-[#1C201C] font-serif">{item.title}</p>
-                    {!item.read && (
-                      <span className="w-2 h-2 rounded-full bg-[#B49A70]" title="Unread" />
-                    )}
-                  </div>
-                  <span className="text-[11px] text-[#8A887F]">{item.time}</span>
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                    item.type === 'approval'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : item.type === 'lead'
+                      ? 'bg-[#B49A70]/15 text-[#B49A70]'
+                      : 'bg-blue-50 text-blue-700'
+                  }`}
+                >
+                  {item.type === 'approval' ? (
+                    <CheckCircle2 size={17} />
+                  ) : item.type === 'lead' ? (
+                    <Inbox size={17} />
+                  ) : (
+                    <Bell size={17} />
+                  )}
                 </div>
-                <p className="text-xs text-[#6E6D66] mt-1 leading-relaxed">{item.message}</p>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-[#1C201C] font-serif">{item.title}</p>
+                      {!item.read && (
+                        <span className="w-2 h-2 rounded-full bg-[#B49A70]" title="Unread" />
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[#8A887F]">{item.time}</span>
+                  </div>
+                  <p className="text-xs text-[#6E6D66] mt-1 leading-relaxed">{item.message}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

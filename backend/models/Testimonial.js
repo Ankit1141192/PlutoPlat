@@ -78,7 +78,7 @@ testimonialSchema.virtual('id').get(function () {
 });
 
 // Sync aliases before save
-testimonialSchema.pre('save', function () {
+testimonialSchema.pre('save', function (next) {
   const author = this.client || this.name || 'Private Client';
   this.client = author;
   this.name = author;
@@ -94,6 +94,10 @@ testimonialSchema.pre('save', function () {
   const affiliation = this.property || this.company || 'Trophy Estate Acquisition';
   this.property = affiliation;
   this.company = affiliation;
+
+  if (typeof next === 'function') {
+    return next();
+  }
 });
 
 // Format normalized JSON for frontend

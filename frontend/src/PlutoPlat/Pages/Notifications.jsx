@@ -23,64 +23,64 @@ const CATEGORY_META = {
 const TABS = ['All', ...Object.keys(CATEGORY_META)];
 const GROUP_ORDER = ['Today', 'Yesterday', 'Earlier'];
 
-const DUMMY_NOTIFICATIONS = [
-  {
-    id: 'd1', category: 'Off-Market', group: 'Today', timestamp: '10 min ago', isUnread: true,
-    title: 'A private Civil Lines estate just opened for review',
-    description: 'A 14,000 sq.ft modern residence with a courtyard pool and staff wing is being offered quietly before public listing. Available to Sovereign Tier members only.',
-    location: 'Civil Lines, Kanpur', price: '₹ 18.50 Cr',
-    image: IMG('photo-1613490493576-7fde63acd811'),
-    actionLabel: 'Review private briefing', actionLink: '/properties',
-  },
-  {
-    id: 'd2', category: 'Itineraries', group: 'Today', timestamp: '2 hours ago', isUnread: true,
-    title: 'Your visit to The Imperial Villa is confirmed',
-    description: 'Saturday, 11:00 AM. Your advisor Aarav Mehta will meet you at the gate. A chauffeur will pick you up from your address at 10:15 AM.',
-    location: 'Swaroop Nagar, Kanpur', price: '₹ 9.20 Cr',
-    image: IMG('photo-1600596542815-ffad4c1539a9'),
-    actionLabel: 'Open itinerary', actionLink: '/my-enquiries',
-  },
-  {
-    id: 'd3', category: 'Market Intelligence', group: 'Today', timestamp: '5 hours ago', isUnread: true,
-    title: 'Price drop of ₹ 1.2 Cr on a saved penthouse',
-    description: 'The Central Park Penthouse you saved now lists at a lower valuation, aimed at closing before year-end.',
-    location: 'Civil Lines, Kanpur', price: '₹ 7.80 Cr',
-    image: IMG('photo-1512917774080-9991f1c4c750'),
-    actionLabel: 'See new price', actionLink: '/properties',
-  },
-  {
-    id: 'd4', category: 'Off-Market', group: 'Yesterday', timestamp: 'Yesterday, 6:40 PM', isUnread: false,
-    title: 'Riverside villa matches your search',
-    description: 'A 4-bedroom villa near the Ganga bank matches your saved filters: 3,800 sq.ft, private garden, ready to move in.',
-    location: 'VIP Road, Kanpur', price: '₹ 5.35 Cr',
-    image: IMG('photo-1600607687939-ce8a6c25118c'),
-    actionLabel: 'View property', actionLink: '/properties',
-  },
-  {
-    id: 'd5', category: 'Itineraries', group: 'Yesterday', timestamp: 'Yesterday, 11:05 AM', isUnread: false,
-    title: 'Advisor message: documents ready for signing',
-    description: 'Your sale agreement draft is ready. Review the terms and reply to your advisor with any changes.',
-    actionLabel: 'Open enquiry', actionLink: '/my-enquiries',
-  },
-  {
-    id: 'd6', category: 'Security Alerts', group: 'Earlier', timestamp: '3 days ago', isUnread: false,
-    title: 'Your NDA has been renewed',
-    description: 'Your non-disclosure agreement with PlutoPlat International Real Estate Inc. renewed automatically and is protected with 256-bit encryption.',
-    actionLabel: 'View security', actionLink: '/profile',
-  },
-  {
-    id: 'd7', category: 'Market Intelligence', group: 'Earlier', timestamp: '5 days ago', isUnread: false,
-    title: 'Kanpur luxury market: Q4 snapshot',
-    description: 'Premium villa prices in Civil Lines and Swaroop Nagar rose 6.4% this quarter, with fewer listings than last year.',
-    actionLabel: 'Read the snapshot', actionLink: '/properties',
-  },
-  {
-    id: 'd8', category: 'Security Alerts', group: 'Earlier', timestamp: '6 days ago', isUnread: false,
-    title: 'New sign-in from Lucknow',
-    description: 'We noticed a sign-in to your account from a new device. If this was you, no action is needed.',
-    actionLabel: 'Review activity', actionLink: '/profile',
-  },
-];
+// const DUMMY_NOTIFICATIONS = [
+//   {
+//     id: 'd1', category: 'Off-Market', group: 'Today', timestamp: '10 min ago', isUnread: true,
+//     title: 'A private Civil Lines estate just opened for review',
+//     description: 'A 14,000 sq.ft modern residence with a courtyard pool and staff wing is being offered quietly before public listing. Available to Sovereign Tier members only.',
+//     location: 'Civil Lines, Kanpur', price: '₹ 18.50 Cr',
+//     image: IMG('photo-1613490493576-7fde63acd811'),
+//     actionLabel: 'Review private briefing', actionLink: '/properties',
+//   },
+//   {
+//     id: 'd2', category: 'Itineraries', group: 'Today', timestamp: '2 hours ago', isUnread: true,
+//     title: 'Your visit to The Imperial Villa is confirmed',
+//     description: 'Saturday, 11:00 AM. Your advisor Aarav Mehta will meet you at the gate. A chauffeur will pick you up from your address at 10:15 AM.',
+//     location: 'Swaroop Nagar, Kanpur', price: '₹ 9.20 Cr',
+//     image: IMG('photo-1600596542815-ffad4c1539a9'),
+//     actionLabel: 'Open itinerary', actionLink: '/my-enquiries',
+//   },
+//   {
+//     id: 'd3', category: 'Market Intelligence', group: 'Today', timestamp: '5 hours ago', isUnread: true,
+//     title: 'Price drop of ₹ 1.2 Cr on a saved penthouse',
+//     description: 'The Central Park Penthouse you saved now lists at a lower valuation, aimed at closing before year-end.',
+//     location: 'Civil Lines, Kanpur', price: '₹ 7.80 Cr',
+//     image: IMG('photo-1512917774080-9991f1c4c750'),
+//     actionLabel: 'See new price', actionLink: '/properties',
+//   },
+//   {
+//     id: 'd4', category: 'Off-Market', group: 'Yesterday', timestamp: 'Yesterday, 6:40 PM', isUnread: false,
+//     title: 'Riverside villa matches your search',
+//     description: 'A 4-bedroom villa near the Ganga bank matches your saved filters: 3,800 sq.ft, private garden, ready to move in.',
+//     location: 'VIP Road, Kanpur', price: '₹ 5.35 Cr',
+//     image: IMG('photo-1600607687939-ce8a6c25118c'),
+//     actionLabel: 'View property', actionLink: '/properties',
+//   },
+//   {
+//     id: 'd5', category: 'Itineraries', group: 'Yesterday', timestamp: 'Yesterday, 11:05 AM', isUnread: false,
+//     title: 'Advisor message: documents ready for signing',
+//     description: 'Your sale agreement draft is ready. Review the terms and reply to your advisor with any changes.',
+//     actionLabel: 'Open enquiry', actionLink: '/my-enquiries',
+//   },
+//   {
+//     id: 'd6', category: 'Security Alerts', group: 'Earlier', timestamp: '3 days ago', isUnread: false,
+//     title: 'Your NDA has been renewed',
+//     description: 'Your non-disclosure agreement with PlutoPlat International Real Estate Inc. renewed automatically and is protected with 256-bit encryption.',
+//     actionLabel: 'View security', actionLink: '/profile',
+//   },
+//   {
+//     id: 'd7', category: 'Market Intelligence', group: 'Earlier', timestamp: '5 days ago', isUnread: false,
+//     title: 'Kanpur luxury market: Q4 snapshot',
+//     description: 'Premium villa prices in Civil Lines and Swaroop Nagar rose 6.4% this quarter, with fewer listings than last year.',
+//     actionLabel: 'Read the snapshot', actionLink: '/properties',
+//   },
+//   {
+//     id: 'd8', category: 'Security Alerts', group: 'Earlier', timestamp: '6 days ago', isUnread: false,
+//     title: 'New sign-in from Lucknow',
+//     description: 'We noticed a sign-in to your account from a new device. If this was you, no action is needed.',
+//     actionLabel: 'Review activity', actionLink: '/profile',
+//   },
+// ];
 
 const groupFor = (d) => {
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -296,7 +296,7 @@ const Notifications = () => {
 
   // Sync real-time socket notifications from store
   useEffect(() => {
-    if (storeNotifs && storeNotifs.length > 0) {
+    if (storeNotifs) {
       setNotifications(storeNotifs.map(mapApiNotification));
     }
   }, [storeNotifs]);
@@ -304,7 +304,6 @@ const Notifications = () => {
   const handleMarkRead = async (id) => {
     const prev = notifications;
     setNotifications((p) => p.map((n) => (n.id === id ? { ...n, isUnread: false } : n)));
-    if (USE_DUMMY) return;
     try {
       await Api.markNotificationRead?.(id);
     } catch {
@@ -317,7 +316,7 @@ const Notifications = () => {
     const prev = notifications;
     setNotifications((p) => p.map((n) => ({ ...n, isUnread: false })));
     try {
-      if (!USE_DUMMY) await Api.markAllNotificationsRead();
+      await Api.markAllNotificationsRead();
       showToast('All notifications marked as read.', 'success');
     } catch {
       setNotifications(prev);
@@ -329,7 +328,7 @@ const Notifications = () => {
     const prev = notifications;
     setNotifications((p) => p.filter((n) => n.id !== id));
     try {
-      if (!USE_DUMMY) await Api.deleteNotification(id);
+      await Api.deleteNotification(id);
       showToast('Notification archived.', 'info');
     } catch {
       setNotifications(prev);
@@ -465,14 +464,6 @@ const Notifications = () => {
                 >
                   Explore properties <ArrowUpRight size={15} />
                 </Link>
-                {USE_DUMMY && (
-                  <button
-                    onClick={() => { setNotifications(DUMMY_NOTIFICATIONS); setActiveTab('All'); }}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md border border-[#DDD8CE] text-[#1C201C] text-sm font-medium hover:bg-[#F8F6F2] transition-colors cursor-pointer"
-                  >
-                    <RotateCcw size={14} /> Restore sample data
-                  </button>
-                )}
               </div>
             </div>
           ) : (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Quote, MapPin, Plus, X, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Star, Quote, MapPin, Plus, X, Loader2, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 
 const TestimonialsSection = () => {
@@ -13,6 +14,9 @@ const TestimonialsSection = () => {
   const [rating, setRating] = useState(5);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Show only 3 testimonials in UI section
+  const displayedTestimonials = testimonials.slice(0, 3);
 
   const average = testimonials.length > 0
     ? testimonials.reduce((sum, t) => sum + (Number(t.rating) || 5), 0) / testimonials.length
@@ -96,9 +100,9 @@ const TestimonialsSection = () => {
           </div>
         </div>
 
-        {/* Cards: swipeable on phones, grid on larger screens */}
+        {/* Cards: show only top 3 testimonials */}
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:gap-8 [&::-webkit-scrollbar]:hidden">
-          {testimonials.map((t, idx) => {
+          {displayedTestimonials.map((t, idx) => {
             const author = t.client || t.name || 'Private Client';
             const body = t.content || t.message || '';
             const photo = t.avatar || t.imageUrl;
@@ -162,6 +166,17 @@ const TestimonialsSection = () => {
         </div>
 
         <p className="mt-3 text-center text-xs text-[#9A978C] md:hidden">Swipe to read more</p>
+
+        {/* View all testimonials CTA - routes to the dedicated page */}
+        <div className="mt-8 flex items-center justify-end">
+          <Link
+            to="/testimonials"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-[#1C201C] hover:text-[#B49A70] transition-colors duration-200"
+          >
+            <span>View all testimonials</span>
+            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+        </div>
       </div>
 
       {/* Testimonial Submission Modal */}

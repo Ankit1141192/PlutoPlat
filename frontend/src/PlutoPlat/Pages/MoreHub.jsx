@@ -93,6 +93,15 @@ const EXTRA_MODULES = [
     color: 'from-stone-500/15 to-transparent',
   },
   {
+    title: 'Client Voices & Testimonials',
+    description: 'Read authentic reflections from private collectors, developers, and investors who acquired estates with PlutoPlat.',
+    icon: Sparkles,
+    link: '/testimonials',
+    badge: 'Verified Reviews',
+    actionText: 'Browse All Testimonials',
+    color: 'from-amber-500/15 to-transparent',
+  },
+  {
     title: 'Heritage Brand Story & Heritage',
     description: 'Discover the architectural ethos behind PlutoPlat and our bespoke representation of India’s most prestigious estates.',
     icon: Award,

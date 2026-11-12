@@ -16,9 +16,11 @@ import {
   Sparkles,
   MapPin,
   BedDouble,
-  Ruler
+  Ruler,
+  Pencil
 } from 'lucide-react';
 import SuperAdminLayout from '../Components/SuperAdminLayout';
+import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
 const getLocationText = (loc) => {
@@ -42,12 +44,13 @@ const getPriceText = (price, numPrice) => {
 };
 
 const Properties = () => {
-  const { properties, approveProperty, rejectProperty, deleteProperty, addProperty } = useSuperAdminStore();
+  const { properties, approveProperty, rejectProperty, deleteProperty, addProperty, updateProperty } = useSuperAdminStore();
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // New Property Form State
   const [newProp, setNewProp] = useState({
@@ -63,6 +66,8 @@ const Properties = () => {
     beds: 4,
     baths: 5,
     sqft: '6,500',
+    latitude: 26.474,
+    longitude: 80.335,
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
     description: '',
   });
@@ -98,6 +103,54 @@ const Properties = () => {
     });
   }, [properties, activeTab, selectedType, searchQuery]);
 
+  const openCreateModal = () => {
+    setEditingId(null);
+    setNewProp({
+      title: '',
+      subtitle: '',
+      location: 'Civil Lines, Kanpur, UP',
+      address: 'Mall Road, Civil Lines',
+      price: '',
+      numericPrice: 12000000,
+      purpose: 'Buy',
+      type: 'Villas',
+      featured: true,
+      beds: 4,
+      baths: 5,
+      sqft: '6,500',
+      latitude: 26.474,
+      longitude: 80.335,
+      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
+      description: '',
+    });
+    setModalOpen(true);
+  };
+
+  const openEditModal = (prop) => {
+    const propId = prop._id || prop.id;
+    setEditingId(propId);
+    const numPrice = prop.numericPrice || (typeof prop.price === 'number' ? prop.price : 12000000);
+    setNewProp({
+      title: prop.title || '',
+      subtitle: prop.subtitle || '',
+      location: getLocationText(prop.location),
+      address: prop.address || getLocationText(prop.location),
+      price: prop.price || '',
+      numericPrice: numPrice,
+      purpose: prop.purpose || 'Buy',
+      type: prop.type || 'Villas',
+      featured: prop.featured !== undefined ? prop.featured : true,
+      beds: prop.beds || 4,
+      baths: prop.baths || 5,
+      sqft: prop.sqft ? String(prop.sqft) : '6,500',
+      latitude: Number(prop.latitude !== undefined ? prop.latitude : (prop.coordinates?.lat || 26.474)) || 26.474,
+      longitude: Number(prop.longitude !== undefined ? prop.longitude : (prop.langitude !== undefined ? prop.langitude : (prop.coordinates?.lng || 80.335))) || 80.335,
+      image: prop.image || prop.images?.[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
+      description: prop.description || '',
+    });
+    setModalOpen(true);
+  };
+
   const handleCreateProperty = (e) => {
     e.preventDefault();
     if (!newProp.title) return;
@@ -107,30 +160,28 @@ const Properties = () => {
       ? `₹${(numPrice / 10000000).toFixed(2)} Cr` 
       : `₹${(numPrice / 100000).toFixed(2)} Lac`;
 
-    addProperty({
+    const lat = Number(newProp.latitude) || 26.474;
+    const lng = Number(newProp.longitude) || 80.335;
+
+    const payload = {
       ...newProp,
       numericPrice: numPrice,
       price: formattedPrice,
+      latitude: lat,
+      longitude: lng,
+      coordinates: { lat, lng },
       images: [newProp.image],
-    });
+      featured: newProp.featured,
+    };
+
+    if (editingId) {
+      updateProperty(editingId, payload);
+    } else {
+      addProperty(payload);
+    }
 
     setModalOpen(false);
-    setNewProp({
-      title: '',
-      subtitle: '',
-      location: 'Civil Lines, Kanpur, UP',
-      address: '',
-      price: '',
-      numericPrice: 12000000,
-      purpose: 'Buy',
-      type: 'Villas',
-      featured: true,
-      beds: 4,
-      baths: 5,
-      sqft: '6,500',
-      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
-      description: '',
-    });
+    setEditingId(null);
   };
 
   return (
@@ -147,7 +198,7 @@ const Properties = () => {
 
           {/* Add Property Button */}
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer self-start sm:self-auto"
           >
             <Plus size={16} />
@@ -360,6 +411,14 @@ const Properties = () => {
                             )}
 
                             <button
+                              onClick={() => openEditModal(prop)}
+                              className="p-1.5 text-[#8A887F] hover:text-[#B49A70] hover:bg-[#FAF8F5] rounded-lg transition-colors cursor-pointer"
+                              title="Edit Property"
+                            >
+                              <Pencil size={15} />
+                            </button>
+
+                            <button
                               onClick={() => {
                                 if (window.confirm(`Delete property "${prop.title}" permanently?`)) {
                                   deleteProperty(propId);
@@ -381,17 +440,23 @@ const Properties = () => {
           </div>
         </div>
 
-        {/* Modal: Add Property */}
+        {/* Modal: Add / Edit Property */}
         {modalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white border border-[#E8E3D8] rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-[#EAE6DE] mb-5">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E8E3D8] text-[10px] font-semibold uppercase tracking-wider text-[#B49A70] mb-1">
-                    <Sparkles size={11} /> Executive Root Creation
+                    <Sparkles size={11} /> {editingId ? 'Edit Listing' : 'Executive Root Creation'}
                   </div>
-                  <h3 className="font-serif text-xl text-[#1C201C] font-normal">Create Verified Property</h3>
-                  <p className="text-xs text-[#6E6D66]">Direct SuperAdmin listing publishes live to marketplace.</p>
+                  <h3 className="font-serif text-xl text-[#1C201C] font-normal">
+                    {editingId ? 'Edit Property Listing' : 'Create Verified Property'}
+                  </h3>
+                  <p className="text-xs text-[#6E6D66]">
+                    {editingId
+                      ? 'Modify property specifications, pricing, and map coordinates.'
+                      : 'Direct SuperAdmin listing publishes live to marketplace.'}
+                  </p>
                 </div>
                 <button
                   onClick={() => setModalOpen(false)}
@@ -475,15 +540,48 @@ const Properties = () => {
                   </div>
                 </div>
 
+                {/* Map Coordinates: Latitude & Longitude */}
+                <div className="grid grid-cols-2 gap-3.5 p-3 rounded-xl bg-[#FAF8F5] border border-[#E8E3D8]">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
+                      Latitude (Map Position) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder="e.g. 26.4740"
+                      value={newProp.latitude}
+                      onChange={(e) => setNewProp({ ...newProp, latitude: e.target.value })}
+                      className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
+                      Longitude (Map Position) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder="e.g. 80.3350"
+                      value={newProp.longitude}
+                      onChange={(e) => setNewProp({ ...newProp, longitude: e.target.value })}
+                      className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
+                    />
+                  </div>
+                  <p className="col-span-2 text-[10px] text-[#8A887F]">
+                    Exact GPS coordinates placed on the interactive Leaflet map view for buyers.
+                  </p>
+                </div>
+
                 <div>
-                  <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
-                    Image URL
-                  </label>
-                  <input
-                    type="url"
+                  <ImageUploadOrLink
+                    label="Property Showcase Image"
                     value={newProp.image}
-                    onChange={(e) => setNewProp({ ...newProp, image: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] px-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
+                    onChange={(val) => setNewProp({ ...newProp, image: val })}
+                    required
+                    helperText="Paste an architectural photograph web URL or directly upload an image from your device."
                   />
                 </div>
 
@@ -512,7 +610,7 @@ const Properties = () => {
                     type="submit"
                     className="px-5 py-2.5 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white text-xs font-semibold rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
                   >
-                    Publish Property
+                    {editingId ? 'Update Property' : 'Publish Property'}
                   </button>
                 </div>
               </form>
