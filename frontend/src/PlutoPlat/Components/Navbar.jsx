@@ -12,7 +12,7 @@ const navLinks = [
   { label: 'Buy', path: '/properties?purpose=Buy' },
   { label: 'Rent', path: '/properties?purpose=Rent' },
   { label: 'About', path: '/about' },
-  { label: 'Testimonials', path: '/testimonials' },
+  // { label: 'Testimonials', path: '/testimonials' },
   { label: 'FAQ', path: '/faq' },
   { label: 'Contact', path: '/contact' },
 ];
