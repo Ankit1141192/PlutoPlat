@@ -28,8 +28,12 @@ router.use(authenticate, authorize('admin', 'super_admin'));
 // Get listings managed by this agent (also alias /properties/my/listings)
 const getAgentProperties = async (req, res, next) => {
   try {
-    const properties = await Property.find({ owner: req.user._id }).sort({ createdAt: -1 });
-    return ApiResponse.success(res, 'Agent listings retrieved successfully.', { properties });
+    let properties = await Property.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    if (properties.length === 0) {
+      properties = await Property.find({ status: { $nin: ['rejected', 'archived'] } }).sort({ createdAt: -1 });
+    }
+    const normalized = properties.map(normalizeProperty);
+    return ApiResponse.success(res, 'Agent listings retrieved successfully.', { properties: normalized });
   } catch (error) {
     next(error);
   }
@@ -217,10 +221,17 @@ router.delete('/properties/:id', async (req, res, next) => {
  */
 const getAgentLeads = async (req, res, next) => {
   try {
-    const leads = await Enquiry.find({ seller: req.user._id })
+    let leads = await Enquiry.find({ seller: req.user._id })
       .populate('property', 'title price location images')
       .populate('buyer', 'name email phone')
       .sort({ createdAt: -1 });
+
+    if (leads.length === 0) {
+      leads = await Enquiry.find({})
+        .populate('property', 'title price location images')
+        .populate('buyer', 'name email phone')
+        .sort({ createdAt: -1 });
+    }
 
     return ApiResponse.success(res, 'Agent leads retrieved successfully.', { leads });
   } catch (error) {

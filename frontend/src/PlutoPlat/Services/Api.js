@@ -38,8 +38,20 @@ const request = async (method, path, { body, auth = false } = {}) => {
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-  } catch {
-    throw new Error('Unable to reach the server. Please check your internet connection.');
+  } catch (err) {
+    if (!BASE_URL.includes('localhost') && !BASE_URL.includes('127.0.0.1')) {
+      try {
+        res = await fetch(`http://localhost:5000/api/v1${path}`, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+      } catch {
+        throw new Error('Unable to reach the server. Please check your internet connection.');
+      }
+    } else {
+      throw new Error('Unable to reach the server. Please check your internet connection.');
+    }
   }
 
   const data = await res.json().catch(() => ({}));

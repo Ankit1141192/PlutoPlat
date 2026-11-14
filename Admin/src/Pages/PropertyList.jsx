@@ -45,11 +45,12 @@ const PropertyList = () => {
     description: '',
   });
 
-  // Filter to properties belonging to this agent
+  // Filter to properties belonging to this agent (or platform properties if none authored yet)
   const myProperties = useMemo(() => {
-    return properties.filter(
-      (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || user?.role === 'admin'
+    const matched = properties.filter(
+      (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || user?.role === 'admin' || !p.ownerEmail
     );
+    return matched.length > 0 ? matched : properties;
   }, [properties, user]);
 
   const pendingCount = myProperties.filter((p) => !p.verified || p.status === 'pending').length;

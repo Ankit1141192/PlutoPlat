@@ -33,8 +33,17 @@ const UsersPage = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [profileStatusFilter, setProfileStatusFilter] = useState('all'); // 'all' | 'complete' | 'incomplete'
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+
+  const isProfileComplete = (u) => {
+    const hasName = Boolean(u.name && u.name.trim().length > 1);
+    const hasEmail = Boolean(u.email && u.email.includes('@'));
+    const hasPhone = Boolean(u.phone && u.phone.trim().length >= 6);
+    const hasCity = Boolean((u.city && u.city.trim().length > 0) || (u.location?.city && u.location.city.trim().length > 0));
+    return hasName && hasEmail && hasPhone && hasCity;
+  };
 
   const [form, setForm] = useState({
     name: '',
@@ -95,6 +104,9 @@ const UsersPage = () => {
   const filteredUsers = useMemo(() => {
     return usersList.filter((u) => {
       if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+      const complete = isProfileComplete(u);
+      if (profileStatusFilter === 'complete' && !complete) return false;
+      if (profileStatusFilter === 'incomplete' && complete) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = u.name?.toLowerCase().includes(q);
@@ -104,7 +116,7 @@ const UsersPage = () => {
       }
       return true;
     });
-  }, [usersList, roleFilter, searchQuery]);
+  }, [usersList, roleFilter, profileStatusFilter, searchQuery]);
 
   return (
     <SuperAdminLayout title="User & Administrator Governance">
@@ -140,7 +152,7 @@ const UsersPage = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -150,6 +162,16 @@ const UsersPage = () => {
               <option value="super_admin">SuperAdmin (Owner)</option>
               <option value="admin">Admin (Seller/Agent)</option>
               <option value="user">User (Buyer)</option>
+            </select>
+
+            <select
+              value={profileStatusFilter}
+              onChange={(e) => setProfileStatusFilter(e.target.value)}
+              className="h-11 px-4 text-xs bg-[#FBFAF7] border border-[#DDD8CE] rounded-xl text-[#1C201C] focus:outline-none focus:border-[#B49A70] focus:ring-2 focus:ring-[#B49A70]/20 cursor-pointer font-medium"
+            >
+              <option value="all">All Profile Statuses</option>
+              <option value="complete">✓ Complete Profile</option>
+              <option value="incomplete">⚠ Incomplete Profile</option>
             </select>
           </div>
         </div>
@@ -195,9 +217,20 @@ const UsersPage = () => {
                               {u.name?.charAt(0) || 'U'}
                             </div>
                             <div>
-                              <p className="font-semibold text-sm text-[#1C201C] font-serif">{u.name}</p>
-                              <p className="text-[11px] text-[#6E6D66] mt-0.5">{u.email} • {u.phone}</p>
-                              <p className="text-[10px] text-[#8A887F]">{u.city}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm text-[#1C201C] font-serif">{u.name}</p>
+                                {isProfileComplete(u) ? (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                    <CheckCircle2 size={10} /> Complete
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                    <AlertCircle size={10} /> Incomplete
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-[#6E6D66] mt-0.5">{u.email} • {u.phone || 'No phone'}</p>
+                              <p className="text-[10px] text-[#8A887F]">{u.city || u.location?.city || 'No city specified'}</p>
                             </div>
                           </div>
                         </td>

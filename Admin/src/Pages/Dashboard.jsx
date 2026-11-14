@@ -40,15 +40,17 @@ const Dashboard = () => {
   const { user, properties, leads } = useAdminStore();
   const isAdmin = user?.role === 'admin';
 
-  const myProperties = properties.filter(
+  const matchedProperties = properties.filter(
     (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || isAdmin
   );
+  const myProperties = matchedProperties.length > 0 ? matchedProperties : properties;
   const pending = myProperties.filter((p) => !p.verified || p.status === 'pending');
   const approved = myProperties.filter((p) => p.verified && p.status !== 'rejected');
 
-  const myLeads = leads.filter(
+  const matchedLeads = leads.filter(
     (l) => l.agentEmail === user?.email || l.agentName === user?.name || isAdmin
   );
+  const myLeads = matchedLeads.length > 0 ? matchedLeads : leads;
   const newLeads = myLeads.filter((l) => l.status === 'New');
 
   const firstName = user?.name?.split(' ')[0] || 'there';

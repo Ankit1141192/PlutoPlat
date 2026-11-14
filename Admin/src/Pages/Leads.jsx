@@ -23,9 +23,10 @@ const Leads = () => {
 
   // Filter leads to this agent's properties
   const myLeads = useMemo(() => {
-    return leads.filter(
+    const matched = leads.filter(
       (l) => l.agentEmail === user?.email || l.agentName === user?.name || user?.role === 'admin'
     );
+    return matched.length > 0 ? matched : leads;
   }, [leads, user]);
 
   const filteredLeads = useMemo(() => {

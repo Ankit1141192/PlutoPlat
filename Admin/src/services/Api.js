@@ -26,8 +26,22 @@ const request = async (method, path, { body, auth = false } = {}) => {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (netErr) {
-    console.error('Fetch network error:', netErr);
-    throw new Error('Unable to reach the API server. Please check your backend connection.');
+    // If remote worker URL is unreachable or DNS fails, fallback to local backend
+    if (!BASE_URL.includes('localhost') && !BASE_URL.includes('127.0.0.1')) {
+      try {
+        res = await fetch(`http://localhost:5000/api/v2${path}`, {
+          method,
+          headers: buildHeaders(auth),
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        });
+      } catch {
+        console.warn('Admin API fallback to localhost:5000 also failed.');
+        throw new Error('Unable to reach the API server. Please check your backend connection.');
+      }
+    } else {
+      console.error('Fetch network error:', netErr);
+      throw new Error('Unable to reach the API server. Please check your backend connection.');
+    }
   }
 
   const data = await res.json().catch(() => ({}));

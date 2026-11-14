@@ -49,8 +49,7 @@ const userSchema = new mongoose.Schema(
 
     profileImage: {
       type: String,
-      default:
-        'https://res.cloudinary.com/dxjv6gq3f/image/upload/v1698250910/PlutoPlat/user-icon-1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1_1.png',
+      default: '',
     },
 
     agency: {

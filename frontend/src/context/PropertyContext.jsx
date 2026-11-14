@@ -269,7 +269,10 @@ export const PropertyProvider = ({ children }) => {
   const [properties, setProperties] = useState(() => {
     try {
       const saved = localStorage.getItem('plutoplat_properties_db');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -473,7 +476,7 @@ export const PropertyProvider = ({ children }) => {
     // 1. Sync properties
     try {
       const res = await Api.getProperties();
-      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+      if (res?.data?.properties && Array.isArray(res.data.properties) && res.data.properties.length > 0) {
         setProperties(res.data.properties);
         try {
           localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
