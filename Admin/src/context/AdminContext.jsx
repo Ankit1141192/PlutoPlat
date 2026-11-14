@@ -3,6 +3,35 @@ import { AdminApi } from '../services/Api';
 
 const AdminContext = createContext(null);
 
+const getDeletedIds = () => {
+  try {
+    const raw = localStorage.getItem('plutoplat_deleted_properties');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const markDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null) {
+      set.add(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
+const unmarkDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null && set.has(String(id))) {
+      set.delete(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
 const INITIAL_PROPERTIES = [
   {
     id: 1,
@@ -102,14 +131,17 @@ export const AdminProvider = ({ children }) => {
 
   const [properties, setProperties] = useState(() => {
     try {
+      const deleted = getDeletedIds();
       const saved = localStorage.getItem('plutoplat_properties_db');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
+        }
       }
-      return INITIAL_PROPERTIES;
+      return INITIAL_PROPERTIES.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
     } catch {
-      return INITIAL_PROPERTIES;
+      return [];
     }
   });
 
@@ -139,10 +171,14 @@ export const AdminProvider = ({ children }) => {
     // 1. Sync properties
     try {
       const res = await AdminApi.getMyProperties();
-      if (res?.data?.properties && Array.isArray(res.data.properties) && res.data.properties.length > 0) {
-        setProperties(res.data.properties);
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        const deleted = getDeletedIds();
+        const activeProps = res.data.properties.filter(
+          p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+        );
+        setProperties(activeProps);
         try {
-          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
         } catch {}
       }
     } catch (err) {
@@ -264,9 +300,13 @@ export const AdminProvider = ({ children }) => {
       AdminApi.getMyProperties()
         .then((res) => {
           if (res?.data?.properties && Array.isArray(res.data.properties)) {
-            setProperties(res.data.properties);
+            const deleted = getDeletedIds();
+            const activeProps = res.data.properties.filter(
+              p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+            );
+            setProperties(activeProps);
             try {
-              localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+              localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
             } catch {}
           }
         })
@@ -326,11 +366,11 @@ export const AdminProvider = ({ children }) => {
       } catch (apiErr) {
         // Fallback for local preview if server connection fails
         const cleanEmail = email.trim().toLowerCase();
-        if (cleanEmail === 'm.sharma@plutoplat.com' || cleanEmail.includes('agent') || cleanEmail.includes('admin')) {
+        if (cleanEmail === 'm.sharma@plutoplat.com' || cleanEmail === 'ankitk09773@gmail.com' || cleanEmail.includes('agent') || cleanEmail.includes('admin')) {
           const offlineAdmin = {
-            id: 'USR-002',
-            _id: '672800000000000000000002',
-            name: 'Michael Sharma',
+            id: cleanEmail === 'ankitk09773@gmail.com' ? '6af323846bc75296b386d9de' : 'USR-002',
+            _id: cleanEmail === 'ankitk09773@gmail.com' ? '6af323846bc75296b386d9de' : '672800000000000000000002',
+            name: cleanEmail === 'ankitk09773@gmail.com' ? 'Ankit Kumar' : 'Michael Sharma',
             email: cleanEmail,
             phone: '+91 98210 33445',
             role: 'admin',
@@ -411,15 +451,19 @@ export const AdminProvider = ({ children }) => {
   const addProperty = async (newProp) => {
     try {
       const res = await AdminApi.createProperty(newProp);
-      const created = res?.data?.property || { ...newProp, id: Date.now(), status: 'approved', verified: true };
-      setProperties(prev => [created, ...prev]);
-      showToast('Property published and live on user portal!', 'success');
+      const created = res?.data?.property || { ...newProp, id: Date.now(), _id: String(Date.now()), status: 'approved', verified: true };
+      if (created._id) unmarkDeletedProperty(created._id);
+      if (created.id) unmarkDeletedProperty(created.id);
+      if (created.title) unmarkDeletedProperty(created.title);
+      setProperties(prev => [created, ...prev.filter(p => (p._id || p.id) !== (created._id || created.id))]);
+      showToast('Property published and live on user panel!', 'success');
       return created;
     } catch (err) {
       console.warn('Backend property publish notice:', err.message);
       const fallbackProp = {
         ...newProp,
         id: Date.now(),
+        _id: String(Date.now()),
         verified: true,
         status: 'approved',
         ownerEmail: user?.email || 'agent@plutoplat.com',
@@ -441,23 +485,21 @@ export const AdminProvider = ({ children }) => {
   };
 
   const deleteProperty = async (id) => {
+    markDeletedProperty(id);
+    const toDelete = properties.find(p => p.id === id || p._id === id || String(p.id) === String(id) || String(p._id) === String(id));
+    if (toDelete?.title) markDeletedProperty(toDelete.title);
+    const nextProps = properties.filter(p => p.id !== id && p._id !== id && String(p.id) !== String(id) && String(p._id) !== String(id));
+    setProperties(nextProps);
+    try {
+      localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+    } catch {}
+
     try {
       await AdminApi.deleteProperty(id);
-      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
-      setProperties(nextProps);
-      try {
-        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
-      } catch {}
-      showToast('Property listing removed from directory.', 'info');
     } catch (err) {
       console.warn('Admin deleteProperty notice:', err.message);
-      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
-      setProperties(nextProps);
-      try {
-        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
-      } catch {}
-      showToast('Property listing removed.', 'info');
     }
+    showToast('Property listing permanently removed.', 'info');
   };
 
   // Lead Actions

@@ -128,7 +128,7 @@ const enforceAllowedDomain = (req, res, next) => {
   }
 
   // If no origin/referer header was sent (e.g. direct bot/curl)
-  if (enforceStrict) {
+  if (enforceStrict && process.env.NODE_ENV === 'production') {
     return res.status(403).json({
       success: false,
       message: 'Access Denied: Missing verified domain origin or referer header.',

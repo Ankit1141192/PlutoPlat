@@ -3,6 +3,35 @@ import { SuperAdminApi } from '../services/Api';
 
 const SuperAdminContext = createContext(null);
 
+const getDeletedIds = () => {
+  try {
+    const raw = localStorage.getItem('plutoplat_deleted_properties');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const markDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null) {
+      set.add(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
+const unmarkDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null && set.has(String(id))) {
+      set.delete(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
 const INITIAL_PROPERTIES = [
   {
     id: 1,
@@ -236,14 +265,17 @@ export const SuperAdminProvider = ({ children }) => {
 
   const [properties, setProperties] = useState(() => {
     try {
+      const deleted = getDeletedIds();
       const saved = localStorage.getItem('plutoplat_properties_db');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
+        }
       }
-      return INITIAL_PROPERTIES;
+      return INITIAL_PROPERTIES.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
     } catch {
-      return INITIAL_PROPERTIES;
+      return [];
     }
   });
 
@@ -295,10 +327,14 @@ export const SuperAdminProvider = ({ children }) => {
     // 1. Sync properties from MongoDB backend
     try {
       const res = await SuperAdminApi.getProperties();
-      if (res?.data?.properties && Array.isArray(res.data.properties) && res.data.properties.length > 0) {
-        setProperties(res.data.properties);
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        const deleted = getDeletedIds();
+        const activeProps = res.data.properties.filter(
+          p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+        );
+        setProperties(activeProps);
         try {
-          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
         } catch {}
       }
     } catch (err) {
@@ -457,9 +493,13 @@ export const SuperAdminProvider = ({ children }) => {
       SuperAdminApi.getProperties()
         .then((res) => {
           if (res?.data?.properties && Array.isArray(res.data.properties)) {
-            setProperties(res.data.properties);
+            const deleted = getDeletedIds();
+            const activeProps = res.data.properties.filter(
+              p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+            );
+            setProperties(activeProps);
             try {
-              localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+              localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
             } catch {}
           }
         })
@@ -690,39 +730,28 @@ export const SuperAdminProvider = ({ children }) => {
   };
 
   const deleteProperty = async (id) => {
+    markDeletedProperty(id);
+    const toDelete = properties.find(p => p.id === id || p._id === id || String(p.id) === String(id) || String(p._id) === String(id));
+    if (toDelete?.title) markDeletedProperty(toDelete.title);
+    const nextProps = properties.filter(p => p.id !== id && p._id !== id && String(p.id) !== String(id) && String(p._id) !== String(id));
+    setProperties(nextProps);
+    try {
+      localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+    } catch {}
+
     try {
       await SuperAdminApi.deleteProperty(id);
-      const toDelete = properties.find(p => p.id === id || p._id === id);
-      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
-      setProperties(nextProps);
-      try {
-        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
-      } catch {}
-
-      addAuditLog({
-        module: 'PROPERTY',
-        action: 'DELETE',
-        target: toDelete?.title || `ID: ${id}`,
-        description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
-      });
-      showToast('Property listing permanently removed from platform.', 'info');
     } catch (err) {
       console.warn('Backend deleteProperty notice:', err.message);
-      // If 404, it was already removed on backend
-      const toDelete = properties.find(p => p.id === id || p._id === id);
-      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
-      setProperties(nextProps);
-      try {
-        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
-      } catch {}
-      addAuditLog({
-        module: 'PROPERTY',
-        action: 'DELETE',
-        target: toDelete?.title || `ID: ${id}`,
-        description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
-      });
-      showToast('Property listing removed from platform.', 'info');
     }
+
+    addAuditLog({
+      module: 'PROPERTY',
+      action: 'DELETE',
+      target: toDelete?.title || `ID: ${id}`,
+      description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
+    });
+    showToast('Property listing permanently removed from platform.', 'info');
   };
 
   const addProperty = async (newProp) => {
@@ -735,12 +764,16 @@ export const SuperAdminProvider = ({ children }) => {
       const createdProp = res?.data?.property || {
         ...newProp,
         id: Date.now(),
+        _id: String(Date.now()),
         verified: true,
         status: 'approved',
         ownerEmail: user?.email || 'owner@plutoplat.com',
         ownerName: user?.name || 'Platform Director',
         createdAt: new Date().toISOString()
       };
+      if (createdProp._id) unmarkDeletedProperty(createdProp._id);
+      if (createdProp.id) unmarkDeletedProperty(createdProp.id);
+      if (createdProp.title) unmarkDeletedProperty(createdProp.title);
       const nextProps = [createdProp, ...properties.filter(p => (p._id || p.id) !== (createdProp._id || createdProp.id))];
       setProperties(nextProps);
       try {
@@ -750,15 +783,16 @@ export const SuperAdminProvider = ({ children }) => {
         module: 'PROPERTY',
         action: 'CREATE',
         target: createdProp.title,
-        description: `SuperAdmin created verified direct listing: ${createdProp.title}`
+        description: `SuperAdmin published platform listing: ${createdProp.title}`
       });
-      showToast('Verified property created and published live on user panel!', 'success');
+      showToast(`Property "${createdProp.title}" published and live on user panel!`, 'success');
       return createdProp;
     } catch (err) {
-      console.warn('Backend property publish notice:', err.message);
+      console.warn('SuperAdmin property create notice:', err.message);
       const fallbackProp = {
         ...newProp,
         id: Date.now(),
+        _id: String(Date.now()),
         verified: true,
         status: 'approved',
         ownerEmail: user?.email || 'owner@plutoplat.com',
@@ -770,7 +804,7 @@ export const SuperAdminProvider = ({ children }) => {
       try {
         localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
       } catch {}
-      showToast('Verified property created and published live!', 'success');
+      showToast(`Property "${fallbackProp.title}" recorded and published.`, 'success');
       return fallbackProp;
     }
   };

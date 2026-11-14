@@ -48,7 +48,7 @@ const PropertyList = () => {
   // Filter to properties belonging to this agent (or platform properties if none authored yet)
   const myProperties = useMemo(() => {
     const matched = properties.filter(
-      (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || user?.role === 'admin' || !p.ownerEmail
+      (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || user?.role === 'admin' || user?.role === 'super_admin' || !p.ownerEmail
     );
     return matched.length > 0 ? matched : properties;
   }, [properties, user]);
@@ -321,7 +321,7 @@ const PropertyList = () => {
                             <button
                               onClick={() => {
                                 if (window.confirm(`Delete "${prop.title}" listing?`)) {
-                                  deleteProperty(prop.id);
+                                  deleteProperty(prop._id || prop.id);
                                 }
                               }}
                               className="p-2 text-[#8A887F] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"

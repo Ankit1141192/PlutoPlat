@@ -38,7 +38,7 @@ const greeting = () => {
 
 const Dashboard = () => {
   const { user, properties, leads } = useAdminStore();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   const matchedProperties = properties.filter(
     (p) => p.ownerEmail === user?.email || p.ownerName === user?.name || isAdmin

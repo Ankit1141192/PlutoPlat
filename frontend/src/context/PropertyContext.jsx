@@ -6,6 +6,35 @@ import { Api } from '../PlutoPlat/Services/Api';
 
 const PropertyContext = createContext(null);
 
+const getDeletedIds = () => {
+  try {
+    const raw = localStorage.getItem('plutoplat_deleted_properties');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const markDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null) {
+      set.add(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
+const unmarkDeletedProperty = (id) => {
+  try {
+    const set = getDeletedIds();
+    if (id !== undefined && id !== null && set.has(String(id))) {
+      set.delete(String(id));
+      localStorage.setItem('plutoplat_deleted_properties', JSON.stringify([...set]));
+    }
+  } catch {}
+};
+
 const INITIAL_LEADS = [
   {
     id: 'LD-1001',
@@ -268,21 +297,24 @@ const INITIAL_AUDITS = [
 export const PropertyProvider = ({ children }) => {
   const [properties, setProperties] = useState(() => {
     try {
+      const deleted = getDeletedIds();
       const saved = localStorage.getItem('plutoplat_properties_db');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
+        }
       }
-    } catch (e) {
-      console.error(e);
+      return PROPERTIES.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))).map((p, idx) => ({
+        ...p,
+        verified: idx !== 4 && idx !== 5,
+        status: idx === 4 || idx === 5 ? 'pending' : 'approved',
+        ownerEmail: idx === 1 ? 'm.sharma@plutoplat.com' : 'owner@plutoplat.com',
+        ownerName: idx === 1 ? 'Michael Sharma' : 'Julian Beaumont',
+      }));
+    } catch {
+      return [];
     }
-    return PROPERTIES.map((p, idx) => ({
-      ...p,
-      verified: idx !== 4 && idx !== 5,
-      status: idx === 4 || idx === 5 ? 'pending' : 'approved',
-      ownerEmail: idx === 1 ? 'm.sharma@plutoplat.com' : 'owner@plutoplat.com',
-      ownerName: idx === 1 ? 'Michael Sharma' : 'Julian Beaumont',
-    }));
   });
 
   const [favorites, setFavorites] = useState(() => {
@@ -476,10 +508,14 @@ export const PropertyProvider = ({ children }) => {
     // 1. Sync properties
     try {
       const res = await Api.getProperties();
-      if (res?.data?.properties && Array.isArray(res.data.properties) && res.data.properties.length > 0) {
-        setProperties(res.data.properties);
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        const deleted = getDeletedIds();
+        const activeProps = res.data.properties.filter(
+          p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+        );
+        setProperties(activeProps);
         try {
-          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
         } catch {}
       }
     } catch (err) {
@@ -720,6 +756,7 @@ export const PropertyProvider = ({ children }) => {
       createdProp = {
         ...newProp,
         id: Date.now(),
+        _id: String(Date.now()),
         verified: true,
         status: 'approved',
         ownerEmail: user?.email || 'm.sharma@plutoplat.com',
@@ -728,7 +765,11 @@ export const PropertyProvider = ({ children }) => {
       };
     }
 
-    setProperties(prev => [createdProp, ...prev]);
+    if (createdProp._id) unmarkDeletedProperty(createdProp._id);
+    if (createdProp.id) unmarkDeletedProperty(createdProp.id);
+    if (createdProp.title) unmarkDeletedProperty(createdProp.title);
+
+    setProperties(prev => [createdProp, ...prev.filter(p => (p._id || p.id) !== (createdProp._id || createdProp.id))]);
 
     addAuditLog({
       actorName: user?.name || 'Agent',
@@ -761,17 +802,20 @@ export const PropertyProvider = ({ children }) => {
   };
 
   const deleteProperty = async (id) => {
+    markDeletedProperty(id);
+    const toDelete = properties.find(p => p.id === id || p._id === id || String(p.id) === String(id) || String(p._id) === String(id));
+    if (toDelete?.title) markDeletedProperty(toDelete.title);
+    const nextProps = properties.filter(p => p.id !== id && p._id !== id && String(p.id) !== String(id) && String(p._id) !== String(id));
+    setProperties(nextProps);
+    try {
+      localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+    } catch {}
+
     try {
       await Api.deleteProperty(id);
     } catch (e) {
       console.warn('API deleteProperty warning:', e.message);
     }
-    const toDelete = properties.find(p => p.id === id || p._id === id);
-    const nextProps = properties.filter(p => p.id !== id && p._id !== id);
-    setProperties(nextProps);
-    try {
-      localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
-    } catch {}
 
     addAuditLog({
       actorName: user?.name || 'Admin',

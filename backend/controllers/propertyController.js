@@ -523,9 +523,9 @@ const deleteProperty = async (req, res, next) => {
     }
 
     const isOwner = property.owner && property.owner.toString() === req.user._id.toString();
-    const isSuperAdmin = req.user.role === 'super_admin';
+    const isElevated = req.user.role === 'admin' || req.user.role === 'super_admin';
 
-    if (!isOwner && !isSuperAdmin) {
+    if (!isOwner && !isElevated) {
       return ApiResponse.error(res, 'Forbidden: You cannot delete this listing.', 403);
     }
 

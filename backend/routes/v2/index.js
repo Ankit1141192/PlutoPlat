@@ -25,13 +25,15 @@ router.use(authenticate, authorize('admin', 'super_admin'));
  * ══════════════════════════════════════════
  */
 
-// Get listings managed by this agent (also alias /properties/my/listings)
+// Get listings for agent workstation (supports ?mine=true or full active directory)
 const getAgentProperties = async (req, res, next) => {
   try {
-    let properties = await Property.find({ owner: req.user._id }).sort({ createdAt: -1 });
-    if (properties.length === 0) {
-      properties = await Property.find({ status: { $nin: ['rejected', 'archived'] } }).sort({ createdAt: -1 });
-    }
+    const filter = req.query.mine === 'true'
+      ? { owner: req.user._id }
+      : { status: { $nin: ['rejected', 'archived'] } };
+    const properties = await Property.find(filter)
+      .populate('owner', 'name email phone role')
+      .sort({ createdAt: -1 });
     const normalized = properties.map(normalizeProperty);
     return ApiResponse.success(res, 'Agent listings retrieved successfully.', { properties: normalized });
   } catch (error) {
@@ -245,7 +247,10 @@ router.get('/enquiries/my', getAgentLeads);
 const updateLeadStatus = async (req, res, next) => {
   try {
     const { status, adminNotes } = req.body;
-    const enquiry = await Enquiry.findOne({ _id: req.params.id, seller: req.user._id });
+    const filter = (req.user.role === 'admin' || req.user.role === 'super_admin')
+      ? { _id: req.params.id }
+      : { _id: req.params.id, seller: req.user._id };
+    const enquiry = await Enquiry.findOne(filter);
 
     if (!enquiry) {
       return ApiResponse.error(res, 'Enquiry not found or unauthorized.', 404);
