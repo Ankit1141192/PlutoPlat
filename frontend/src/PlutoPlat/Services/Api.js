@@ -111,6 +111,18 @@ export const Api = {
     return request('GET', `/properties/${id}`);
   },
 
+  createProperty(payload) {
+    return request('POST', '/properties', { body: payload, auth: true });
+  },
+
+  updateProperty(id, payload) {
+    return request('PUT', `/properties/${id}`, { body: payload, auth: true });
+  },
+
+  deleteProperty(id) {
+    return request('DELETE', `/properties/${id}`, { auth: true });
+  },
+
   // ───────── Saved Properties ─────────
   getSavedProperties() {
     return request('GET', '/users/saved-properties', { auth: true });

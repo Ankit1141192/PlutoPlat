@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
 const { sendPasswordResetEmail } = require('../utils/emailService');
+const { isOriginAllowed } = require('../middlewares/domainSecurity');
 
 /**
  * Register a new user
@@ -288,17 +289,17 @@ const forgotPassword = async (req, res, next) => {
     // Determine originating portal and appropriate branding
     const reqPath = (req.originalUrl || req.url || '').toLowerCase();
     let portalName = 'Client Desk';
-    let defaultOrigin = 'http://localhost:5173';
+    let defaultOrigin = 'https://www.plutoplot.in';
 
     if (reqPath.includes('/v3') || clientPortal === 'superadmin' || user.role === 'super_admin') {
       portalName = 'SuperAdmin Executive Control';
-      defaultOrigin = 'http://localhost:5175';
+      defaultOrigin = 'https://superadmin.plutoplot.in';
     } else if (reqPath.includes('/v2') || clientPortal === 'admin' || user.role === 'admin') {
       portalName = 'Broker Workstation';
-      defaultOrigin = 'http://localhost:5174';
+      defaultOrigin = 'https://admin.plutoplot.in';
     }
 
-    // Resolve base URL for reset link
+    // Resolve base URL for reset link (enforce allowed plutoplot.in origin)
     let resolvedOrigin = clientOrigin;
     if (!resolvedOrigin && req.headers['origin']) {
       resolvedOrigin = req.headers['origin'];
@@ -310,7 +311,7 @@ const forgotPassword = async (req, res, next) => {
         resolvedOrigin = null;
       }
     }
-    if (!resolvedOrigin) {
+    if (!resolvedOrigin || !isOriginAllowed(resolvedOrigin)) {
       resolvedOrigin = defaultOrigin;
     }
     resolvedOrigin = resolvedOrigin.replace(/\/$/, '');

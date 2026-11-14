@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { SuperAdminApi } from '../services/Api';
 
 const SuperAdminContext = createContext(null);
@@ -274,85 +273,99 @@ export const SuperAdminProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [loading, setLoading] = useState(false);
+  const knownNotificationIds = useRef(new Set());
 
-  // Real-Time Socket.IO Integration for SuperAdmin
+  // Universal Data Sync for SuperAdmin Console (Replaces Socket.IO)
+  const syncSuperAdminData = async (silent = true) => {
+    const token = sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');
+    if (!token) return;
+
+    // 1. Sync properties from MongoDB backend
+    try {
+      const res = await SuperAdminApi.getProperties();
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        setProperties(res.data.properties);
+        try {
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+        } catch {}
+      }
+    } catch (err) {
+      if (!silent) console.warn('Properties sync error:', err.message);
+    }
+
+    // 2. Sync notifications from MongoDB backend
+    try {
+      const res = await SuperAdminApi.getNotifications();
+      if (res?.data?.notifications && Array.isArray(res.data.notifications)) {
+        const notifs = res.data.notifications;
+        notifs.forEach((n) => {
+          const nid = n._id || n.id;
+          if (nid && knownNotificationIds.current.size > 0 && !knownNotificationIds.current.has(nid)) {
+            showToast(`📢 ${n.title}`, 'info');
+          }
+          if (nid) knownNotificationIds.current.add(nid);
+        });
+        setNotifications(notifs);
+      }
+    } catch {}
+
+    // 3. Sync leads
+    try {
+      const res = await SuperAdminApi.getAllEnquiries();
+      if (res?.data?.leads && Array.isArray(res.data.leads)) {
+        setLeads(res.data.leads);
+        try {
+          localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
+        } catch {}
+      }
+    } catch {}
+
+    // 4. Sync users
+    try {
+      const res = await SuperAdminApi.getAllUsers();
+      if (res?.data?.users && Array.isArray(res.data.users)) {
+        setUsersList(res.data.users);
+        try {
+          localStorage.setItem('plutoplat_users_db', JSON.stringify(res.data.users));
+        } catch {}
+      }
+    } catch {}
+
+    // 5. Sync audits
+    try {
+      const res = await SuperAdminApi.getAuditLogs();
+      if (res?.data?.audits && Array.isArray(res.data.audits)) {
+        setAuditLogs(res.data.audits);
+        try {
+          localStorage.setItem('plutoplat_audits_db', JSON.stringify(res.data.audits));
+        } catch {}
+      }
+    } catch {}
+  };
+
+  // Real-Time Heartbeat Polling & Window Focus Synchronization (Replaces Socket.IO)
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-    });
+    syncSuperAdminData(false);
 
-    socket.on('connect', () => {
-      console.log('[Socket.IO] SuperAdmin connected to server:', socket.id);
-      socket.emit('register', {
-        role: 'super_admin',
-        userId: user?._id || user?.id,
-      });
-    });
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncSuperAdminData(true);
+      }
+    };
 
-    socket.on('new_notification', (notif) => {
-      console.log('[Socket.IO] SuperAdmin received notification:', notif);
-      setNotifications((prev) => [notif, ...prev.filter((n) => (n._id || n.id) !== (notif._id || notif.id))]);
-      showToast(`📢 ${notif.title}`, 'info');
-    });
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    socket.on('property_created', (prop) => {
-      setProperties((prev) => {
-        if (prev.some((p) => (p.id || p._id) === (prop.id || prop._id))) return prev;
-        return [prop, ...prev];
-      });
-      showToast(`Estate "${prop.title}" added to directory.`, 'info');
-    });
-
-    socket.on('property_updated', (prop) => {
-      setProperties((prev) =>
-        prev.map((p) => ((p.id || p._id) === (prop.id || prop._id) ? { ...p, ...prop } : p))
-      );
-    });
-
-    socket.on('property_deleted', ({ id, _id }) => {
-      const targetId = id || _id;
-      setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
-    });
-
-    socket.on('testimonial_created', (item) => {
-      console.log('[Socket.IO SuperAdmin] Testimonial created:', item);
-      try {
-        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
-        const list = cached ? JSON.parse(cached) : [];
-        if (!list.some((t) => (t.id || t._id) === (item.id || item._id))) {
-          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify([item, ...list]));
-        }
-      } catch {}
-    });
-
-    socket.on('testimonial_updated', (item) => {
-      try {
-        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
-        if (cached) {
-          const list = JSON.parse(cached);
-          const next = list.map((t) => ((t.id || t._id) === (item.id || item._id) ? { ...t, ...item } : t));
-          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
-        }
-      } catch {}
-    });
-
-    socket.on('testimonial_deleted', ({ id, _id }) => {
-      const targetId = id || _id;
-      try {
-        const cached = localStorage.getItem('pluto_superadmin_testimonials_cache');
-        if (cached) {
-          const list = JSON.parse(cached);
-          const next = list.filter((t) => t.id !== targetId && t._id !== targetId);
-          localStorage.setItem('pluto_superadmin_testimonials_cache', JSON.stringify(next));
-        }
-      } catch {}
-    });
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncSuperAdminData(true);
+      }
+    }, 6000);
 
     return () => {
-      socket.disconnect();
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
     };
   }, [user]);
 
@@ -404,7 +417,7 @@ export const SuperAdminProvider = ({ children }) => {
 
   // Sync SuperAdmin session on mount/refresh if token exists in sessionStorage
   useEffect(() => {
-    const token = sessionStorage.getItem('pluto_superadmin_token');
+    const token = sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');
     if (token) {
       SuperAdminApi.getMe()
         .then((res) => {
@@ -431,8 +444,11 @@ export const SuperAdminProvider = ({ children }) => {
       // Sync platform properties from MongoDB backend
       SuperAdminApi.getProperties()
         .then((res) => {
-          if (res?.data?.properties && res.data.properties.length > 0) {
+          if (res?.data?.properties && Array.isArray(res.data.properties)) {
             setProperties(res.data.properties);
+            try {
+              localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+            } catch {}
           }
         })
         .catch(() => {});
@@ -630,16 +646,37 @@ export const SuperAdminProvider = ({ children }) => {
   const deleteProperty = async (id) => {
     try {
       await SuperAdminApi.deleteProperty(id);
-    } catch (err) {}
-    const toDelete = properties.find(p => p.id === id || p._id === id);
-    setProperties(prev => prev.filter(p => p.id !== id && p._id !== id));
-    addAuditLog({
-      module: 'PROPERTY',
-      action: 'DELETE',
-      target: toDelete?.title || `ID: ${id}`,
-      description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
-    });
-    showToast('Property listing removed from platform.', 'info');
+      const toDelete = properties.find(p => p.id === id || p._id === id);
+      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
+
+      addAuditLog({
+        module: 'PROPERTY',
+        action: 'DELETE',
+        target: toDelete?.title || `ID: ${id}`,
+        description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
+      });
+      showToast('Property listing permanently removed from platform.', 'info');
+    } catch (err) {
+      console.warn('Backend deleteProperty notice:', err.message);
+      // If 404, it was already removed on backend
+      const toDelete = properties.find(p => p.id === id || p._id === id);
+      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
+      addAuditLog({
+        module: 'PROPERTY',
+        action: 'DELETE',
+        target: toDelete?.title || `ID: ${id}`,
+        description: `SuperAdmin deleted property listing: ${toDelete?.title || id}`
+      });
+      showToast('Property listing removed from platform.', 'info');
+    }
   };
 
   const addProperty = async (newProp) => {
@@ -658,7 +695,11 @@ export const SuperAdminProvider = ({ children }) => {
         ownerName: user?.name || 'Platform Director',
         createdAt: new Date().toISOString()
       };
-      setProperties(prev => [createdProp, ...prev]);
+      const nextProps = [createdProp, ...properties.filter(p => (p._id || p.id) !== (createdProp._id || createdProp.id))];
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
       addAuditLog({
         module: 'PROPERTY',
         action: 'CREATE',
@@ -678,7 +719,11 @@ export const SuperAdminProvider = ({ children }) => {
         ownerName: user?.name || 'Platform Director',
         createdAt: new Date().toISOString()
       };
-      setProperties(prev => [fallbackProp, ...prev]);
+      const nextProps = [fallbackProp, ...properties];
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
       showToast('Verified property created and published live!', 'success');
       return fallbackProp;
     }

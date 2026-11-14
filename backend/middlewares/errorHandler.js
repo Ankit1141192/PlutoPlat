@@ -1,3 +1,5 @@
+const { isOriginAllowed } = require('./domainSecurity');
+
 /**
  * Centralized Application Error Handler
  */
@@ -50,6 +52,12 @@ const errorHandler = (err, req, res, next) => {
       message,
       stack: err.stack,
     });
+  }
+
+  const rawOrigin = req.headers && req.headers['origin'];
+  if (rawOrigin && isOriginAllowed(rawOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', rawOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
 
   res.status(statusCode).json({

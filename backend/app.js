@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { enforceAllowedDomain, parseAllowedOrigins } = require('./middlewares/domainSecurity');
+const { enforceAllowedDomain, parseAllowedOrigins, isOriginAllowed } = require('./middlewares/domainSecurity');
 const { apiLimiter } = require('./middlewares/rateLimiter');
 const errorHandler = require('./middlewares/errorHandler');
 const v1Router = require('./routes/v1');
@@ -20,41 +20,17 @@ app.use(
   })
 );
 
-// 2. Strict CORS Configuration
+// 2. Strict CORS Configuration (Only plutoplot.in and its subdomains)
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl during local dev if not strict)
+      // Allow requests with no origin (e.g. server-to-server or curl tools when not in strict browser CORS)
       if (!origin) return callback(null, true);
-      const allowedOrigins = parseAllowedOrigins();
-      const originLower = origin.toLowerCase().replace(/\/$/, '');
 
-      // Allow all localhost / 127.0.0.1 variants during development
-      if (
-        originLower.includes('localhost') ||
-        originLower.includes('127.0.0.1') ||
-        process.env.ENFORCE_ORIGIN_CHECK !== 'true'
-      ) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
 
-      const isAllowed = allowedOrigins.some((allowed) => {
-        if (allowed === '*' || allowed === originLower) return true;
-        if (allowed.startsWith('*.')) {
-          const rootDomain = allowed.slice(2);
-          try {
-            const parsed = new URL(originLower);
-            return parsed.hostname.endsWith(rootDomain) || parsed.hostname === rootDomain;
-          } catch {
-            return false;
-          }
-        }
-        return false;
-      });
-
-      if (isAllowed) {
-        return callback(null, true);
-      }
       return callback(
         new Error(`Blocked by CORS: Origin '${origin}' is not authorized.`)
       );

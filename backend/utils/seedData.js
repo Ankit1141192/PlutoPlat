@@ -252,9 +252,11 @@ const INITIAL_TESTIMONIALS = [
 
 const seedInitialData = async () => {
   try {
+    let isFirstRun = false;
     // 1. Ensure SuperAdmin user exists
     let superAdmin = await User.findOne({ role: 'super_admin' });
     if (!superAdmin) {
+      isFirstRun = true;
       superAdmin = await User.create({
         name: 'Julian Beaumont',
         email: 'owner@plutoplat.com',
@@ -300,9 +302,9 @@ const seedInitialData = async () => {
       console.log('[Seed] Client account seeded: client@plutoplat.com / Password123!');
     }
 
-    // 4. Seed Properties if none exist
+    // 4. Seed Properties if none exist on very first platform setup
     const propertyCount = await Property.countDocuments();
-    if (propertyCount === 0) {
+    if (propertyCount === 0 && isFirstRun) {
       const docsToInsert = INITIAL_PROPERTIES.map(p => ({
         ...p,
         owner: superAdmin._id,

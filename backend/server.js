@@ -26,16 +26,14 @@ const startServer = async () => {
     // Auto seed initial dataset if empty
     await seedInitialData();
 
-    // Create HTTP Server & Bind Socket.IO
+    // Create HTTP Server
     server = http.createServer(app);
-    initSocket(server);
 
     server.listen(PORT, () => {
       console.log(`===============================================`);
-      console.log(` PlutoPlat API & Real-Time Socket Server Running on Port: ${PORT}`);
+      console.log(` PlutoPlat Platform API Server Running on Port: ${PORT}`);
       console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(` API Base URL: http://localhost:${PORT}/api/v1`);
-      console.log(` Socket.IO Server: http://localhost:${PORT}`);
       console.log(` Health Check: http://localhost:${PORT}/health`);
       console.log(`===============================================`);
     });

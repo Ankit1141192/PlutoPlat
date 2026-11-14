@@ -51,10 +51,10 @@ const DEFAULT_CORE_PAGES = [
     id: 'core-notif',
     title: 'Notification & Broadcast Center',
     category: 'Real-Time Communications',
-    description: 'Dispatch instant alerts, breaking off-market arrivals, and administrative notices to User, Admin, or Both panels via Socket.IO.',
+    description: 'Dispatch instant alerts, breaking off-market arrivals, and administrative notices to User, Admin, or Both panels.',
     path: '/notifications',
     icon: Bell,
-    badge: 'Socket.IO Engine',
+    badge: 'Live Sync Engine',
     badgeColor: 'bg-blue-500/10 text-blue-700 border border-blue-200',
     actionText: 'Broadcast Notice',
   },
@@ -202,7 +202,7 @@ const MoreHub = () => {
           <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 text-xs text-[#D9C49B]">
               <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Socket.IO Engine & MongoDB v3 API Online</span>
+              <span>Real-Time Sync Engine & MongoDB v3 API Online</span>
             </div>
             <div className="flex items-center gap-2.5">
               <button

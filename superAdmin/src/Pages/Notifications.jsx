@@ -178,7 +178,7 @@ const NotificationsPage = () => {
               Real-Time Notification Dispatcher
             </h1>
             <p className="text-sm text-[#A8A59B] mt-1 font-light">
-              Broadcast high-priority alerts via Socket.IO directly to User showroom, Admin agent desk, or both panels.
+              Broadcast high-priority alerts directly to User showroom, Admin agent desk, or both panels.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ const NotificationsPage = () => {
               </div>
               <div>
                 <h3 className="text-base font-semibold text-white">Dispatch New Broadcast</h3>
-                <p className="text-xs text-[#8E8B82]">Instant Socket.IO telemetry delivery</p>
+                <p className="text-xs text-[#8E8B82]">Instant platform notification delivery</p>
               </div>
             </div>
 
@@ -344,7 +344,7 @@ const NotificationsPage = () => {
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#B49A70] to-[#8E7448] text-[#121612] font-semibold text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#B49A70]/20 disabled:opacity-50 cursor-pointer"
               >
                 <Send size={16} />
-                {sending ? 'Broadcasting via Socket.IO...' : 'Dispatch Live Notification'}
+                {sending ? 'Broadcasting live notification...' : 'Dispatch Live Notification'}
               </button>
             </form>
           </div>

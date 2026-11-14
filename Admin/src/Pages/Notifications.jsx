@@ -47,7 +47,7 @@ const Notifications = () => {
     fetchNotifs();
   }, []);
 
-  // Sync real-time socket notifications
+  // Sync real-time notifications
   useEffect(() => {
     if (storeNotifs) {
       const mapped = storeNotifs.map((n) => ({

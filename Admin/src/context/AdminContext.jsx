@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { AdminApi } from '../services/Api';
 
 const AdminContext = createContext(null);
@@ -122,50 +121,77 @@ export const AdminProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [loading, setLoading] = useState(false);
+  const knownNotificationIds = useRef(new Set());
 
-  // Real-Time Socket.IO Integration for Admin & Agent Desks
+  // Universal Data Sync for Agent/Admin Desk (Replaces Socket.IO)
+  const syncAdminData = async (silent = true) => {
+    const token = sessionStorage.getItem('pluto_admin_token') || localStorage.getItem('pluto_admin_token');
+    if (!token) return;
+
+    // 1. Sync properties
+    try {
+      const res = await AdminApi.getMyProperties();
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        setProperties(res.data.properties);
+        try {
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+        } catch {}
+      }
+    } catch (err) {
+      if (!silent) console.warn('Admin properties sync notice:', err.message);
+    }
+
+    // 2. Sync notifications
+    try {
+      const res = await AdminApi.getNotifications();
+      if (res?.data?.notifications && Array.isArray(res.data.notifications)) {
+        const notifs = res.data.notifications;
+        notifs.forEach((n) => {
+          const nid = n._id || n.id;
+          if (nid && knownNotificationIds.current.size > 0 && !knownNotificationIds.current.has(nid)) {
+            showToast(`📢 ${n.title}`, 'info');
+          }
+          if (nid) knownNotificationIds.current.add(nid);
+        });
+        setNotifications(notifs);
+      }
+    } catch {}
+
+    // 3. Sync inquiries
+    try {
+      const res = await AdminApi.getMyEnquiries();
+      if (res?.data?.leads && Array.isArray(res.data.leads)) {
+        setLeads(res.data.leads);
+        try {
+          localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
+        } catch {}
+      }
+    } catch {}
+  };
+
+  // Heartbeat Polling & Window Focus Synchronization (Replaces Socket.IO)
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-    });
+    syncAdminData(false);
 
-    socket.on('connect', () => {
-      console.log('[Socket.IO] Admin connected to server:', socket.id);
-      socket.emit('register', {
-        role: 'admin',
-        userId: user?._id || user?.id,
-      });
-    });
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncAdminData(true);
+      }
+    };
 
-    socket.on('new_notification', (notif) => {
-      console.log('[Socket.IO] Admin received real-time notification:', notif);
-      setNotifications((prev) => [notif, ...prev.filter((n) => (n._id || n.id) !== (notif._id || notif.id))]);
-      showToast(`📢 ${notif.title}`, 'info');
-    });
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    socket.on('property_created', (prop) => {
-      setProperties((prev) => {
-        if (prev.some((p) => (p.id || p._id) === (prop.id || prop._id))) return prev;
-        return [prop, ...prev];
-      });
-    });
-
-    socket.on('property_updated', (prop) => {
-      setProperties((prev) =>
-        prev.map((p) => ((p.id || p._id) === (prop.id || prop._id) ? { ...p, ...prop } : p))
-      );
-    });
-
-    socket.on('property_deleted', ({ id, _id }) => {
-      const targetId = id || _id;
-      setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
-    });
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncAdminData(true);
+      }
+    }, 6000);
 
     return () => {
-      socket.disconnect();
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
     };
   }, [user]);
 
@@ -199,9 +225,9 @@ export const AdminProvider = ({ children }) => {
     }
   }, [leads]);
 
-  // Silently sync session on mount/refresh if token exists in sessionStorage
+  // Silently sync session on mount/refresh if token exists
   useEffect(() => {
-    const token = sessionStorage.getItem('pluto_admin_token');
+    const token = sessionStorage.getItem('pluto_admin_token') || localStorage.getItem('pluto_admin_token');
     if (token) {
       AdminApi.getMe()
         .then((res) => {
@@ -229,8 +255,11 @@ export const AdminProvider = ({ children }) => {
       // Sync live agent properties from MongoDB backend
       AdminApi.getMyProperties()
         .then((res) => {
-          if (res?.data?.properties && res.data.properties.length > 0) {
+          if (res?.data?.properties && Array.isArray(res.data.properties)) {
             setProperties(res.data.properties);
+            try {
+              localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+            } catch {}
           }
         })
         .catch(() => {});
@@ -238,8 +267,11 @@ export const AdminProvider = ({ children }) => {
       // Sync live inquiries/leads from MongoDB backend
       AdminApi.getMyEnquiries()
         .then((res) => {
-          if (res?.data?.leads && res.data.leads.length > 0) {
+          if (res?.data?.leads && Array.isArray(res.data.leads)) {
             setLeads(res.data.leads);
+            try {
+              localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
+            } catch {}
           }
         })
         .catch(() => {});
@@ -377,9 +409,21 @@ export const AdminProvider = ({ children }) => {
   const deleteProperty = async (id) => {
     try {
       await AdminApi.deleteProperty(id);
-    } catch (err) {}
-    setProperties(prev => prev.filter(p => p.id !== id && p._id !== id));
-    showToast('Property listing removed.', 'info');
+      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
+      showToast('Property listing removed from directory.', 'info');
+    } catch (err) {
+      console.warn('Admin deleteProperty notice:', err.message);
+      const nextProps = properties.filter(p => p.id !== id && p._id !== id);
+      setProperties(nextProps);
+      try {
+        localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+      } catch {}
+      showToast('Property listing removed.', 'info');
+    }
   };
 
   // Lead Actions

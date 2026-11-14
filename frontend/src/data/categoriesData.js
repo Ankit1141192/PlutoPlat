@@ -1,4 +1,15 @@
 export const CATEGORIES = [
+   {
+    id: 'plots',
+    name: 'Plots',
+    plural: 'Residential Plots & Acreage',
+    slug: 'plots',
+    type: 'Plots',
+    count: 37,
+    description: 'Premier shovel-ready land parcels, panoramic ridgelines, and private acreage in world-class enclaves.',
+    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+    tag: 'Bespoke Horizons'
+  },
   {
     id: 'homes',
     name: 'Homes',
@@ -32,15 +43,5 @@ export const CATEGORIES = [
     image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80',
     tag: 'Skyline Vistas'
   },
-  {
-    id: 'plots',
-    name: 'Plots',
-    plural: 'Residential Plots & Acreage',
-    slug: 'plots',
-    type: 'Plots',
-    count: 29,
-    description: 'Premier shovel-ready land parcels, panoramic ridgelines, and private acreage in world-class enclaves.',
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
-    tag: 'Bespoke Horizons'
-  }
+ 
 ];

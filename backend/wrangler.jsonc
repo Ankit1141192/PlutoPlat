@@ -11,10 +11,10 @@
   },
   "vars": {
     "NODE_ENV": "production",
-    "MONGO_URI": "mongodb+srv://ankit2914978_db_user:qXdyWvZPWB3Ac45R@cluster0.b8xd9bf.mongodb.net/plutoplat?retryWrites=true&w=majority",
+    "MONGO_URI": "mongodb://ankit2914978_db_user:qXdyWvZPWB3Ac45R@ac-bmca6rw-shard-00-00.b8xd9bf.mongodb.net:27017,ac-bmca6rw-shard-00-01.b8xd9bf.mongodb.net:27017,ac-bmca6rw-shard-00-02.b8xd9bf.mongodb.net:27017/plutoplat?ssl=true&replicaSet=atlas-5yewnm-shard-0&authSource=admin&retryWrites=true&w=majority",
     "JWT_SECRET": "PlutoPaltSecretKeySuperSecure2026",
-    "ALLOWED_ORIGIN": "http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175,https://my-node-backend.ankit2914978.workers.dev,*.vercel.app,*.plutoplat.com,https://plutoplat.com,https://admin.plutoplat.com,https://superadmin.plutoplat.com,https://www.plutoplot.in,https://admin.plutoplot.in,https://superadmin.plutoplot.in",
-    "ENFORCE_ORIGIN_CHECK": "false",
+    "ALLOWED_ORIGIN": "https://www.plutoplot.in,https://admin.plutoplot.in,https://superadmin.plutoplot.in,https://plutoplot.in,*.plutoplot.in,*.plutoplat.in,*.plutoplat.com",
+    "ENFORCE_ORIGIN_CHECK": "true",
     "JWT_EXPIRES_IN": "7d",
     "MAX_LOGIN_ATTEMPTS": "5",
     "LOCK_TIME_MINUTES": "30",

@@ -294,7 +294,7 @@ const Notifications = () => {
     return () => { active = false; };
   }, []);
 
-  // Sync real-time socket notifications from store
+  // Sync real-time notifications from store
   useEffect(() => {
     if (storeNotifs) {
       setNotifications(storeNotifs.map(mapApiNotification));

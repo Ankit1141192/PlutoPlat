@@ -504,7 +504,20 @@ const updateProperty = async (req, res, next) => {
  */
 const deleteProperty = async (req, res, next) => {
   try {
-    const property = await Property.findById(req.params.id);
+    const targetId = req.params.id;
+    const mongoose = require('mongoose');
+    const User = require('../models/User');
+
+    let property = null;
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      property = await Property.findById(targetId);
+    }
+    if (!property) {
+      property = await Property.findOne({
+        $or: [{ _id: targetId }, { slug: targetId }, { title: targetId }],
+      });
+    }
+
     if (!property) {
       return ApiResponse.error(res, 'Property not found.', 404);
     }
@@ -516,10 +529,16 @@ const deleteProperty = async (req, res, next) => {
       return ApiResponse.error(res, 'Forbidden: You cannot delete this listing.', 403);
     }
 
-    await Property.findByIdAndDelete(req.params.id);
+    await Property.findByIdAndDelete(property._id);
+
+    // Pull from all users' saved properties
+    await User.updateMany(
+      { savedProperties: property._id },
+      { $pull: { savedProperties: property._id } }
+    ).catch(() => {});
 
     try {
-      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+      emitPropertyEvent('property_deleted', { id: property._id, _id: property._id });
     } catch (e) {}
 
     await logAudit({
@@ -533,7 +552,9 @@ const deleteProperty = async (req, res, next) => {
       req,
     });
 
-    return ApiResponse.success(res, 'Property deleted successfully.');
+    return ApiResponse.success(res, 'Property deleted successfully.', {
+      deletedId: property._id,
+    });
   } catch (error) {
     next(error);
   }

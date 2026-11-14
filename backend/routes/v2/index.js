@@ -168,20 +168,43 @@ router.put('/properties/:id', async (req, res, next) => {
 // Agent deletes listing
 router.delete('/properties/:id', async (req, res, next) => {
   try {
-    const filter = (req.user.role === 'admin' || req.user.role === 'super_admin')
-      ? { _id: req.params.id }
-      : { _id: req.params.id, owner: req.user._id };
+    const targetId = req.params.id;
+    const isElevated = req.user.role === 'admin' || req.user.role === 'super_admin';
+    const ownerFilter = isElevated ? {} : { owner: req.user._id };
 
-    const property = await Property.findOneAndDelete(filter);
+    let property = null;
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      property = await Property.findOneAndDelete({ _id: targetId, ...ownerFilter });
+    }
+
+    if (!property) {
+      property = await Property.findOneAndDelete({
+        $or: [
+          { _id: targetId },
+          { slug: targetId },
+          { title: targetId },
+        ],
+        ...ownerFilter,
+      });
+    }
+
     if (!property) {
       return ApiResponse.error(res, 'Property not found or unauthorized.', 404);
     }
 
+    // Pull from all users' saved properties
+    await User.updateMany(
+      { savedProperties: property._id },
+      { $pull: { savedProperties: property._id } }
+    ).catch(() => {});
+
     try {
-      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+      emitPropertyEvent('property_deleted', { id: targetId, _id: targetId });
     } catch (e) {}
 
-    return ApiResponse.success(res, 'Property listing permanently removed.');
+    return ApiResponse.success(res, 'Property listing permanently removed.', {
+      deletedId: property._id,
+    });
   } catch (error) {
     next(error);
   }

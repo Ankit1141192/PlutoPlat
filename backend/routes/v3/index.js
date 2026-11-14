@@ -139,20 +139,61 @@ router.put('/properties/:id', async (req, res, next) => {
   }
 });
 
-// SuperAdmin deletes any property
+// SuperAdmin deletes any property permanently from platform & all user panels
 router.delete('/properties/:id', async (req, res, next) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return ApiResponse.error(res, 'Property not found.', 404);
+    const targetId = req.params.id;
+    let property = null;
+
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      property = await Property.findByIdAndDelete(targetId);
     }
-    const property = await Property.findByIdAndDelete(req.params.id);
-    if (!property) return ApiResponse.error(res, 'Property not found.', 404);
+
+    if (!property) {
+      property = await Property.findOneAndDelete({
+        $or: [
+          { _id: targetId },
+          { slug: targetId },
+          { title: targetId },
+        ],
+      });
+    }
+
+    if (property) {
+      // Remove from all users' saved properties / favorites
+      await User.updateMany(
+        { savedProperties: property._id },
+        { $pull: { savedProperties: property._id } }
+      ).catch(() => {});
+
+      await logAudit({
+        actor: req.user._id,
+        actorRole: 'super_admin',
+        action: 'DELETE',
+        module: 'PROPERTY',
+        targetId: property._id,
+        targetType: 'Property',
+        description: `SuperAdmin deleted property: ${property.title}`,
+        req,
+      }).catch(() => {});
+
+      // Notify platform users that listing has been removed
+      await sendNotification({
+        recipientRole: 'all',
+        title: 'Listing Removed',
+        message: `Property listing "${property.title}" has been removed from PlutoPlat.`,
+        type: 'property',
+        category: 'Listing Updates',
+      }).catch(() => {});
+    }
 
     try {
-      emitPropertyEvent('property_deleted', { id: req.params.id, _id: req.params.id });
+      emitPropertyEvent('property_deleted', { id: targetId, _id: targetId });
     } catch (e) {}
 
-    return ApiResponse.success(res, 'Property listing permanently removed.');
+    return ApiResponse.success(res, 'Property listing permanently removed from all platform views.', {
+      deletedId: property ? property._id : targetId,
+    });
   } catch (error) {
     next(error);
   }

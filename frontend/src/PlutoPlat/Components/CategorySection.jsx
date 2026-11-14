@@ -32,15 +32,15 @@ const CategorySection = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
         <div>
           <span className="text-xs font-semibold text-[#B49A70] uppercase tracking-widest block mb-2">
-            Curated Portfolios
+            Papular Categories
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight">
-            Explore by Architectural Category
+            Explore by Category
           </h2>
         </div>
-        <p className="text-[#6E6D66] max-w-md text-sm mt-4 md:mt-0 font-light leading-relaxed">
+        {/* <p className="text-[#6E6D66] max-w-md text-sm mt-4 md:mt-0 font-light leading-relaxed">
           From historic waterfront chateaus to sky-high penthouses and untouched alpine acreage, select your preferred way of living.
-        </p>
+        </p> */}
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -67,7 +67,7 @@ const CategorySection = () => {
             {/* Top Pill */}
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
               <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-[#B49A70] bg-[#1C201C]/80 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xs border border-[#B49A70]/30">
-                {cat.tag}
+                {cat.type}
               </span>
             </div>
 

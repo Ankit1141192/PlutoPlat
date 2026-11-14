@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { io } from 'socket.io-client';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { PROPERTIES } from '../data/propertiesData';
 import { CATEGORIES } from '../data/categoriesData';
 import { AGENTS, TESTIMONIALS, STATS, FAQS } from '../data/testimonialsData';
@@ -466,120 +465,85 @@ export const PropertyProvider = ({ children }) => {
     }
   }, [notifications]);
 
-  // Real-Time Socket.IO Integration for Buyer/User Portal
+  // Reference to track known notification IDs to alert on new ones
+  const knownNotificationIds = useRef(new Set());
+
+  // Universal Sync Method: pulls latest properties, notifications, testimonials from MongoDB backend
+  const syncPlatformData = async (silent = true) => {
+    // 1. Sync properties
+    try {
+      const res = await Api.getProperties();
+      if (res?.data?.properties && Array.isArray(res.data.properties)) {
+        setProperties(res.data.properties);
+        try {
+          localStorage.setItem('plutoplat_properties_db', JSON.stringify(res.data.properties));
+        } catch {}
+      }
+    } catch (err) {
+      if (!silent) console.warn('Properties sync notice:', err.message);
+    }
+
+    // 2. Sync notifications
+    try {
+      const res = await Api.getNotifications();
+      if (res?.data?.notifications && Array.isArray(res.data.notifications)) {
+        const notifs = res.data.notifications;
+        // Check for any newly arrived notifications
+        notifs.forEach((n) => {
+          const nid = n._id || n.id;
+          if (nid && knownNotificationIds.current.size > 0 && !knownNotificationIds.current.has(nid) && (n.isUnread !== false && !n.read)) {
+            showToast(`📢 ${n.title}`, 'info');
+          }
+          if (nid) knownNotificationIds.current.add(nid);
+        });
+        setNotifications(notifs);
+        try {
+          localStorage.setItem('plutoplat_notifications_db', JSON.stringify(notifs));
+        } catch {}
+      }
+    } catch {}
+
+    // 3. Sync testimonials
+    try {
+      const res = await Api.getTestimonials();
+      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+        setTestimonials(res.data);
+        try {
+          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(res.data));
+        } catch {}
+      }
+    } catch {}
+  };
+
+  // Periodic heartbeat polling & window focus synchronization (Replaces Socket.IO)
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-    });
+    syncPlatformData(false);
 
-    socket.on('connect', () => {
-      console.log('[Socket.IO] Frontend connected to server:', socket.id);
-      socket.emit('register', {
-        role: user?.role || 'user',
-        userId: user?.id || user?._id || null,
-      });
-    });
+    // Sync on window focus / document visibility
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncPlatformData(true);
+      }
+    };
+    window.addEventListener('focus', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    socket.on('new_notification', (notif) => {
-      console.log('[Socket.IO] Frontend received real-time notification:', notif);
-      setNotifications((prev) => [notif, ...prev.filter((n) => (n._id || n.id) !== (notif._id || notif.id))]);
-      showToast(`📢 ${notif.title}`, 'info');
-    });
-
-    socket.on('property_created', (prop) => {
-      console.log('[Socket.IO] Real-time property published:', prop);
-      setProperties((prev) => {
-        if (prev.some((p) => (p.id || p._id) === (prop.id || prop._id))) return prev;
-        return [prop, ...prev];
-      });
-      showToast(`✦ New Luxury Estate Listed: ${prop.title}`, 'success');
-    });
-
-    socket.on('property_updated', (prop) => {
-      setProperties((prev) =>
-        prev.map((p) => ((p.id || p._id) === (prop.id || prop._id) ? { ...p, ...prop } : p))
-      );
-    });
-
-    socket.on('property_deleted', ({ id, _id }) => {
-      const targetId = id || _id;
-      setProperties((prev) => prev.filter((p) => p.id !== targetId && p._id !== targetId));
-    });
-
-    socket.on('testimonial_created', (item) => {
-      console.log('[Socket.IO] Real-time testimonial received:', item);
-      setTestimonials((prev) => {
-        if (prev.some((t) => (t.id || t._id) === (item.id || item._id))) return prev;
-        const next = [item, ...prev];
-        try {
-          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    });
-
-    socket.on('testimonial_updated', (item) => {
-      setTestimonials((prev) => {
-        const next = prev.map((t) => ((t.id || t._id) === (item.id || item._id) ? { ...t, ...item } : t));
-        try {
-          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    });
-
-    socket.on('testimonial_deleted', ({ id, _id }) => {
-      const targetId = id || _id;
-      setTestimonials((prev) => {
-        const next = prev.filter((t) => t.id !== targetId && t._id !== targetId);
-        try {
-          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    });
+    // Auto-poll every 6 seconds to keep showroom in sync with platform updates
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncPlatformData(true);
+      }
+    }, 6000);
 
     return () => {
-      socket.disconnect();
+      window.removeEventListener('focus', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
     };
-  }, [user]);
+  }, []);
 
-  // Sync session on mount/refresh if token exists & fetch backend properties / testimonials / notifications
+  // Sync user session on mount/refresh if token exists
   useEffect(() => {
-    // 1. Fetch properties from backend MongoDB
-    Api.getProperties()
-      .then((res) => {
-        if (res?.data?.properties && res.data.properties.length > 0) {
-          setProperties(res.data.properties);
-        }
-      })
-      .catch((err) => console.warn('Properties load notice (local dataset active):', err.message));
-
-    // 2. Fetch testimonials from backend MongoDB
-    Api.getTestimonials()
-      .then((res) => {
-        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-          setTestimonials(res.data);
-          try {
-            localStorage.setItem('pluto_testimonials_cache', JSON.stringify(res.data));
-          } catch {}
-        }
-      })
-      .catch((err) => console.warn('Testimonials load notice (local dataset active):', err.message));
-
-    // 3. Fetch notifications from backend MongoDB
-    Api.getNotifications()
-      .then((res) => {
-        if (res?.data?.notifications) {
-          setNotifications(res.data.notifications);
-        }
-      })
-      .catch(() => {});
-
-    // 4. User session & saved properties sync
     const token = localStorage.getItem('pluto_token');
     if (token) {
       Api.getMe()
@@ -793,9 +757,18 @@ export const PropertyProvider = ({ children }) => {
     showToast('Property details updated successfully.', 'success');
   };
 
-  const deleteProperty = (id) => {
-    const toDelete = properties.find(p => p.id === id);
-    setProperties(prev => prev.filter(p => p.id !== id));
+  const deleteProperty = async (id) => {
+    try {
+      await Api.deleteProperty(id);
+    } catch (e) {
+      console.warn('API deleteProperty warning:', e.message);
+    }
+    const toDelete = properties.find(p => p.id === id || p._id === id);
+    const nextProps = properties.filter(p => p.id !== id && p._id !== id);
+    setProperties(nextProps);
+    try {
+      localStorage.setItem('plutoplat_properties_db', JSON.stringify(nextProps));
+    } catch {}
 
     addAuditLog({
       actorName: user?.name || 'Admin',
