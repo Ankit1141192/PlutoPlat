@@ -55,7 +55,7 @@ const TestimonialsSection = () => {
   };
 
   return (
-    <section className="relative overflow-hidden border-t border-[#DDD8CE] bg-[#F1EEE6] py-16 sm:py-24 lg:py-28">
+    <section className="relative overflow-hidden border-t border-[#DDD8CE] bg-[#F1EEE6] py-8 sm:py-16 lg:py-24">
       {/* soft gold glow */}
       <div
         aria-hidden="true"
@@ -66,42 +66,42 @@ const TestimonialsSection = () => {
         }}
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="relative mx-auto max-w-7xl px-3.5 sm:px-6">
         {/* Heading */}
-        <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-14">
-          <p className="mb-3 text-sm font-medium text-[#9A7F52]">Client voices</p>
-          <h2 className="font-serif text-[30px] font-normal leading-tight text-[#1C201C] sm:text-4xl md:text-5xl">
+        <div className="mx-auto mb-5 max-w-2xl text-center sm:mb-10">
+          <p className="mb-1.5 text-xs sm:text-sm font-medium text-[#9A7F52]">Client voices</p>
+          <h2 className="font-serif text-2xl font-normal leading-tight text-[#1C201C] sm:text-4xl md:text-5xl">
             Trusted by buyers who expect the best.
           </h2>
-          <p className="mt-4 text-[15px] font-light leading-relaxed text-[#6E6D66] sm:text-base">
+          <p className="mt-2 text-xs sm:text-base font-light leading-relaxed text-[#6E6D66]">
             Reflections from collectors, developers and families who chose PlutoPlat for their most important
             acquisitions.
           </p>
 
           {/* Rating summary & Review CTA */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <div className="inline-flex items-center gap-3 rounded-full border border-[#E2DCCE] bg-white px-5 py-2.5 shadow-sm">
+          <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
+            <div className="inline-flex items-center gap-2 sm:gap-3 rounded-full border border-[#E2DCCE] bg-white px-3.5 py-1.5 sm:px-5 sm:py-2.5 shadow-sm">
               <span className="flex text-[#B49A70]">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={15} fill={i < Math.round(average) ? 'currentColor' : 'none'} />
+                  <Star key={i} size={13} className="sm:w-[15px] sm:h-[15px]" fill={i < Math.round(average) ? 'currentColor' : 'none'} />
                 ))}
               </span>
-              <span className="text-sm font-semibold text-[#1C201C]">{average.toFixed(1)}</span>
-              <span className="text-sm text-[#77766E]">from {testimonials.length} reviews</span>
+              <span className="text-xs sm:text-sm font-semibold text-[#1C201C]">{average.toFixed(1)}</span>
+              <span className="text-xs sm:text-sm text-[#77766E]">from {testimonials.length} reviews</span>
             </div>
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1C201C] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-sm transition hover:bg-black active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#1C201C] px-3.5 py-1.5 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white shadow-sm transition hover:bg-black active:scale-95 cursor-pointer"
             >
-              <Plus size={14} className="text-[#B49A70]" />
+              <Plus size={13} className="text-[#B49A70] sm:w-[14px] sm:h-[14px]" />
               <span>Share Experience</span>
             </button>
           </div>
         </div>
 
         {/* Cards: show only top 3 testimonials */}
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:gap-8 [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-3.5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3.5 pb-3 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:gap-8 [&::-webkit-scrollbar]:hidden">
           {displayedTestimonials.map((t, idx) => {
             const author = t.client || t.name || 'Private Client';
             const body = t.content || t.message || '';
@@ -116,7 +116,7 @@ const TestimonialsSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: Math.min(idx, 3) * 0.12 }}
-                className="group relative flex w-[86%] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-3xl border border-[#E4DFD4] bg-white p-6 shadow-[0_20px_50px_-30px_rgba(28,32,28,0.35)] transition-all duration-300 hover:-translate-y-1 hover:border-[#B49A70]/60 hover:shadow-[0_30px_60px_-25px_rgba(28,32,28,0.4)] sm:w-[60%] sm:p-8 md:w-auto"
+                className="group relative flex w-[86%] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border border-[#E4DFD4] bg-white p-4 sm:p-6 md:p-8 shadow-[0_15px_40px_-25px_rgba(28,32,28,0.25)] transition-all duration-300 hover:-translate-y-1 hover:border-[#B49A70]/60 hover:shadow-[0_25px_50px_-20px_rgba(28,32,28,0.35)] sm:w-[60%] md:w-auto"
               >
                 {/* gold top accent */}
                 <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#C9B287] via-[#B49A70] to-transparent" />

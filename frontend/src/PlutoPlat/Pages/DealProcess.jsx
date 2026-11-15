@@ -13,20 +13,20 @@ const DealProcess = () => {
   const activeDeal = deals.find(d => d.id === selectedDealId) || deals[0];
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         
         {/* Header Row */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-8 mb-8 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-4 sm:pb-8 mb-4 sm:mb-8 gap-3 sm:gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2">
-              <ShieldCheck size={14} />
+            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-1 sm:mb-2">
+              <ShieldCheck size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span>Escrow & Transaction Protocol</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal">
+            <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight">
               Active Deal Process Tracker
             </h1>
-            <p className="text-xs sm:text-sm text-[#6E6D66] mt-2 max-w-2xl font-light leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#6E6D66] mt-1 sm:mt-2 max-w-2xl font-light leading-relaxed">
               Transparent 7-stage acquisition ledger tracking legal due diligence, title deeds, escrow funds, and registry handovers.
             </p>
           </div>

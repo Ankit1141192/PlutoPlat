@@ -27,6 +27,15 @@ const PropertyDetail = () => {
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
 
   useEffect(() => {
+    setActiveImageIndex(0);
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  }, [id]);
+
+  useEffect(() => {
     if (!getPropertyById(id) && id) {
       Api.getPropertyById(id)
         .then((res) => {
@@ -76,13 +85,13 @@ const PropertyDetail = () => {
     .slice(0, 3);
 
   return (
-    <div className="pt-28 pb-24 px-6 max-w-7xl mx-auto min-h-screen">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 px-3.5 sm:px-6 max-w-7xl mx-auto min-h-screen">
       {/* Top Navigation Row */}
       <div className="flex items-center justify-between mb-6 text-xs text-[#6E6D66]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (window.history.length > 1) {
+              if (window.history.state && window.history.state.idx > 0) {
                 navigate(-1);
               } else {
                 navigate('/properties');
@@ -91,14 +100,14 @@ const PropertyDetail = () => {
             className="inline-flex items-center gap-1.5 hover:text-[#1C201C] transition-colors cursor-pointer font-medium"
           >
             <ArrowLeft size={15} />
-            <span>Back to Archive</span>
+            <span>Back</span>
           </button>
           <span className="text-[#DDD8CE]">|</span>
           <Link
             to="/properties"
             className="hover:text-[#1C201C] transition-colors font-medium hidden sm:inline"
           >
-            All Properties
+            All Properties Archive
           </Link>
         </div>
 
@@ -127,25 +136,25 @@ const PropertyDetail = () => {
       </div>
 
       {/* Main Architectural Gallery */}
-      <div className="mb-12">
-        <div className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden rounded-xs bg-[#EAE6DE] shadow-md mb-3">
+      <div className="mb-6 sm:mb-10">
+        <div className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden rounded-xl sm:rounded-xs bg-[#EAE6DE] shadow-md mb-2.5 sm:mb-3">
           <img
             src={galleryImages[activeImageIndex]}
             alt={`${property.title} view ${activeImageIndex + 1}`}
             className="w-full h-full object-cover transition-all duration-700"
           />
-          <div className="absolute bottom-4 left-4 bg-[#1C201C]/80 backdrop-blur-md text-white text-[11px] uppercase tracking-widest px-3 py-1 rounded-xs">
+          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 bg-[#1C201C]/80 backdrop-blur-md text-white text-[10px] sm:text-[11px] uppercase tracking-widest px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-sm">
             Image {activeImageIndex + 1} of {galleryImages.length}
           </div>
         </div>
 
         {/* Thumbnails Row */}
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-thin">
           {galleryImages.map((img, idx) => (
             <button
               key={idx}
               onClick={() => setActiveImageIndex(idx)}
-              className={`relative w-28 h-18 sm:w-32 sm:h-20 shrink-0 rounded-xs overflow-hidden border-2 transition-all cursor-pointer ${
+              className={`relative w-20 h-14 sm:w-32 sm:h-20 shrink-0 rounded-lg sm:rounded-xs overflow-hidden border-2 transition-all cursor-pointer ${
                 activeImageIndex === idx
                   ? 'border-[#B49A70] scale-95 opacity-100 shadow-sm'
                   : 'border-transparent opacity-60 hover:opacity-100'
@@ -158,26 +167,26 @@ const PropertyDetail = () => {
       </div>
 
       {/* Two Column Layout: Main Details & Sticky Agent Concierge Card */}
-      <div className="flex flex-col lg:flex-row gap-12">
+      <div className="flex flex-col lg:flex-row gap-5 sm:gap-10">
         {/* Left: Main Property Dossier */}
-        <div className="lg:w-2/3 space-y-12">
+        <div className="lg:w-2/3 space-y-6 sm:space-y-10">
           {/* Header & Title */}
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="bg-[#1C201C] text-[#E8D9BF] text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-xs">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+              <span className="bg-[#1C201C] text-[#E8D9BF] text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-sm">
                 {property.type}
               </span>
-              <span className="bg-[#EFECE4] text-[#1C201C] text-[10px] font-semibold uppercase tracking-widest px-2.5 py-1 rounded-xs border border-[#DDD8CE]">
+              <span className="bg-[#EFECE4] text-[#1C201C] text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-sm border border-[#DDD8CE]">
                 For {property.purpose}
               </span>
               {property.verified && (
-                <span className="text-[#287A50] text-xs font-semibold flex items-center gap-1 ml-2">
-                  <ShieldCheck size={14} /> Title & Deed Verified
+                <span className="text-[#287A50] text-[11px] sm:text-xs font-semibold flex items-center gap-1 ml-1 sm:ml-2">
+                  <ShieldCheck size={13} className="sm:w-[14px] sm:h-[14px]" /> Title & Deed Verified
                 </span>
               )}
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight mb-2">
+            <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight mb-1.5 sm:mb-2">
               {property.title}
             </h1>
             <p className="text-xs sm:text-sm text-[#B49A70] uppercase tracking-wider font-medium mb-3">
@@ -296,7 +305,7 @@ const PropertyDetail = () => {
 
               <div className="rounded-2xl overflow-hidden border border-[#E5E0D8] shadow-md">
                 <PlutoMapExplorer
-                  selectedPropertyId={property.id}
+                  selectedPropertyId={propId}
                   singlePropertyMode={true}
                   height="360px"
                   showControls={false}

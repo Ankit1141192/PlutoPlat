@@ -122,7 +122,7 @@ const Testimonials = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2] pt-28 pb-24 text-[#1C201C]">
+    <div className="min-h-screen bg-[#F8F6F2] pt-20 sm:pt-28 pb-10 sm:pb-24 text-[#1C201C]">
       {/* Background soft gold ambience */}
       <div
         aria-hidden="true"
@@ -133,26 +133,26 @@ const Testimonials = () => {
         }}
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8">
         {/* Header Section */}
-        <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#DDD8CE] bg-white px-4 py-1.5 shadow-xs">
-            <Sparkles size={14} className="text-[#B49A70]" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#B49A70]">
+        <div className="mx-auto mb-5 sm:mb-12 max-w-3xl text-center">
+          <div className="mb-2 sm:mb-3 inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#DDD8CE] bg-white px-3 py-1 sm:px-4 sm:py-1.5 shadow-2xs">
+            <Sparkles size={12} className="text-[#B49A70] sm:w-[14px] sm:h-[14px]" />
+            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-[#B49A70]">
               Verified Client Voices
             </span>
           </div>
 
-          <h1 className="font-serif text-3xl font-normal leading-tight text-[#1C201C] sm:text-5xl">
+          <h1 className="font-serif text-2xl font-normal leading-tight text-[#1C201C] sm:text-5xl">
             Client Testimonials & Experiences
           </h1>
 
-          <p className="mt-4 text-sm font-light leading-relaxed text-[#6E6D66] sm:text-base">
+          <p className="mt-2 sm:mt-4 text-xs font-light leading-relaxed text-[#6E6D66] sm:text-base">
             Read firsthand accounts from collectors, developers, and private families who acquired their trophy residences and commercial parcels with PlutoPlat.
           </p>
 
           {/* Rating Summary & Write Review Button */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-4 sm:mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
             <div className="inline-flex items-center gap-3 rounded-full border border-[#DDD8CE] bg-white px-6 py-3 shadow-xs">
               <span className="flex text-[#B49A70]">
                 {[...Array(5)].map((_, i) => (

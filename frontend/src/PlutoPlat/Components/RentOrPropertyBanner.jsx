@@ -6,8 +6,8 @@ const RentOrPropertyBanner = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 my-6 sm:my-10">
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#005A3E] via-[#026646] to-[#015237] shadow-xl border border-[#0A7B57]/30 text-white p-4 sm:p-6 lg:p-7 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6">
+    <div className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 my-3 sm:my-8">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-3xl bg-gradient-to-r from-[#005A3E] via-[#026646] to-[#015237] shadow-lg sm:shadow-xl border border-[#0A7B57]/30 text-white p-3.5 sm:p-6 lg:p-7 flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-6">
         
         {/* Left Side: Buildings Vector Illustration matching user design */}
         <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto">

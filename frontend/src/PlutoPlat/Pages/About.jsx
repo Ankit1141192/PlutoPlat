@@ -8,25 +8,25 @@ const About = () => {
   const { agents, stats } = usePropertyStore();
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2]">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2]">
       {/* Hero Headline */}
-      <section className="px-6 max-w-7xl mx-auto mb-20">
+      <section className="px-3.5 sm:px-6 max-w-7xl mx-auto mb-6 sm:mb-14">
         <div className="max-w-3xl">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#B49A70] block mb-3">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-[#B49A70] block mb-1.5 sm:mb-3">
             Our Heritage & Philosophy
           </span>
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-[#1C201C] font-normal leading-[1.15] mb-6">
+          <h1 className="font-serif text-2xl sm:text-5xl md:text-6xl text-[#1C201C] font-normal leading-[1.15] mb-3 sm:mb-6">
             We Curate Not Just Buildings, But <span className="italic text-[#B49A70]">Enduring Legacies</span>.
           </h1>
-          <p className="text-sm sm:text-base text-[#6E6D66] font-light leading-relaxed">
+          <p className="text-xs sm:text-base text-[#6E6D66] font-light leading-relaxed">
             Founded with an uncompromising belief that exceptional architecture is a transformative art form, PlutoPlat connects discerning individuals with the finest residences across the world’s most sought-after enclaves.
           </p>
         </div>
       </section>
 
       {/* Dual Image & Mission Section */}
-      <section className="px-6 max-w-7xl mx-auto mb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <section className="px-3.5 sm:px-6 max-w-7xl mx-auto mb-10 sm:mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12 items-center">
           <div className="lg:col-span-7 relative">
             <img
               src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85"

@@ -6,10 +6,14 @@ import { MapPin, ArrowUpRight, X, Hash, Eye, EyeOff, ChevronDown, ChevronUp } fr
 import { usePropertyStore } from '../../context/PropertyContext';
 import { WhatsAppIcon } from './RegisterInterestModal';
 
-// ─── MapTiler key ────────────────────────────────────────────────────────────
-// Tip: in the MapTiler dashboard, add your site domain (and localhost) under
-// "Allowed HTTP origins", otherwise tiles return 403 and the map stays blank.
-const MAPTILER_KEY = 'wbyPv8NSVlYAesaoNStK';
+// ─── Tile Providers ─────────────────────────────────────────────────────────
+// CARTO Voyager is zero-key, origin-free, and works reliably everywhere
+// (including localhost, Vercel deployments (*.vercel.app), and custom domains).
+const PRIMARY_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const PRIMARY_TILE_ATTR =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const FALLBACK_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const FALLBACK_TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 // ─── Suppress Leaflet's default icon ─────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -224,52 +228,68 @@ const PlutoMapExplorer = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
+    // Safety: ensure container does not retain a stale Leaflet instance
+    if (mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.stop();
+        mapInstanceRef.current.off();
+        mapInstanceRef.current.remove();
+      } catch (e) {}
+      mapInstanceRef.current = null;
+    }
+    if (mapContainerRef.current._leaflet_id) {
+      mapContainerRef.current._leaflet_id = null;
+    }
+
     let center = [28.5, -20.0];
     let zoom = 3;
     if (singlePropertyMode && selectedPropertyId) {
       const target = properties.find((p) => String(p.id || p._id) === String(selectedPropertyId));
       const lat = Number(target?.latitude ?? target?.coordinates?.lat ?? target?.coordinates?.latitude);
       const lng = Number(target?.longitude ?? target?.langitude ?? target?.coordinates?.lng ?? target?.coordinates?.longitude);
-      if (lat && lng) {
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
         center = [lat, lng];
         zoom = 14;
       }
     }
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-      zoomControl: false,
-      scrollWheelZoom: !singlePropertyMode,
+    let map;
+    try {
+      map = L.map(mapContainerRef.current, {
+        center,
+        zoom,
+        zoomControl: false,
+        scrollWheelZoom: !singlePropertyMode,
+      });
+    } catch (err) {
+      console.warn('Leaflet map creation notice:', err);
+      return;
+    }
+
+    // Primary: CARTO Voyager (Clean luxury styling, 100% free, NO API key required, works universally on localhost & Vercel)
+    const baseTileLayer = L.tileLayer(PRIMARY_TILE_URL, {
+      attribution: PRIMARY_TILE_ATTR,
+      subdomains: 'abcd',
+      maxZoom: 20,
+      tileSize: 256,
     });
 
-    // Primary: MapTiler. Fallback: CARTO Voyager (no key needed).
-    const mapTiler = L.tileLayer(
-      `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
-      {
-        attribution:
-          '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 20,
-        tileSize: 256,
-      }
-    );
-
-    let tileErrors = 0;
     let usingFallback = false;
-    mapTiler.on('tileerror', () => {
-      tileErrors += 1;
-      if (tileErrors >= 3 && !usingFallback) {
+    baseTileLayer.on('tileerror', () => {
+      if (!usingFallback && mapInstanceRef.current) {
         usingFallback = true;
-        map.removeLayer(mapTiler);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 20,
-        }).addTo(map);
+        try {
+          map.removeLayer(baseTileLayer);
+          L.tileLayer(FALLBACK_TILE_URL, {
+            attribution: FALLBACK_TILE_ATTR,
+            maxZoom: 19,
+          }).addTo(map);
+        } catch (e) {
+          console.warn('Fallback tile swap error:', e);
+        }
       }
     });
-    mapTiler.addTo(map);
+    baseTileLayer.addTo(map);
 
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
@@ -286,20 +306,27 @@ const PlutoMapExplorer = ({
 
     // Popup buttons: SPA navigation (no full page reload) + close button
     map.on('popupopen', (e) => {
-      const el = e.popup.getElement();
+      const el = e.popup?.getElement();
       if (!el) return;
       const nav = el.querySelector('[data-pp-nav]');
       const close = el.querySelector('[data-pp-close]');
       if (nav) {
         nav.addEventListener('click', (ev) => {
           ev.preventDefault();
-          navigateRef.current(nav.getAttribute('data-pp-nav'));
+          const targetUrl = nav.getAttribute('data-pp-nav');
+          if (targetUrl) {
+            navigateRef.current(targetUrl);
+          }
         });
       }
       if (close) {
         close.addEventListener('click', (ev) => {
           ev.preventDefault();
-          map.closePopup();
+          try {
+            map.closePopup();
+          } catch (e) {
+            // ignore
+          }
         });
       }
     });
@@ -307,16 +334,24 @@ const PlutoMapExplorer = ({
     mapInstanceRef.current = map;
 
     // Make sure Leaflet measures the container correctly after layout/animations
-    const invalidate = () => map.invalidateSize();
+    const invalidate = () => {
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
     const timers = [100, 350, 800, 1500].map((ms) => setTimeout(invalidate, ms));
 
     let ro = null;
-    if (typeof ResizeObserver !== 'undefined') {
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
       ro = new ResizeObserver(invalidate);
       ro.observe(mapContainerRef.current);
     }
     let io = null;
-    if (typeof IntersectionObserver !== 'undefined') {
+    if (typeof IntersectionObserver !== 'undefined' && mapContainerRef.current) {
       io = new IntersectionObserver((entries) => {
         if (entries[0]?.isIntersecting) invalidate();
       });
@@ -325,14 +360,30 @@ const PlutoMapExplorer = ({
 
     return () => {
       timers.forEach(clearTimeout);
-      ro?.disconnect();
-      io?.disconnect();
-      map.remove();
-      mapInstanceRef.current = null;
-      markersLayerRef.current = null;
-      markersRef.current = {};
-      popupRef.current = null;
-      activeIdRef.current = null;
+      try {
+        ro?.disconnect();
+      } catch (e) {}
+      try {
+        io?.disconnect();
+      } catch (e) {}
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.stop();
+          mapInstanceRef.current.off();
+          mapInstanceRef.current.remove();
+        }
+      } catch (e) {
+        console.warn('Leaflet cleanup notice:', e);
+      } finally {
+        if (mapContainerRef.current) {
+          mapContainerRef.current._leaflet_id = null;
+        }
+        mapInstanceRef.current = null;
+        markersLayerRef.current = null;
+        markersRef.current = {};
+        popupRef.current = null;
+        activeIdRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [singlePropertyMode, selectedPropertyId]);
@@ -360,8 +411,14 @@ const PlutoMapExplorer = ({
     });
 
     if (!singlePropertyMode && displayProperties.length > 0 && activeRegion === 'Global View') {
-      const bounds = L.latLngBounds(displayProperties.map((p) => [p.coordinates.lat, p.coordinates.lng]));
-      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
+      try {
+        const bounds = L.latLngBounds(displayProperties.map((p) => [p.coordinates.lat, p.coordinates.lng]));
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
+        }
+      } catch (e) {
+        // ignore
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayProperties, singlePropertyMode]);

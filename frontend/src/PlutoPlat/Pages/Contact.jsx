@@ -107,7 +107,7 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-[#F6F3EC] pb-20 lg:pb-28">
       {/* ───────── Hero ───────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0F130F] via-[#1B211B] to-[#252A1F] px-4 pb-28 pt-28 text-white sm:px-6 lg:pb-36 lg:pt-36">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0F130F] via-[#1B211B] to-[#252A1F] px-3.5 pb-12 pt-16 text-white sm:px-6 sm:pb-28 sm:pt-28 lg:pb-36 lg:pt-36">
         <div
           aria-hidden="true"
           className="absolute inset-0"
@@ -117,16 +117,16 @@ const Contact = () => {
           }}
         />
         <div className="relative mx-auto max-w-7xl">
-          <p className="mb-3 text-sm font-medium text-[#C9B287]">Private client concierge</p>
-          <h1 className="max-w-3xl font-serif text-[34px] font-normal leading-[1.1] sm:text-5xl lg:text-6xl">
+          <p className="mb-2 sm:mb-3 text-xs sm:text-sm font-medium text-[#C9B287]">Private client concierge</p>
+          <h1 className="max-w-3xl font-serif text-2xl font-normal leading-[1.1] sm:text-5xl lg:text-6xl">
             Talk to our senior advisory desk.
           </h1>
-          <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/70 sm:text-base">
+          <p className="mt-2 sm:mt-5 max-w-xl text-xs sm:text-base font-light leading-relaxed text-white/70">
             Buying a residence, requesting a confidential valuation or asking about off-market homes — our partners
             respond promptly.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="mt-4 sm:mt-8 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap">
             {[
               { Icon: Phone, text: '+91 99563 46155', href: 'tel:+919956346155' },
               { Icon: Mail, text: 'concierge@plutoplat.com', href: 'mailto:concierge@plutoplat.com' },
@@ -134,12 +134,12 @@ const Contact = () => {
             ].map(({ Icon, text, href }) => {
               const inner = (
                 <>
-                  <Icon size={16} className="text-[#C9B287]" />
+                  <Icon size={14} className="text-[#C9B287] sm:w-4 sm:h-4" />
                   <span>{text}</span>
                 </>
               );
               const cls =
-                'inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90 backdrop-blur transition';
+                'inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-white/90 backdrop-blur transition';
               return href ? (
                 <a key={text} href={href} className={`${cls} hover:border-[#C9B287]/60 hover:bg-white/10`}>
                   {inner}
@@ -154,10 +154,10 @@ const Contact = () => {
         </div>
       </section>
 
-      <div className="relative mx-auto -mt-16 max-w-7xl px-4 sm:px-6 lg:-mt-24">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+      <div className="relative mx-auto -mt-8 max-w-7xl px-3.5 sm:px-6 lg:-mt-24">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-12 lg:gap-8">
           {/* ───────── Form ───────── */}
-          <div className="rounded-3xl border border-[#E8E3D8] bg-white p-5 shadow-[0_30px_70px_-30px_rgba(28,32,28,0.35)] sm:p-9 lg:col-span-7">
+          <div className="rounded-2xl sm:rounded-3xl border border-[#E8E3D8] bg-white p-3.5 sm:p-9 shadow-[0_20px_50px_-25px_rgba(28,32,28,0.25)] lg:col-span-7">
             {submitted ? (
               <div className="py-14 text-center">
                 <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#287A50]/10 text-[#287A50]">

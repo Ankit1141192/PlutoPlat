@@ -108,10 +108,10 @@ const Footer = () => {
         }}
       />
 
-      <div className="relative mx-auto max-w-7xl px-5 pt-16 sm:px-6 lg:pt-24">
+      <div className="relative mx-auto max-w-7xl px-3.5 pt-8 sm:px-6 sm:pt-16 lg:pt-24">
         {/* ───────── Newsletter panel ───────── */}
-        <div className="rounded-3xl bg-gradient-to-br from-[#B49A70]/50 via-[#B49A70]/10 to-transparent p-px">
-          <div className="grid grid-cols-1 items-center gap-6 rounded-3xl bg-[#191D19] p-6 sm:p-8 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-8">
+        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#B49A70]/50 via-[#B49A70]/10 to-transparent p-px">
+          <div className="grid grid-cols-1 items-center gap-4 sm:gap-6 rounded-2xl sm:rounded-3xl bg-[#191D19] p-4 sm:p-8 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-8">
             <div className="lg:col-span-8">
               <p className="mb-2 text-sm font-medium text-[#C9B287]">The Private Gazette</p>
               <h3 className="font-serif text-2xl font-normal leading-snug text-white xl:whitespace-nowrap xl:text-[28px]">
@@ -161,7 +161,7 @@ const Footer = () => {
         </div>
 
         {/* ───────── Link columns ───────── */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-8 lg:py-20">
+        <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-6 sm:gap-y-12 py-8 sm:py-14 lg:grid-cols-12 lg:gap-8 lg:py-20">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-3 lg:pr-6">
             <Link to="/" className="inline-block">
@@ -228,7 +228,7 @@ const Footer = () => {
         </div>
 
         {/* ───────── Contact strip ───────── */}
-        <div className="grid grid-cols-1 gap-3 border-t border-[#262B26] py-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:gap-3 border-t border-[#262B26] py-5 sm:py-8 sm:grid-cols-2 lg:grid-cols-4">
           {contactItems.map(({ Icon, label, value, href }) => {
             const body = (
               <>
@@ -256,7 +256,7 @@ const Footer = () => {
         </div>
 
         {/* ───────── Bottom bar ───────── */}
-        <div className="flex flex-col items-center gap-6 border-t border-[#262B26] py-8 text-xs text-[#706D65] md:flex-row md:justify-between">
+        <div className="flex flex-col items-center gap-4 sm:gap-6 border-t border-[#262B26] py-5 sm:py-8 text-xs text-[#706D65] md:flex-row md:justify-between">
           <p className="text-center md:text-left">
             &copy; {new Date().getFullYear()} PlutoPlat International Real Estate Inc. All rights reserved.
           </p>

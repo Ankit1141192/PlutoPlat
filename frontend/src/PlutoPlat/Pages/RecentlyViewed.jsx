@@ -8,19 +8,19 @@ const RecentlyViewed = () => {
   const { recentlyViewedProperties, clearRecentlyViewed, favorites } = usePropertyStore();
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         {/* Header Row */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#DDD8CE] pb-8 mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#DDD8CE] pb-4 sm:pb-8 mb-4 sm:mb-8 gap-3 sm:gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2">
-              <Clock size={14} />
+            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-1 sm:mb-2">
+              <Clock size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span>Browsing Telemetry</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl text-[#1C201C] font-normal">
+            <h1 className="font-serif text-2xl sm:text-4xl text-[#1C201C] font-normal leading-tight">
               Recently Viewed Properties
             </h1>
-            <p className="text-xs sm:text-sm text-[#6E6D66] mt-2 font-light">
+            <p className="text-xs sm:text-sm text-[#6E6D66] mt-1 sm:mt-2 font-light">
               Revisit luxury estates and penthouses you recently inspected on PlutoPlat.
             </p>
           </div>
@@ -63,7 +63,7 @@ const RecentlyViewed = () => {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-5 md:gap-8">
               {recentlyViewedProperties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}

@@ -36,25 +36,25 @@ const ContactAgents = () => {
   };
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         
         {/* Header */}
-        <div className="border-b border-[#DDD8CE] pb-8 mb-10">
-          <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2">
-            <Users size={14} />
+        <div className="border-b border-[#DDD8CE] pb-4 sm:pb-8 mb-4 sm:mb-10">
+          <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-1 sm:mb-2">
+            <Users size={12} className="sm:w-[14px] sm:h-[14px]" />
             <span>Fiduciary Advisory Directory</span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal">
+          <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight">
             Connect with Senior Advisors & Agents
           </h1>
-          <p className="text-xs sm:text-sm text-[#6E6D66] mt-2 max-w-2xl font-light leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#6E6D66] mt-1 sm:mt-2 max-w-2xl font-light leading-relaxed">
             Every PlutoPlat partner agent is an accredited specialist bound by strict non-disclosure mandates, providing discreet representation for prime and super-prime acquisitions.
           </p>
         </div>
 
         {/* Advisors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
           {agents.map((agent) => (
             <div
               key={agent.id}

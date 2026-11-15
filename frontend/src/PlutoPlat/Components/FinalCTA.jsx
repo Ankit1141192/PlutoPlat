@@ -23,7 +23,7 @@ const FinalCTA = () => {
   const reduce = useReducedMotion();
 
   return (
-    <section className="relative w-full overflow-hidden px-4 pb-16 pt-28 sm:px-6 sm:pb-24 sm:pt-36 lg:pb-28 lg:pt-44">
+    <section className="relative w-full overflow-hidden px-3.5 pb-10 pt-14 sm:px-6 sm:pb-24 sm:pt-36 lg:pb-28 lg:pt-44">
       {/* Designed background (no photo) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#0F130F] via-[#1B211B] to-[#262B20]" />
       <div
@@ -82,7 +82,7 @@ const FinalCTA = () => {
       {/* Curved top edge – change text-[#F1EEE6] to match the section above */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute left-0 top-0 z-[5] h-16 w-full text-[#F1EEE6] sm:h-24 lg:h-32"
+        className="pointer-events-none absolute left-0 top-0 z-[5] h-9 w-full text-[#F1EEE6] sm:h-24 lg:h-32"
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
       >
@@ -97,7 +97,7 @@ const FinalCTA = () => {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-12 lg:gap-14">
+      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-6 lg:grid-cols-12 lg:gap-14">
         {/* ───────── Left: message + actions ───────── */}
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 30 }}
@@ -106,50 +106,50 @@ const FinalCTA = () => {
           transition={{ duration: 0.8 }}
           className="text-center text-white lg:col-span-7 lg:text-left"
         >
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-4 py-2 text-xs font-medium text-[#E8D9BF] backdrop-blur-sm sm:text-[13px]">
+          <p className="mb-2 sm:mb-4 inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-3 py-1 sm:px-4 sm:py-2 text-[11px] font-medium text-[#E8D9BF] backdrop-blur-sm sm:text-[13px]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#C9B287]" />
             Kanpur, Uttar Pradesh &amp; beyond
           </p>
 
-          <h2 className="font-serif text-[34px] font-normal leading-[1.08] sm:text-5xl lg:text-6xl">
+          <h2 className="font-serif text-2xl font-normal leading-[1.1] sm:text-5xl lg:text-6xl">
             Find your
             <span className="block text-[#E8D9BF]">next address.</span>
           </h2>
 
-          <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/80 sm:text-lg lg:mx-0">
+          <p className="mx-auto mt-2 sm:mt-5 max-w-xl text-xs sm:text-lg font-light leading-relaxed text-white/80 lg:mx-0">
             Exceptional homes, riverside sanctuaries and high-growth developments across Kanpur and prime destinations
             worldwide.
           </p>
 
           {/* Actions */}
-          <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-stretch lg:justify-start sm:justify-center">
+          <div className="mt-4 sm:mt-10 flex flex-col gap-2.5 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-stretch lg:justify-start sm:justify-center">
             <Link
               to="/properties"
-              className={`group inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] px-8 text-sm font-semibold text-[#161916] shadow-lg transition hover:brightness-110 ${focusRing}`}
+              className={`group inline-flex min-h-11 sm:min-h-14 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9B287] to-[#B49A70] px-6 sm:px-8 text-xs sm:text-sm font-semibold text-[#161916] shadow-lg transition hover:brightness-110 ${focusRing}`}
             >
               <span>Explore properties</span>
-              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+              <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
 
             <a
               href="https://wa.me/919956346155?text=Hello%20PlutoPlat,%20I%20am%20interested%20in%20luxury%20properties%20in%20Kanpur,%20Uttar%20Pradesh."
               target="_blank"
               rel="noopener noreferrer"
-              className={`inline-flex min-h-14 items-center justify-center gap-3 rounded-xl bg-[#25D366] px-7 text-sm font-semibold text-white shadow-lg transition hover:bg-[#1EBE5A] ${focusRing}`}
+              className={`inline-flex min-h-11 sm:min-h-14 items-center justify-center gap-2.5 sm:gap-3 rounded-xl bg-[#25D366] px-5 sm:px-7 text-xs sm:text-sm font-semibold text-white shadow-lg transition hover:bg-[#1EBE5A] ${focusRing}`}
             >
-              <WhatsAppLogo size={24} />
+              <WhatsAppLogo size={20} />
               <span className="text-left leading-tight">
                 Chat on WhatsApp
-                <span className="block text-[11px] font-normal text-white/90">+91 99563 46155</span>
+                <span className="block text-[10px] sm:text-[11px] font-normal text-white/90">+91 99563 46155</span>
               </span>
             </a>
 
             <Link
               to="/contact?subject=List+Your+Property"
-              className={`group inline-flex min-h-14 items-center justify-center gap-1.5 rounded-xl border border-white/60 px-7 text-sm font-semibold text-white transition hover:bg-white hover:text-[#1C201C] ${focusRing}`}
+              className={`group inline-flex min-h-11 sm:min-h-14 items-center justify-center gap-1.5 rounded-xl border border-white/60 px-5 sm:px-7 text-xs sm:text-sm font-semibold text-white transition hover:bg-white hover:text-[#1C201C] ${focusRing}`}
             >
               List your property
-              <ArrowUpRight size={16} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <ArrowUpRight size={15} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </Link>
           </div>
         </motion.div>

@@ -123,34 +123,34 @@ const EXTRA_MODULES = [
 
 const MoreHub = () => {
   return (
-    <div className="min-h-screen bg-[#F8F6F2] text-[#1C201C] pt-28 pb-24">
+    <div className="min-h-screen bg-[#F8F6F2] text-[#1C201C] pt-20 sm:pt-28 pb-10 sm:pb-24">
       {/* Editorial Header */}
-      <div className="max-w-7xl mx-auto px-6 mb-16">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 mb-5 sm:mb-12">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#B49A70]/15 text-[#8E7448] text-xs font-semibold uppercase tracking-widest mb-4">
-            <Sparkles size={13} />
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#B49A70]/15 text-[#8E7448] text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2 sm:mb-4">
+            <Sparkles size={12} className="sm:w-[13px] sm:h-[13px]" />
             <span>Platform Services & Discovery Hub</span>
           </div>
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-[#1C201C] font-normal tracking-tight leading-tight mb-6">
+          <h1 className="font-serif text-2xl sm:text-5xl md:text-6xl text-[#1C201C] font-normal tracking-tight leading-tight mb-2 sm:mb-6">
             Everything Extra, <br className="hidden sm:inline" />
             <span className="italic text-[#B49A70]">Curated in One Place.</span>
           </h1>
-          <p className="text-base sm:text-lg text-[#6E6D66] font-light leading-relaxed">
+          <p className="text-xs sm:text-lg text-[#6E6D66] font-light leading-relaxed">
             Access our complete suite of institutional tools: interactive map navigation, deal progression milestones, chauffeured property tours, verified advisory contacts, and confidential portfolio management.
           </p>
         </div>
       </div>
 
       {/* Grid of Extra Services & Modules */}
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
           {EXTRA_MODULES.map((mod, idx) => {
             const Icon = mod.icon;
             return (
               <Link
                 key={idx}
                 to={mod.link}
-                className="group relative bg-white border border-[#E7E3DA] rounded-2xl p-7 shadow-sm hover:shadow-xl hover:border-[#B49A70]/50 transition-all duration-300 flex flex-col justify-between overflow-hidden hover:-translate-y-1"
+                className="group relative bg-white border border-[#E7E3DA] rounded-xl sm:rounded-2xl p-4 sm:p-7 shadow-2xs hover:shadow-xl hover:border-[#B49A70]/50 transition-all duration-300 flex flex-col justify-between overflow-hidden hover:-translate-y-1"
               >
                 {/* Subtle Glow */}
                 <div

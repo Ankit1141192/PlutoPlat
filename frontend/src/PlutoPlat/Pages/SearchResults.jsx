@@ -64,42 +64,42 @@ const SearchResults = () => {
   }, [properties, searchQuery, selectedType]);
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         {/* Top Back Link */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link
             to="/properties"
-            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-semibold text-[#6E6D66] hover:text-[#1C201C] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-wider font-semibold text-[#6E6D66] hover:text-[#1C201C] transition-colors"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft size={13} />
             <span>Back to Complete Archive</span>
           </Link>
         </div>
 
         {/* Search Console Header */}
-        <div className="bg-white border border-[#DDD8CE] p-6 sm:p-8 rounded-sm shadow-xs mb-10">
-          <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-3">
-            <Sparkles size={13} />
+        <div className="bg-white border border-[#DDD8CE] p-3.5 sm:p-8 rounded-xl sm:rounded-sm shadow-xs mb-5 sm:mb-10">
+          <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2 sm:mb-3">
+            <Sparkles size={12} className="sm:w-[13px] sm:h-[13px]" />
             <span>Global Architectural Query Engine</span>
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 items-stretch">
+          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch">
             <div className="relative flex-1">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B49A70]" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B49A70] sm:w-[18px] sm:h-[18px]" />
               <input
                 type="text"
                 placeholder="Search by city, neighborhood, architectural style, or keyword..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-[#F8F6F2] border border-[#DDD8CE] text-sm text-[#1C201C] rounded-xs focus:outline-none focus:border-[#B49A70] transition-colors"
+                className="w-full pl-10 sm:pl-12 pr-3.5 sm:pr-4 py-2.5 sm:py-3.5 bg-[#F8F6F2] border border-[#DDD8CE] text-xs sm:text-sm text-[#1C201C] rounded-lg sm:rounded-xs focus:outline-none focus:border-[#B49A70] transition-colors"
               />
             </div>
 
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-3.5 bg-[#F8F6F2] border border-[#DDD8CE] text-xs uppercase font-semibold tracking-wider text-[#1C201C] rounded-xs focus:outline-none pr-8 cursor-pointer"
+              className="px-3.5 py-2.5 sm:py-3.5 bg-[#F8F6F2] border border-[#DDD8CE] text-xs uppercase font-semibold tracking-wider text-[#1C201C] rounded-lg sm:rounded-xs focus:outline-none pr-8 cursor-pointer"
             >
               <option value="All">All Categories</option>
               <option value="Homes">Homes</option>
@@ -110,7 +110,7 @@ const SearchResults = () => {
 
             <button
               type="submit"
-              className="px-8 py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shrink-0 shadow-sm cursor-pointer"
+              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-[#1C201C] hover:bg-black text-white text-xs uppercase tracking-widest font-semibold rounded-lg sm:rounded-xs transition-colors shrink-0 shadow-sm cursor-pointer"
             >
               Search Archive
             </button>
@@ -211,7 +211,7 @@ const SearchResults = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-5 md:gap-8">
             {filteredProperties.map((prop) => (
               <PropertyCard key={prop.id} property={prop} />
             ))}

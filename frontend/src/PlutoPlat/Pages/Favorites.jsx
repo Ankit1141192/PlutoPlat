@@ -15,18 +15,18 @@ const Favorites = () => {
   };
 
   return (
-    <div className="pt-28 pb-24 px-6 max-w-7xl mx-auto min-h-screen">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 px-3.5 sm:px-6 max-w-7xl mx-auto min-h-screen">
       {/* Page Title */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-8 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-4 sm:pb-8 mb-4 sm:mb-12">
         <div>
-          <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2">
-            <Sparkles size={13} />
+          <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-1 sm:mb-2">
+            <Sparkles size={12} className="sm:w-[13px] sm:h-[13px]" />
             <span>Private Curation</span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal">
+          <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight">
             Your Saved Collection
           </h1>
-          <p className="text-xs sm:text-sm text-[#6E6D66] mt-2 font-light">
+          <p className="text-xs sm:text-sm text-[#6E6D66] mt-1 sm:mt-2 font-light">
             {favoriteProperties.length} architectural estates saved to your private watchlist.
           </p>
         </div>
@@ -71,7 +71,7 @@ const Favorites = () => {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-5 md:gap-8">
             {favoriteProperties.map((prop) => (
               <PropertyCard key={prop.id || prop._id} property={prop} />
             ))}

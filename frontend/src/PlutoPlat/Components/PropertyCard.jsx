@@ -77,14 +77,14 @@ const PropertyCard = ({ property }) => {
       </div>
 
       {/* Card Content */}
-      <div className="p-3 sm:p-5 md:p-6 flex flex-col flex-grow justify-between">
+      <div className="p-2 sm:p-4 md:p-5 flex flex-col flex-grow justify-between">
         <div>
-          <div className="flex items-center text-[#77766E] text-[10px] sm:text-xs font-medium mb-1">
-            <MapPin size={11} className="mr-1 text-[#B49A70] shrink-0 sm:w-3.5 sm:h-3.5" />
+          <div className="flex items-center text-[#77766E] text-[9px] sm:text-xs font-medium mb-0.5 sm:mb-1">
+            <MapPin size={10} className="mr-0.5 text-[#B49A70] shrink-0 sm:w-3.5 sm:h-3.5 sm:mr-1" />
             <span className="truncate">{displayLocation}</span>
           </div>
 
-          <h3 className="font-serif text-sm sm:text-xl md:text-2xl text-[#1C201C] group-hover:text-[#B49A70] transition-colors leading-snug line-clamp-1 mb-0.5 sm:mb-1 font-normal">
+          <h3 className="font-serif text-[13px] sm:text-lg md:text-xl text-[#1C201C] group-hover:text-[#B49A70] transition-colors leading-snug line-clamp-1 mb-0.5 sm:mb-1 font-normal">
             {property.title}
           </h3>
 
@@ -95,36 +95,36 @@ const PropertyCard = ({ property }) => {
 
         <div>
           {/* Price & Action Row */}
-          <div className="flex items-baseline justify-between mb-2 sm:mb-4">
+          <div className="flex items-baseline justify-between mb-1.5 sm:mb-3">
             <div>
-              <span className="text-[8px] sm:text-[10px] uppercase tracking-wider text-[#77766E] block font-semibold">
+              <span className="text-[7px] sm:text-[10px] uppercase tracking-wider text-[#77766E] block font-semibold leading-none mb-0.5">
                 Valuation
               </span>
-              <span className="text-sm sm:text-xl md:text-2xl font-serif text-[#1C201C] font-semibold">
+              <span className="text-xs sm:text-lg md:text-xl font-serif text-[#1C201C] font-semibold">
                 {property.numericPrice ? formatPrice(property.numericPrice) : property.price}
               </span>
             </div>
-            <span className="w-6 h-6 sm:w-9 sm:h-9 rounded-full border border-[#DEDAD1] flex items-center justify-center text-[#77766E] group-hover:bg-[#1C201C] group-hover:text-[#B49A70] group-hover:border-[#1C201C] transition-all duration-300 shadow-2xs">
-              <ArrowUpRight size={13} className="sm:w-4 sm:h-4" />
+            <span className="w-5 h-5 sm:w-8 sm:h-8 rounded-full border border-[#DEDAD1] flex items-center justify-center text-[#77766E] group-hover:bg-[#1C201C] group-hover:text-[#B49A70] group-hover:border-[#1C201C] transition-all duration-300 shadow-2xs">
+              <ArrowUpRight size={11} className="sm:w-3.5 sm:h-3.5" />
             </span>
           </div>
 
           {/* Specs Footer */}
-          <div className="flex items-center justify-between border-t border-[#F0ECE4] pt-2 sm:pt-3 text-[10px] sm:text-xs text-[#6E6D66] font-medium">
+          <div className="flex items-center justify-between border-t border-[#F0ECE4] pt-1.5 sm:pt-2.5 text-[9px] sm:text-xs text-[#6E6D66] font-medium">
             {property.type !== 'Plots' && (
               <>
-                <span className="flex items-center gap-1 sm:gap-1.5" title="Bedrooms">
-                  <BedDouble size={12} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
+                <span className="flex items-center gap-0.5 sm:gap-1.5" title="Bedrooms">
+                  <BedDouble size={11} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
                   <span>{property.beds} <span className="hidden xs:inline">{property.beds === 1 ? 'Bed' : 'Beds'}</span></span>
                 </span>
-                <span className="flex items-center gap-1 sm:gap-1.5" title="Bathrooms">
-                  <Bath size={12} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
+                <span className="flex items-center gap-0.5 sm:gap-1.5" title="Bathrooms">
+                  <Bath size={11} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
                   <span>{property.baths} <span className="hidden xs:inline">{property.baths === 1 ? 'Bath' : 'Baths'}</span></span>
                 </span>
               </>
             )}
-            <span className="flex items-center gap-1 sm:gap-1.5" title="Total Area">
-              <Square size={12} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
+            <span className="flex items-center gap-0.5 sm:gap-1.5" title="Total Area">
+              <Square size={11} className="text-[#B49A70] sm:w-3.5 sm:h-3.5" />
               <span>{property.sqft} <span className="hidden xs:inline">sq.ft</span></span>
             </span>
           </div>

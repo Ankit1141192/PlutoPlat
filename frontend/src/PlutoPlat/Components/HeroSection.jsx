@@ -61,7 +61,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-[92vh] lg:min-h-screen flex items-center justify-center overflow-hidden bg-[#1C201C] pt-24 pb-20">
+    <section className="relative min-h-[75vh] sm:min-h-[90vh] lg:min-h-screen flex items-center justify-center overflow-hidden bg-[#1C201C] pt-16 pb-8 sm:pt-24 sm:pb-20">
       {/* Background Video with Luxury Cinematic Overlay */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
         <video
@@ -101,16 +101,16 @@ const HeroSection = () => {
       </div>
 
       {/* Main Hero Content */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 text-center text-white">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-3.5 sm:px-6 text-center text-white">
         {/* Prestige Tag */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-2 sm:mb-6">
            <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-4 py-2 text-xs font-medium text-[#EBE7DF] shadow-xl backdrop-blur-md sm:text-[13px]"
+          className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-3 py-1 sm:px-4 sm:py-2 text-[11px] font-medium text-[#EBE7DF] shadow-xl backdrop-blur-md sm:text-[13px]"
         >
-          <Sparkles size={14} className="text-[#C9B287]" />
+          <Sparkles size={12} className="text-[#C9B287] sm:w-[14px] sm:h-[14px]" />
           <span>Kanpur, Uttar Pradesh &middot; Sovereign Collection</span>
         </motion.div>
         </div>
@@ -120,8 +120,8 @@ const HeroSection = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.9, delay: 0.15 }}
-                  style={{ fontSize: 'clamp(2.25rem, min(8vw, 9.5vh), 5rem)' }}
-                  className="font-serif font-normal leading-[1.08] tracking-tight mb-4 sm:mb-6 max-w-5xl mx-auto drop-shadow-md"
+                  style={{ fontSize: 'clamp(1.75rem, min(7vw, 7vh), 4.75rem)' }}
+                  className="font-serif font-normal leading-[1.1] tracking-tight mb-2 sm:mb-6 max-w-5xl mx-auto drop-shadow-md"
                 >
                   Find a Place That <span className="italic font-light text-[#E8D9BF]">Feels Like Home</span>.
                 </motion.h1>
@@ -131,7 +131,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.25 }}
-          className="mx-auto mb-9 mt-5 max-w-2xl text-[15px] font-light leading-relaxed text-[#E5E1D8] drop-shadow sm:mb-12 sm:text-lg"
+          className="mx-auto mb-4 mt-2 sm:mb-10 sm:mt-5 max-w-2xl text-xs sm:text-base lg:text-lg font-light leading-relaxed text-[#E5E1D8] drop-shadow px-2"
         >
           Colonial manors, quiet Ganges-side sanctuaries and prestigious estates across Kanpur, Uttar Pradesh and
           beyond.
@@ -142,36 +142,36 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.45 }}
-          className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-2xl border border-white/20 mx-auto max-w-4xl text-[#222522]"
+          className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-5 md:p-6 shadow-2xl border border-white/20 mx-auto max-w-4xl text-[#222522]"
         >
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-stretch md:items-end">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2.5 sm:gap-4 items-stretch md:items-end">
             {/* Location Input */}
             <div className="flex-1 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
+              <label className="block text-[10px] sm:text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-1 sm:mb-2">
                 Location
               </label>
               <div className="relative">
-                <MapPin size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B49A70]" />
+                <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B49A70] sm:w-[17px] sm:h-[17px]" />
                 <input
                   type="text"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
                   placeholder="City, Neighborhood or Enclave..."
-                  className="w-full pl-10 pr-4 py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70] text-sm text-[#222522] placeholder:text-[#9A9890] transition-colors"
+                  className="w-full pl-9 sm:pl-10 pr-3.5 sm:pr-4 py-2 sm:py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#B49A70] text-xs sm:text-sm text-[#222522] placeholder:text-[#9A9890] transition-colors"
                 />
               </div>
             </div>
 
             {/* Category Dropdown */}
             <div className="w-full md:w-48 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
+              <label className="block text-[10px] sm:text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-1 sm:mb-2">
                 Property Category
               </label>
               <div className="relative">
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-xl focus:outline-none focus:border-[#B49A70] text-sm text-[#222522] appearance-none pr-9 cursor-pointer transition-colors"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-[#F8F6F2] border border-[#DDD8CE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#B49A70] text-xs sm:text-sm text-[#222522] appearance-none pr-8 sm:pr-9 cursor-pointer transition-colors"
                 >
                   <option value="All">All Categories</option>
                   <option value="Homes">Luxury Homes</option>
@@ -179,19 +179,19 @@ const HeroSection = () => {
                   <option value="Apartments">Apartments / Penthouses</option>
                   <option value="Plots">Residential Plots</option>
                 </select>
-                <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6E6D66] pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6E6D66] pointer-events-none sm:w-[16px] sm:h-[16px]" />
               </div>
             </div>
 
             {/* Purpose Selector with Sliding Pill (Buy / Rent / Off-Plan) */}
             <div className="w-full md:w-56 text-left">
-              <label className="block text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-2">
+              <label className="block text-[10px] sm:text-[11px] font-semibold text-[#6E6D66] uppercase tracking-wider mb-1 sm:mb-2">
                 Acquisition
               </label>
-              <div className="relative flex border border-[#DDD8CE] rounded-xl bg-[#F8F6F2] p-1">
+              <div className="relative flex border border-[#DDD8CE] rounded-lg sm:rounded-xl bg-[#F8F6F2] p-1">
                 {/* Animated Sliding Pill */}
                 <div
-                  className={`absolute top-1 bottom-1 left-1 w-[calc((100%-8px)/3)] rounded-lg bg-[#1C201C] transition-transform duration-250 ease-out shadow-sm ${
+                  className={`absolute top-1 bottom-1 left-1 w-[calc((100%-8px)/3)] rounded-md sm:rounded-lg bg-[#1C201C] transition-transform duration-250 ease-out shadow-sm ${
                     purpose === 'Buy'
                       ? 'translate-x-0'
                       : purpose === 'Rent'
@@ -212,7 +212,7 @@ const HeroSection = () => {
                         }
                       }
                     }}
-                    className={`relative z-10 flex-1 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors duration-200 text-center ${
+                    className={`relative z-10 flex-1 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider rounded-md sm:rounded-lg transition-colors duration-200 text-center ${
                       purpose === opt ? 'text-white' : 'text-[#6E6D66] hover:text-[#1C201C]'
                     }`}
                   >
@@ -225,9 +225,9 @@ const HeroSection = () => {
             {/* Search Submit Button */}
             <button
               type="submit"
-              className="w-full md:w-auto px-8 py-3.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-sm font-semibold uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl shrink-0 cursor-pointer"
+              className="w-full md:w-auto px-6 sm:px-8 py-2.5 sm:py-3.5 bg-[#B49A70] hover:bg-[#9E865F] text-white text-xs sm:text-sm font-semibold uppercase tracking-wider rounded-lg sm:rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-xl shrink-0 cursor-pointer"
             >
-              <Search size={16} />
+              <Search size={15} />
               <span>Explore</span>
             </button>
           </form>
@@ -252,7 +252,7 @@ const HeroSection = () => {
       </div>
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-[-1px] left-0 z-[5] h-14 w-full text-[#F8F6F2] sm:h-20 lg:h-28"
+        className="pointer-events-none absolute bottom-[-1px] left-0 z-[5] h-8 w-full text-[#F8F6F2] sm:h-16 lg:h-24"
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
       >

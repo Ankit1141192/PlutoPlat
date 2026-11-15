@@ -20,14 +20,14 @@ const FAQ = () => {
   };
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-4xl mx-auto px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-4xl mx-auto px-3.5 sm:px-6">
         {/* Header */}
-        <div className="text-center max-w-xl mx-auto mb-16">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#B49A70] block mb-2">
+        <div className="text-center max-w-xl mx-auto mb-5 sm:mb-12">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-[#B49A70] block mb-1.5 sm:mb-2">
             Acquisition Protocols
           </span>
-          <h1 className="font-serif text-4xl sm:text-5xl text-[#1C201C] font-normal mb-4">
+          <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal mb-2 sm:mb-4 leading-tight">
             Frequently Addressed Questions
           </h1>
           <p className="text-xs sm:text-sm text-[#6E6D66] font-light leading-relaxed">
@@ -36,7 +36,7 @@ const FAQ = () => {
         </div>
 
         {/* Category Pills */}
-        <div className="flex justify-center items-center gap-2 mb-12 flex-wrap">
+        <div className="flex justify-center items-center gap-1.5 sm:gap-2 mb-5 sm:mb-10 flex-wrap">
           {categories.map((cat) => (
             <button
               key={cat}

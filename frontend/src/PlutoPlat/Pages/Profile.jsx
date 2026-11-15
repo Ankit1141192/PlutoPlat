@@ -210,11 +210,11 @@ const Profile = () => {
   const tabLabel = (t) => (t.id === 'saved' ? `${t.label} (${favorites.length})` : t.label);
 
   return (
-    <div className="pt-24 sm:pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
 
         {/* ───────── Header banner ───────── */}
-        <div className="bg-[#1C201C] text-white rounded-3xl p-5 sm:p-8 lg:p-10 shadow-xl border border-[#2E342E] mb-6 sm:mb-8 relative overflow-hidden">
+        <div className="bg-[#1C201C] text-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-10 shadow-xl border border-[#2E342E] mb-4 sm:mb-8 relative overflow-hidden">
           <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#B49A70]/20 blur-3xl pointer-events-none" />
           <div className="absolute -left-24 -bottom-24 w-72 h-72 rounded-full bg-[#B49A70]/10 blur-3xl pointer-events-none" />
 

@@ -1265,6 +1265,7 @@ export const PropertyProvider = ({ children }) => {
     rejectProperty,
     leads,
     addLead,
+    submitEnquiry: addLead,
     updateLeadStatus,
     deleteLead,
     usersList,

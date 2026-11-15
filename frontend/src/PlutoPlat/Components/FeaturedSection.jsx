@@ -30,20 +30,20 @@ const FeaturedSection = () => {
   };
 
   return (
-    <section className="py-20 md:py-28 px-4 sm:px-6 bg-[#F8F6F2]">
+    <section className="py-8 sm:py-16 md:py-24 px-3 sm:px-6 bg-[#F8F6F2]">
       <div className="max-w-7xl mx-auto">
 
         {/* ── Header row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-6 mb-4 sm:mb-8">
           <div>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#B49A70] mb-2"
+              className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-[#B49A70] mb-1.5"
             >
-              <Sparkles size={13} />
+              <Sparkles size={12} className="sm:w-[13px] sm:h-[13px]" />
               Curated Collection
             </motion.div>
 
@@ -52,7 +52,7 @@ const FeaturedSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.07 }}
-              className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight"
+              className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight"
             >
               Featured Properties
             </motion.h2>
@@ -64,13 +64,13 @@ const FeaturedSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex flex-wrap gap-2"
+            className="flex flex-wrap gap-1.5 sm:gap-2"
           >
             {TABS.map((t) => (
               <button
                 key={t}
                 onClick={() => handleTab(t)}
-                className={`px-4 py-1.5 text-xs uppercase tracking-wider font-semibold rounded-full transition-all duration-200 cursor-pointer ${
+                className={`px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-wider font-semibold rounded-full transition-all duration-200 cursor-pointer ${
                   tab === t
                     ? 'bg-[#1C201C] text-[#EBE7DF]'
                     : 'bg-white text-[#6E6D66] border border-[#DDD8CE] hover:border-[#B49A70] hover:text-[#1C201C]'
@@ -90,7 +90,7 @@ const FeaturedSection = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.35 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5"
           >
             {visible.map((property) => (
               <PropertyCard key={property.id} property={property} />
@@ -99,7 +99,7 @@ const FeaturedSection = () => {
         </AnimatePresence>
 
         {/* ── Footer: pagination + CTA ── */}
-        <div className="mt-10 flex items-center justify-between">
+        <div className="mt-5 sm:mt-10 flex items-center justify-between">
           {/* Pagination */}
           <div className="flex items-center gap-3">
             <button

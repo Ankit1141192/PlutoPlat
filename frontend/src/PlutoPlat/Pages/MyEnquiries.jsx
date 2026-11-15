@@ -123,19 +123,19 @@ const MyEnquiries = () => {
   };
 
   return (
-    <div className="pt-28 pb-24 bg-[#F8F6F2] min-h-screen">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className="pt-20 sm:pt-28 pb-10 sm:pb-24 bg-[#F8F6F2] min-h-screen">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-8 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#DDD8CE] pb-4 sm:pb-8 mb-4 sm:mb-8">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-2">
-              <FileText size={14} />
+            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-widest text-[#B49A70] font-semibold mb-1 sm:mb-2">
+              <FileText size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span>Acquisition Tracker</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal">
+            <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl text-[#1C201C] font-normal leading-tight">
               My Active Enquiries & Escrow
             </h1>
-            <p className="text-xs sm:text-sm text-[#6E6D66] mt-2 font-light">
+            <p className="text-xs sm:text-sm text-[#6E6D66] mt-1 sm:mt-2 font-light">
               Real-time monitoring of your scheduled itineraries, private dossiers, and advisor communications.
             </p>
           </div>

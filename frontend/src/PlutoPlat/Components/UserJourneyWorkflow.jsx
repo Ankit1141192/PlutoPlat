@@ -64,38 +64,38 @@ const UserJourneyWorkflow = ({ compact = false }) => {
   const { user } = usePropertyStore();
 
   return (
-    <div className={`w-full ${compact ? 'py-8' : 'py-16'} bg-[#1C201C] text-white rounded-3xl border border-[#2E342E] shadow-2xl relative overflow-hidden my-12`}>
+    <div className={`w-full ${compact ? 'py-4' : 'py-5 sm:py-12'} bg-[#1C201C] text-white rounded-2xl sm:rounded-3xl border border-[#2E342E] shadow-xl sm:shadow-2xl relative overflow-hidden my-4 sm:my-10`}>
       {/* Subtle gold glow accents */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-[#B49A70]/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#B49A70]/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10">
+      <div className="relative z-10 max-w-7xl mx-auto px-3.5 sm:px-10">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-white/10 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-6 mb-4 sm:mb-10 border-b border-white/10 pb-3 sm:pb-6">
           <div>
-            <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold text-[#B49A70] bg-white/5 px-3 py-1 rounded-full mb-3 border border-[#B49A70]/20">
-              <Sparkles size={13} />
+            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-widest font-bold text-[#B49A70] bg-white/5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full mb-1.5 sm:mb-3 border border-[#B49A70]/20">
+              <Sparkles size={11} className="sm:w-[13px] sm:h-[13px]" />
               <span>Institutional Acquisition Protocol</span>
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl text-white font-normal tracking-tight">
+            <h2 className="font-serif text-xl sm:text-3xl md:text-4xl text-white font-normal tracking-tight">
               The PlutoPlat Client Journey
             </h2>
-            <p className="text-xs sm:text-sm text-[#A09D94] mt-2 max-w-2xl font-light leading-relaxed">
+            <p className="text-[11px] sm:text-sm text-[#A09D94] mt-1 sm:mt-2 max-w-2xl font-light leading-relaxed">
               From open public browsing to bespoke agent advisory, private chauffeured site visits, and multi-stage deal escrow closure.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#A09D94]">Account Status:</span>
+            <span className="text-[10px] sm:text-[11px] text-[#A09D94]">Account Status:</span>
             {user ? (
-              <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/15 px-3 py-1 rounded-full border border-[#10B981]/30 flex items-center gap-1.5">
+              <span className="text-[11px] sm:text-xs font-semibold text-[#10B981] bg-[#10B981]/15 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-[#10B981]/30 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
                 <span>Logged In as {user.name?.split(' ')[0]}</span>
               </span>
             ) : (
               <Link
                 to="/login"
-                className="text-xs font-semibold text-[#B49A70] hover:text-white bg-[#B49A70]/20 hover:bg-[#B49A70]/30 px-3 py-1 rounded-full border border-[#B49A70]/40 transition-colors"
+                className="text-[11px] sm:text-xs font-semibold text-[#B49A70] hover:text-white bg-[#B49A70]/20 hover:bg-[#B49A70]/30 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-[#B49A70]/40 transition-colors"
               >
                 Guest Mode &bull; Sign In &rarr;
               </Link>
@@ -104,59 +104,62 @@ const UserJourneyWorkflow = ({ compact = false }) => {
         </div>
 
         {/* 5 Steps Interactive Grid (2 cards per row on mobile) */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
-          {WORKFLOW_STEPS.map((item) => {
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+          {WORKFLOW_STEPS.map((item, index) => {
             const Icon = item.icon;
             const isSelected = activeStep === item.step;
+            const isLastOnMobile = index === WORKFLOW_STEPS.length - 1;
 
             return (
               <div
                 key={item.step}
                 onClick={() => setActiveStep(item.step)}
-                className={`relative p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between ${
+                className={`relative p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between ${
+                  isLastOnMobile ? 'col-span-2 md:col-span-1' : ''
+                } ${
                   isSelected
-                    ? 'bg-gradient-to-b from-[#2A312A] to-[#1F251F] border-[#B49A70] shadow-xl scale-[1.02]'
+                    ? 'bg-gradient-to-b from-[#2A312A] to-[#1F251F] border-[#B49A70] shadow-xl scale-[1.01]'
                     : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
                 }`}
               >
                 <div>
                   {/* Step Number & Tag */}
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-serif text-xs sm:text-sm font-bold ${
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <span className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-serif text-[11px] sm:text-sm font-bold ${
                       isSelected ? 'bg-[#B49A70] text-[#1C201C]' : 'bg-white/10 text-white'
                     }`}>
                       0{item.step}
                     </span>
-                    <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-[#B49A70] bg-[#B49A70]/10 px-1.5 py-0.5 rounded-sm">
+                    <span className="text-[7px] sm:text-[9px] uppercase tracking-wider font-semibold text-[#B49A70] bg-[#B49A70]/10 px-1 py-0.5 rounded-xs sm:rounded-sm">
                       {item.tag}
                     </span>
                   </div>
 
-                  <div className={`p-2 sm:p-2.5 rounded-xl w-fit mb-2 sm:mb-3 ${
+                  <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl w-fit mb-1.5 sm:mb-2.5 ${
                     isSelected ? 'bg-[#B49A70]/20 text-[#E8D9BF]' : 'bg-white/5 text-[#A09D94]'
                   }`}>
-                    <Icon size={18} className="sm:w-[22px] sm:h-[22px]" />
+                    <Icon size={16} className="sm:w-[22px] sm:h-[22px]" />
                   </div>
 
-                  <h3 className="font-serif text-sm sm:text-base text-white font-medium mb-0.5 sm:mb-1">
+                  <h3 className="font-serif text-xs sm:text-base text-white font-medium mb-0.5 leading-snug">
                     {item.title}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-[#B49A70] font-sans font-medium mb-1.5 sm:mb-2 line-clamp-1">
+                  <p className="text-[9px] sm:text-[11px] text-[#B49A70] font-sans font-medium mb-1 sm:mb-1.5 line-clamp-1">
                     {item.subtitle}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-[#A09D94] font-light leading-relaxed line-clamp-3">
+                  <p className="text-[9px] sm:text-[11px] text-[#A09D94] font-light leading-relaxed line-clamp-2 sm:line-clamp-3">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="mt-3 sm:mt-5 pt-2 sm:pt-3 border-t border-white/10 flex items-center justify-between">
+                <div className="mt-2 sm:mt-4 pt-1.5 sm:pt-2.5 border-t border-white/10 flex items-center justify-between">
                   <Link
                     to={item.link}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] sm:text-[11px] uppercase font-semibold text-[#E8D9BF] hover:text-white inline-flex items-center gap-1 group"
+                    className="text-[9px] sm:text-[11px] uppercase font-semibold text-[#E8D9BF] hover:text-white inline-flex items-center gap-1 group"
                   >
                     <span>{item.linkText}</span>
-                    <ChevronRight size={12} className="transition-transform group-hover:translate-x-1 text-[#B49A70]" />
+                    <ChevronRight size={11} className="transition-transform group-hover:translate-x-1 text-[#B49A70] sm:w-3 sm:h-3" />
                   </Link>
                 </div>
               </div>
