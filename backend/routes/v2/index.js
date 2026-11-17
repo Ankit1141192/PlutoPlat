@@ -9,6 +9,7 @@ const { logAudit } = require('../../utils/auditLogger');
 const { sendNotification } = require('../../utils/notificationService');
 const userController = require('../../controllers/userController');
 const { normalizeProperty } = require('../../controllers/propertyController');
+const { normalizeEnquiry } = require('../../controllers/enquiryController');
 const { emitPropertyEvent } = require('../../utils/socketService');
 const testimonialRoutes = require('../v1/testimonialRoutes');
 const authRoutes = require('../v1/authRoutes');
@@ -218,32 +219,40 @@ router.delete('/properties/:id', async (req, res, next) => {
 
 /**
  * ══════════════════════════════════════════
- * 2. ADMIN LEADS (Leads on Agent's Own Properties)
+ * 2. ADMIN LEADS (Leads on Agent's Own Properties + General Contact Inquiries)
  * ══════════════════════════════════════════
  */
 const getAgentLeads = async (req, res, next) => {
   try {
-    let leads = await Enquiry.find({ seller: req.user._id })
+    const filter = req.user.role === 'super_admin'
+      ? {}
+      : {
+          $or: [
+            { seller: req.user._id },
+            { seller: null },
+          ]
+        };
+
+    const rawLeads = await Enquiry.find(filter)
       .populate('property', 'title price location images')
       .populate('buyer', 'name email phone')
       .sort({ createdAt: -1 });
 
-    if (leads.length === 0) {
-      leads = await Enquiry.find({})
-        .populate('property', 'title price location images')
-        .populate('buyer', 'name email phone')
-        .sort({ createdAt: -1 });
-    }
+    const normalized = rawLeads.map(normalizeEnquiry);
 
-    return ApiResponse.success(res, 'Agent leads retrieved successfully.', { leads });
+    return ApiResponse.success(res, 'Agent leads retrieved successfully.', {
+      leads: normalized,
+      enquiries: normalized,
+    });
   } catch (error) {
     next(error);
   }
 };
 router.get('/leads', getAgentLeads);
+router.get('/enquiries', getAgentLeads);
 router.get('/enquiries/my', getAgentLeads);
 
-// Update lead status (e.g. contacted, interested, closed)
+// Update lead status (Toggle between Completed and Incompleted)
 const updateLeadStatus = async (req, res, next) => {
   try {
     const { status, adminNotes } = req.body;
@@ -256,11 +265,18 @@ const updateLeadStatus = async (req, res, next) => {
       return ApiResponse.error(res, 'Enquiry not found or unauthorized.', 404);
     }
 
-    if (status) enquiry.status = status;
+    if (status !== undefined) {
+      const s = String(status).trim().toLowerCase();
+      enquiry.status = s === 'completed' ? 'completed' : 'incompleted';
+    }
     if (adminNotes !== undefined) enquiry.adminNotes = adminNotes;
     await enquiry.save();
 
-    return ApiResponse.success(res, 'Lead stage updated successfully.', { enquiry });
+    const normalized = normalizeEnquiry(enquiry);
+    return ApiResponse.success(res, `Lead status updated to ${normalized.status}.`, {
+      enquiry: normalized,
+      lead: normalized,
+    });
   } catch (error) {
     next(error);
   }

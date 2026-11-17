@@ -869,36 +869,57 @@ export const PropertyProvider = ({ children }) => {
   };
 
   // Lead / Enquiry Actions
-  const addLead = (leadData) => {
+  const addLead = async (leadData) => {
+    const buyerName = leadData.name || leadData.buyerName || user?.name || 'Prospective Client';
+    const buyerEmail = leadData.email || leadData.buyerEmail || user?.email || '';
+    const buyerPhone = leadData.phone || leadData.buyerPhone || user?.phone || '';
+    const propTitle = leadData.propertyTitle || (leadData.inquiryType && leadData.inquiryType !== 'property_information' ? leadData.inquiryType : 'General Contact Enquiry');
+
     const newLead = {
       id: `LD-${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      status: 'New',
+      status: 'Incompleted',
       leadScore: 'Direct Inquiry',
-      ...leadData
+      ...leadData,
+      buyerName,
+      buyerEmail,
+      buyerPhone,
+      propertyTitle: propTitle,
     };
     setLeads(prev => [newLead, ...prev]);
 
     // Dispatch to live deployed backend
-    Api.createEnquiry({
-      propertyId: leadData.propertyId || '1',
-      message: leadData.message,
-      name: leadData.buyerName,
-      email: leadData.buyerEmail,
-      phone: leadData.buyerPhone
-    }).catch(err => console.warn('Backend enquiry dispatch notice:', err.message));
+    try {
+      const res = await Api.createEnquiry({
+        propertyId: leadData.propertyId || null,
+        propertyTitle: propTitle,
+        message: leadData.message,
+        name: buyerName,
+        email: buyerEmail,
+        phone: buyerPhone,
+        enquiryType: leadData.inquiryType || 'property_information',
+        budget: leadData.budget || '',
+      });
+      if (res?.data?.enquiry?._id) {
+        newLead.id = String(res.data.enquiry._id);
+        newLead._id = String(res.data.enquiry._id);
+      }
+      showToast('Enquiry submitted! Stored in database successfully.', 'success');
+    } catch (err) {
+      console.warn('Backend enquiry dispatch notice:', err.message);
+      showToast(`Notice: Stored locally. Backend notice: ${err.message}. Please ensure backend is running on port 5000.`, 'info');
+    }
 
     addAuditLog({
-      actorName: leadData.buyerName || user?.name || 'Guest',
+      actorName: buyerName,
       actorRole: user?.role || 'user',
       module: 'ENQUIRY',
       action: 'CREATE',
-      target: leadData.propertyTitle || 'Property',
+      target: propTitle,
       status: 'SUCCESS',
-      description: `New inquiry submitted by ${leadData.buyerName || 'Buyer'} for ${leadData.propertyTitle}`
+      description: `New inquiry submitted by ${buyerName} for ${propTitle}`
     });
 
-    showToast('Enquiry submitted! A dedicated advisor will connect with you shortly.', 'success');
     return newLead;
   };
 

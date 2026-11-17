@@ -321,9 +321,6 @@ export const SuperAdminProvider = ({ children }) => {
 
   // Universal Data Sync for SuperAdmin Console (Replaces Socket.IO)
   const syncSuperAdminData = async (silent = true) => {
-    const token = sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');
-    if (!token) return;
-
     // 1. Sync properties from MongoDB backend
     try {
       const res = await SuperAdminApi.getProperties();
@@ -360,10 +357,11 @@ export const SuperAdminProvider = ({ children }) => {
     // 3. Sync leads
     try {
       const res = await SuperAdminApi.getAllEnquiries();
-      if (res?.data?.leads && Array.isArray(res.data.leads)) {
-        setLeads(res.data.leads);
+      const fetched = res?.data?.leads || res?.data?.enquiries;
+      if (fetched && Array.isArray(fetched)) {
+        setLeads(fetched);
         try {
-          localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
+          localStorage.setItem('plutoplat_leads_db', JSON.stringify(fetched));
         } catch {}
       }
     } catch {}
@@ -463,7 +461,7 @@ export const SuperAdminProvider = ({ children }) => {
     }
   }, [auditLogs]);
 
-  // Sync SuperAdmin session on mount/refresh if token exists in sessionStorage
+  // Sync SuperAdmin session and data on mount/refresh
   useEffect(() => {
     const token = sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');
     if (token) {
@@ -488,59 +486,60 @@ export const SuperAdminProvider = ({ children }) => {
             sessionStorage.removeItem('plutoplat_superadmin_user');
           }
         });
-
-      // Sync platform properties from MongoDB backend
-      SuperAdminApi.getProperties()
-        .then((res) => {
-          if (res?.data?.properties && Array.isArray(res.data.properties)) {
-            const deleted = getDeletedIds();
-            const activeProps = res.data.properties.filter(
-              p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
-            );
-            setProperties(activeProps);
-            try {
-              localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-
-      // Sync platform leads from MongoDB backend
-      SuperAdminApi.getAllEnquiries()
-        .then((res) => {
-          if (res?.data?.leads && res.data.leads.length > 0) {
-            setLeads(res.data.leads);
-          }
-        })
-        .catch(() => {});
-
-      // Sync platform users from MongoDB backend
-      SuperAdminApi.getAllUsers()
-        .then((res) => {
-          if (res?.data?.users && res.data.users.length > 0) {
-            setUsersList(res.data.users);
-          }
-        })
-        .catch(() => {});
-
-      // Sync audit telemetry from MongoDB backend
-      SuperAdminApi.getAuditLogs()
-        .then((res) => {
-          if (res?.data?.audits && res.data.audits.length > 0) {
-            setAuditLogs(res.data.audits);
-          }
-        })
-        .catch(() => {});
-
-      // Sync platform notifications from MongoDB backend
-      SuperAdminApi.getNotifications()
-        .then((res) => {
-          if (res?.data?.notifications) {
-            setNotifications(res.data.notifications);
-          }
-        })
-        .catch(() => {});
     }
+
+    // Always sync platform properties from MongoDB backend
+    SuperAdminApi.getProperties()
+      .then((res) => {
+        if (res?.data?.properties && Array.isArray(res.data.properties)) {
+          const deleted = getDeletedIds();
+          const activeProps = res.data.properties.filter(
+            p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+          );
+          setProperties(activeProps);
+          try {
+            localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // Always sync platform leads from MongoDB backend
+    SuperAdminApi.getAllEnquiries()
+      .then((res) => {
+        const fetched = res?.data?.leads || res?.data?.enquiries;
+        if (fetched && Array.isArray(fetched) && fetched.length > 0) {
+          setLeads(fetched);
+        }
+      })
+      .catch(() => {});
+
+    // Always sync platform users from MongoDB backend
+    SuperAdminApi.getAllUsers()
+      .then((res) => {
+        if (res?.data?.users && res.data.users.length > 0) {
+          setUsersList(res.data.users);
+        }
+      })
+      .catch(() => {});
+
+    // Always sync audit telemetry from MongoDB backend
+    SuperAdminApi.getAuditLogs()
+      .then((res) => {
+        if (res?.data?.audits && res.data.audits.length > 0) {
+          setAuditLogs(res.data.audits);
+        }
+      })
+      .catch(() => {});
+
+    // Always sync platform notifications from MongoDB backend
+    SuperAdminApi.getNotifications()
+      .then((res) => {
+        if (res?.data?.notifications) {
+          setNotifications(res.data.notifications);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const showToast = (message, type = 'success') => {
@@ -823,19 +822,36 @@ export const SuperAdminProvider = ({ children }) => {
     showToast('Property details updated successfully.', 'success');
   };
 
-  // Lead Actions
+  // Lead Actions (Full CRUD)
   const updateLeadStatus = async (leadId, newStatus) => {
+    const normalized = String(newStatus).toLowerCase() === 'completed' ? 'Completed' : 'Incompleted';
+    setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, status: normalized } : l)));
     try {
-      await SuperAdminApi.updateEnquiryStatus(leadId, { status: newStatus });
-    } catch (e) {}
-    setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, status: newStatus } : l)));
+      await SuperAdminApi.updateEnquiryStatus(leadId, { status: normalized.toLowerCase() });
+      showToast(`Inquiry marked as ${normalized}`, 'success');
+    } catch (e) {
+      showToast(`Inquiry status updated to: ${normalized}`, 'info');
+    }
     addAuditLog({
       module: 'ENQUIRY',
       action: 'STATUS_UPDATE',
       target: `Lead ID: ${leadId}`,
-      description: `SuperAdmin updated lead status to ${newStatus}`
+      description: `SuperAdmin updated lead status to ${normalized}`
     });
-    showToast(`Lead status updated to: ${newStatus}`, 'success');
+  };
+
+  const updateLead = async (leadId, updateData) => {
+    try {
+      const res = await SuperAdminApi.updateEnquiry(leadId, updateData);
+      const updated = res?.data?.enquiry || res?.data?.lead || updateData;
+      setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, ...updated } : l)));
+      showToast('Inquiry updated successfully.', 'success');
+      return updated;
+    } catch (err) {
+      setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, ...updateData } : l)));
+      showToast('Inquiry updated locally.', 'info');
+      return updateData;
+    }
   };
 
   const deleteLead = async (leadId) => {
@@ -845,20 +861,20 @@ export const SuperAdminProvider = ({ children }) => {
     setLeads(prev => prev.filter(l => l.id !== leadId && l._id !== leadId));
     addAuditLog({
       module: 'ENQUIRY',
-      action: 'ARCHIVE',
+      action: 'DELETE',
       target: `Lead ID: ${leadId}`,
-      description: `SuperAdmin archived inquiry ${leadId}`
+      description: `SuperAdmin removed inquiry ${leadId}`
     });
-    showToast('Inquiry archived / removed.', 'info');
+    showToast('Inquiry deleted successfully.', 'info');
   };
 
   const addLead = async (leadData) => {
     try {
       const res = await SuperAdminApi.createEnquiry(leadData);
-      const created = res?.data?.enquiry || {
+      const created = res?.data?.enquiry || res?.data?.lead || {
         id: `INQ-${Math.floor(1000 + Math.random() * 9000)}`,
         date: new Date().toISOString().slice(0, 10),
-        status: 'New',
+        status: leadData.status || 'Incompleted',
         ...leadData,
       };
       setLeads(prev => [created, ...prev]);
@@ -868,7 +884,7 @@ export const SuperAdminProvider = ({ children }) => {
       const fallback = {
         id: `INQ-${Math.floor(1000 + Math.random() * 9000)}`,
         date: new Date().toISOString().slice(0, 10),
-        status: 'New',
+        status: leadData.status || 'Incompleted',
         ...leadData,
       };
       setLeads(prev => [fallback, ...prev]);
@@ -1017,6 +1033,7 @@ export const SuperAdminProvider = ({ children }) => {
     updateLeadStatus,
     deleteLead,
     addLead,
+    updateLead,
     usersList,
     addUser,
     deleteUser,

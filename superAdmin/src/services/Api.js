@@ -153,11 +153,15 @@ export const SuperAdminApi = {
   // Leads & Inquiries
   async getAllEnquiries(params = {}) {
     const q = new URLSearchParams(params).toString();
-    return request('GET', `/enquiries/my${q ? `?${q}` : ''}`, { auth: true });
+    return request('GET', `/enquiries${q ? `?${q}` : ''}`, { auth: true });
   },
 
   async createEnquiry(payload) {
     return request('POST', '/enquiries', { body: payload, auth: true });
+  },
+
+  async updateEnquiry(id, payload) {
+    return request('PUT', `/enquiries/${id}`, { body: payload, auth: true });
   },
 
   async updateEnquiryStatus(id, payload) {

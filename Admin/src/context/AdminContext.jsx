@@ -165,9 +165,6 @@ export const AdminProvider = ({ children }) => {
 
   // Universal Data Sync for Agent/Admin Desk (Replaces Socket.IO)
   const syncAdminData = async (silent = true) => {
-    const token = sessionStorage.getItem('pluto_admin_token') || localStorage.getItem('pluto_admin_token');
-    if (!token) return;
-
     // 1. Sync properties
     try {
       const res = await AdminApi.getMyProperties();
@@ -204,10 +201,11 @@ export const AdminProvider = ({ children }) => {
     // 3. Sync inquiries
     try {
       const res = await AdminApi.getMyEnquiries();
-      if (res?.data?.leads && Array.isArray(res.data.leads)) {
-        setLeads(res.data.leads);
+      const fetched = res?.data?.leads || res?.data?.enquiries;
+      if (fetched && Array.isArray(fetched)) {
+        setLeads(fetched);
         try {
-          localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
+          localStorage.setItem('plutoplat_leads_db', JSON.stringify(fetched));
         } catch {}
       }
     } catch {}
@@ -269,7 +267,7 @@ export const AdminProvider = ({ children }) => {
     }
   }, [leads]);
 
-  // Silently sync session on mount/refresh if token exists
+  // Silently sync session and data on mount/refresh
   useEffect(() => {
     const token = sessionStorage.getItem('pluto_admin_token') || localStorage.getItem('pluto_admin_token');
     if (token) {
@@ -281,7 +279,6 @@ export const AdminProvider = ({ children }) => {
               setUser(authUser);
               sessionStorage.setItem('plutoplat_admin_user', JSON.stringify(authUser));
             } else {
-              // Revoke if role is not authorized
               AdminApi.logout();
               setUser(null);
               sessionStorage.removeItem('plutoplat_admin_user');
@@ -295,44 +292,45 @@ export const AdminProvider = ({ children }) => {
             sessionStorage.removeItem('plutoplat_admin_user');
           }
         });
-
-      // Sync live agent properties from MongoDB backend
-      AdminApi.getMyProperties()
-        .then((res) => {
-          if (res?.data?.properties && Array.isArray(res.data.properties)) {
-            const deleted = getDeletedIds();
-            const activeProps = res.data.properties.filter(
-              p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
-            );
-            setProperties(activeProps);
-            try {
-              localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-
-      // Sync live inquiries/leads from MongoDB backend
-      AdminApi.getMyEnquiries()
-        .then((res) => {
-          if (res?.data?.leads && Array.isArray(res.data.leads)) {
-            setLeads(res.data.leads);
-            try {
-              localStorage.setItem('plutoplat_leads_db', JSON.stringify(res.data.leads));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-
-      // Sync live notifications from MongoDB backend
-      AdminApi.getNotifications()
-        .then((res) => {
-          if (res?.data?.notifications) {
-            setNotifications(res.data.notifications);
-          }
-        })
-        .catch(() => {});
     }
+
+    // Always sync live agent properties from MongoDB backend
+    AdminApi.getMyProperties()
+      .then((res) => {
+        if (res?.data?.properties && Array.isArray(res.data.properties)) {
+          const deleted = getDeletedIds();
+          const activeProps = res.data.properties.filter(
+            p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))
+          );
+          setProperties(activeProps);
+          try {
+            localStorage.setItem('plutoplat_properties_db', JSON.stringify(activeProps));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // Always sync live inquiries/leads from MongoDB backend
+    AdminApi.getMyEnquiries()
+      .then((res) => {
+        const fetched = res?.data?.leads || res?.data?.enquiries;
+        if (fetched && Array.isArray(fetched)) {
+          setLeads(fetched);
+          try {
+            localStorage.setItem('plutoplat_leads_db', JSON.stringify(fetched));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // Always sync live notifications from MongoDB backend
+    AdminApi.getNotifications()
+      .then((res) => {
+        if (res?.data?.notifications) {
+          setNotifications(res.data.notifications);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const showToast = (message, type = 'success') => {
@@ -503,9 +501,16 @@ export const AdminProvider = ({ children }) => {
   };
 
   // Lead Actions
-  const updateLeadStatus = (leadId, newStatus) => {
-    setLeads(prev => prev.map(l => (l.id === leadId ? { ...l, status: newStatus } : l)));
-    showToast(`Lead status updated to: ${newStatus}`, 'success');
+  const updateLeadStatus = async (leadId, newStatus) => {
+    const normalized = String(newStatus).toLowerCase() === 'completed' ? 'Completed' : 'Incompleted';
+    setLeads(prev => prev.map(l => (l.id === leadId || l._id === leadId ? { ...l, status: normalized } : l)));
+    try {
+      await AdminApi.updateEnquiryStatus(leadId, { status: normalized.toLowerCase() });
+      showToast(`Enquiry marked as ${normalized}`, 'success');
+    } catch (err) {
+      console.warn('Backend updateEnquiryStatus notice:', err.message);
+      showToast(`Enquiry updated locally to: ${normalized}`, 'info');
+    }
   };
 
   const isAuthenticated = Boolean(user && (user.role === 'admin' || user.role === 'super_admin'));

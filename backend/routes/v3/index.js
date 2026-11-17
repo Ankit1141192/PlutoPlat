@@ -11,6 +11,7 @@ const { logAudit } = require('../../utils/auditLogger');
 const { sendNotification } = require('../../utils/notificationService');
 const userController = require('../../controllers/userController');
 const { normalizeProperty } = require('../../controllers/propertyController');
+const { normalizeEnquiry } = require('../../controllers/enquiryController');
 const { emitPropertyEvent } = require('../../utils/socketService');
 const testimonialRoutes = require('../v1/testimonialRoutes');
 const authRoutes = require('../v1/authRoutes');
@@ -609,76 +610,192 @@ router.delete('/users/:id', async (req, res, next) => {
  * 3. GLOBAL LEADS MATRIX & AUDIT TELEMETRY
  * ══════════════════════════════════════════
  */
-router.get('/leads', async (req, res, next) => {
+/**
+ * ══════════════════════════════════════════
+ * 3. GLOBAL LEADS MATRIX & ENQUIRY CRUD
+ * ══════════════════════════════════════════
+ */
+const getAllEnquiries = async (req, res, next) => {
   try {
-    const leads = await Enquiry.find({})
+    let filter = {};
+    if (req.query.status) {
+      const s = String(req.query.status).toLowerCase();
+      if (s === 'completed') {
+        filter.status = 'completed';
+      } else if (s === 'incompleted') {
+        filter.status = { $ne: 'completed' };
+      }
+    }
+
+    const rawEnquiries = await Enquiry.find(filter)
       .populate('property', 'title price location')
       .populate('buyer', 'name email phone')
       .populate('seller', 'name email phone')
       .sort({ createdAt: -1 });
 
-    return ApiResponse.success(res, 'Global leads matrix retrieved.', { leads });
+    const normalized = rawEnquiries.map(normalizeEnquiry);
+
+    return ApiResponse.success(res, 'Global leads matrix retrieved.', {
+      leads: normalized,
+      enquiries: normalized,
+    });
   } catch (error) {
     next(error);
   }
-});
-router.get('/enquiries/my', async (req, res, next) => {
+};
+
+router.get('/leads', getAllEnquiries);
+router.get('/enquiries', getAllEnquiries);
+router.get('/enquiries/my', getAllEnquiries);
+
+// Get single enquiry by ID
+router.get('/enquiries/:id', async (req, res, next) => {
   try {
-    const leads = await Enquiry.find({})
+    const enquiry = await Enquiry.findById(req.params.id)
       .populate('property', 'title price location')
       .populate('buyer', 'name email phone')
-      .populate('seller', 'name email phone')
-      .sort({ createdAt: -1 });
+      .populate('seller', 'name email phone');
 
-    return ApiResponse.success(res, 'Global leads matrix retrieved.', { leads });
+    if (!enquiry) return ApiResponse.error(res, 'Enquiry not found.', 404);
+
+    const normalized = normalizeEnquiry(enquiry);
+    return ApiResponse.success(res, 'Enquiry retrieved.', { enquiry: normalized, lead: normalized });
   } catch (error) {
     next(error);
   }
 });
 
-router.patch('/enquiries/:id/status', async (req, res, next) => {
+// SuperAdmin logs a new enquiry/lead (CRUD: Create)
+router.post('/enquiries', async (req, res, next) => {
+  try {
+    const { name, email, phone, message, propertyTitle, budget, status, propertyId } = req.body;
+    const buyerName = (name || req.body.buyerName || 'Private Client').trim();
+    const buyerEmail = (email || req.body.buyerEmail || 'client@plutoplat.com').trim().toLowerCase();
+    const buyerPhone = (phone || req.body.buyerPhone || '+91 98765 43210').trim();
+    const title = (propertyTitle || req.body.enquiryType || 'General Inward Inquiry').trim();
+
+    const normalizedStatus = String(status || 'incompleted').toLowerCase() === 'completed' ? 'completed' : 'incompleted';
+
+    const enquiry = await Enquiry.create({
+      name: buyerName,
+      email: buyerEmail,
+      phone: buyerPhone,
+      message: message || 'Direct private inquiry logged by SuperAdmin.',
+      propertyTitle: title,
+      property: propertyId || null,
+      buyer: req.user._id,
+      budget: budget || '',
+      status: normalizedStatus,
+    });
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'CREATE',
+      module: 'ENQUIRY',
+      targetId: enquiry._id,
+      targetType: 'Enquiry',
+      description: `SuperAdmin logged manual inquiry for ${buyerName}`,
+      req,
+    }).catch(() => {});
+
+    const normalized = normalizeEnquiry(enquiry);
+    return ApiResponse.success(res, 'Enquiry created successfully.', { enquiry: normalized, lead: normalized }, 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin updates full enquiry details (CRUD: Update)
+router.put('/enquiries/:id', async (req, res, next) => {
+  try {
+    const enquiry = await Enquiry.findById(req.params.id);
+    if (!enquiry) return ApiResponse.error(res, 'Enquiry not found.', 404);
+
+    const { name, email, phone, message, propertyTitle, budget, status, adminNotes } = req.body;
+    if (name) enquiry.name = name.trim();
+    if (email) enquiry.email = email.trim().toLowerCase();
+    if (phone) enquiry.phone = phone.trim();
+    if (message) enquiry.message = message.trim();
+    if (propertyTitle) enquiry.propertyTitle = propertyTitle.trim();
+    if (budget !== undefined) enquiry.budget = budget;
+    if (status !== undefined) {
+      const s = String(status).trim().toLowerCase();
+      enquiry.status = s === 'completed' ? 'completed' : 'incompleted';
+    }
+    if (adminNotes !== undefined) enquiry.adminNotes = adminNotes;
+
+    await enquiry.save();
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'UPDATE',
+      module: 'ENQUIRY',
+      targetId: enquiry._id,
+      targetType: 'Enquiry',
+      description: `SuperAdmin updated enquiry ${enquiry._id}`,
+      req,
+    }).catch(() => {});
+
+    const normalized = normalizeEnquiry(enquiry);
+    return ApiResponse.success(res, 'Enquiry updated successfully.', { enquiry: normalized, lead: normalized });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// SuperAdmin updates enquiry status (Completed / Incompleted)
+const updateSuperAdminEnquiryStatus = async (req, res, next) => {
   try {
     const { status, adminNotes } = req.body;
     const enquiry = await Enquiry.findById(req.params.id);
     if (!enquiry) return ApiResponse.error(res, 'Enquiry not found.', 404);
-    if (status) enquiry.status = status;
+
+    if (status !== undefined) {
+      const s = String(status).trim().toLowerCase();
+      enquiry.status = s === 'completed' ? 'completed' : 'incompleted';
+    }
     if (adminNotes !== undefined) enquiry.adminNotes = adminNotes;
     await enquiry.save();
-    return ApiResponse.success(res, 'Enquiry status updated.', { enquiry });
+
+    const normalized = normalizeEnquiry(enquiry);
+    return ApiResponse.success(res, `Enquiry status updated to ${normalized.status}.`, { enquiry: normalized, lead: normalized });
   } catch (error) {
     next(error);
   }
-});
+};
 
-// SuperAdmin logs a new enquiry/lead
-router.post('/enquiries', async (req, res, next) => {
-  try {
-    const { name, email, phone, message, propertyId, status } = req.body;
-    const enquiry = await Enquiry.create({
-      name: name || req.body.buyerName || 'Private Client',
-      email: email || req.body.buyerEmail || 'client@plutoplat.com',
-      phone: phone || req.body.buyerPhone || '+91 98765 43210',
-      message: message || 'Direct private inquiry logged by SuperAdmin.',
-      property: propertyId || null,
-      buyer: req.user._id,
-      status: status || 'New',
-    });
-    return ApiResponse.success(res, 'Enquiry created successfully.', { enquiry }, 201);
-  } catch (error) {
-    next(error);
-  }
-});
+router.patch('/enquiries/:id/status', updateSuperAdminEnquiryStatus);
+router.patch('/leads/:id/status', updateSuperAdminEnquiryStatus);
 
-// SuperAdmin deletes/archives an enquiry
-router.delete('/enquiries/:id', async (req, res, next) => {
+// SuperAdmin deletes/archives an enquiry (CRUD: Delete)
+const deleteSuperAdminEnquiry = async (req, res, next) => {
   try {
     const enquiry = await Enquiry.findByIdAndDelete(req.params.id);
     if (!enquiry) return ApiResponse.error(res, 'Enquiry not found.', 404);
-    return ApiResponse.success(res, 'Enquiry archived / removed successfully.');
+
+    await logAudit({
+      actor: req.user._id,
+      actorRole: 'super_admin',
+      action: 'DELETE',
+      module: 'ENQUIRY',
+      targetId: req.params.id,
+      targetType: 'Enquiry',
+      description: `SuperAdmin deleted enquiry for ${enquiry.name}`,
+      req,
+    }).catch(() => {});
+
+    return ApiResponse.success(res, 'Enquiry permanently removed successfully.', {
+      deletedId: req.params.id,
+    });
   } catch (error) {
     next(error);
   }
-});
+};
+
+router.delete('/enquiries/:id', deleteSuperAdminEnquiry);
+router.delete('/leads/:id', deleteSuperAdminEnquiry);
 
 // Update user profile
 const updateSuperAdminProfile = async (req, res, next) => {

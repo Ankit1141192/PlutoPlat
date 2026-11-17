@@ -171,6 +171,15 @@ export const Api = {
   createTestimonial(payload) {
     return request('POST', '/testimonials', { body: payload, auth: true });
   },
+
+  // ───────── Contact Enquiries ─────────
+  createEnquiry(payload) {
+    return request('POST', '/enquiries', { body: payload, auth: Boolean(getToken()) });
+  },
+
+  getMyEnquiries() {
+    return request('GET', '/enquiries/my', { auth: true });
+  },
 };
 
 export default Api;

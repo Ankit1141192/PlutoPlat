@@ -5,7 +5,8 @@ const enquirySchema = new mongoose.Schema(
     property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Property',
-      required: [true, 'Property ID is required'],
+      required: false,
+      default: null,
       index: true,
     },
 
@@ -37,51 +38,41 @@ const enquirySchema = new mongoose.Schema(
       required: true,
       trim: true,
       lowercase: true,
-      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
 
     phone: {
       type: String,
       required: true,
       trim: true,
-      validate: {
-        validator: (value) => /^\+?[1-9]\d{9,14}$/.test(value),
-        message: 'Invalid phone number',
-      },
     },
 
     message: {
       type: String,
       required: [true, 'Enquiry message is required'],
       trim: true,
-      minlength: 5,
       maxlength: 2000,
+    },
+
+    propertyTitle: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
+    budget: {
+      type: String,
+      default: '',
+      trim: true,
     },
 
     enquiryType: {
       type: String,
-      enum: [
-        'property_information',
-        'site_visit',
-        'price_negotiation',
-        'buying',
-        'renting',
-        'other',
-      ],
       default: 'property_information',
     },
 
     status: {
       type: String,
-      enum: [
-        'pending',
-        'contacted',
-        'interested',
-        'not_interested',
-        'closed',
-        'cancelled',
-      ],
-      default: 'pending',
+      default: 'incompleted',
       index: true,
     },
 
@@ -117,7 +108,6 @@ const enquirySchema = new mongoose.Schema(
 
     source: {
       type: String,
-      enum: ['website', 'mobile_app', 'admin', 'other'],
       default: 'website',
     },
   },
