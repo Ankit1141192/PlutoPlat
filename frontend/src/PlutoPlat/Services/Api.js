@@ -2,7 +2,7 @@
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:5000/api/v1';
+  'https://my-node-backend.ankit2914978.workers.dev/api/v1';
 
 const TOKEN_KEY = 'pluto_token';
 
@@ -117,6 +117,10 @@ export const Api = {
   getProperties(params = {}) {
     const q = new URLSearchParams(params).toString();
     return request('GET', `/properties${q ? `?${q}` : ''}`);
+  },
+
+  getCategoryCounts() {
+    return request('GET', '/properties/categories/counts');
   },
 
   getPropertyById(id) {

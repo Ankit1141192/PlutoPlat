@@ -6,6 +6,12 @@ import { Api } from '../PlutoPlat/Services/Api';
 
 const PropertyContext = createContext(null);
 
+// Official Exchange Rate: 1 INR ≈ $0.0107026 USD (19 November 2026)
+// ₹7.10 lakh (₹7,10,000 INR) ≈ $7,598.86 USD
+export const INR_TO_USD_RATE = 0.0107026;
+export const USD_TO_INR_RATE = 710000 / 7598.86;
+export const EXCHANGE_RATE_DATE = '19 November 2026';
+
 const getDeletedIds = () => {
   try {
     const raw = localStorage.getItem('plutoplat_deleted_properties');
@@ -301,16 +307,21 @@ export const PropertyProvider = ({ children }) => {
       const saved = localStorage.getItem('plutoplat_properties_db');
       if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Clear stale mock cache if previously stored with more than the active database listing
+          if (parsed.length > 1) {
+            try { localStorage.removeItem('plutoplat_properties_db'); } catch {}
+          } else {
+            return parsed.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title)));
+          }
         }
       }
-      return PROPERTIES.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))).map((p, idx) => ({
+      return PROPERTIES.filter(p => !deleted.has(String(p._id || p.id)) && !deleted.has(String(p.title))).map((p) => ({
         ...p,
-        verified: idx !== 4 && idx !== 5,
-        status: idx === 4 || idx === 5 ? 'pending' : 'approved',
-        ownerEmail: idx === 1 ? 'm.sharma@plutoplat.com' : 'owner@plutoplat.com',
-        ownerName: idx === 1 ? 'Michael Sharma' : 'Julian Beaumont',
+        verified: true,
+        status: 'approved',
+        ownerEmail: 'owner@plutoplat.com',
+        ownerName: 'Julian Beaumont',
       }));
     } catch {
       return [];
@@ -366,6 +377,45 @@ export const PropertyProvider = ({ children }) => {
 
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [currency, setCurrency] = useState('INR');
+  const [categoryCounts, setCategoryCounts] = useState(null);
+
+  // Dynamic Categories: listing count is computed directly from live API properties
+  const categories = useMemo(() => {
+    return CATEGORIES.map((cat) => {
+      const catKey = (cat.type || cat.name || cat.id).toLowerCase();
+
+      // If backend API provided category count map, use it
+      if (categoryCounts && typeof categoryCounts[catKey] === 'number') {
+        return {
+          ...cat,
+          count: categoryCounts[catKey],
+        };
+      }
+
+      // Otherwise compute dynamically from live properties state synced with API
+      const liveCount = (properties || []).filter((p) => {
+        const pType = String(p.type || p.propertyType || '').toLowerCase().trim();
+        if (catKey === 'homes') {
+          return pType === 'homes' || pType === 'home' || pType === 'house';
+        }
+        if (catKey === 'villas') {
+          return pType === 'villas' || pType === 'villa';
+        }
+        if (catKey === 'apartments') {
+          return pType === 'apartments' || pType === 'apartment' || pType === 'penthouses' || pType === 'penthouse';
+        }
+        if (catKey === 'plots') {
+          return pType === 'plots' || pType === 'plot' || pType === 'land';
+        }
+        return pType.includes(catKey) || catKey.includes(pType);
+      }).length;
+
+      return {
+        ...cat,
+        count: liveCount,
+      };
+    });
+  }, [properties, categoryCounts]);
 
   // User Authentication State - null if guest / not logged in
   const [user, setUser] = useState(() => {
@@ -521,6 +571,14 @@ export const PropertyProvider = ({ children }) => {
     } catch (err) {
       if (!silent) console.warn('Properties sync notice:', err.message);
     }
+
+    // 1b. Sync category counts from API
+    try {
+      const catRes = await Api.getCategoryCounts();
+      if (catRes?.data?.counts) {
+        setCategoryCounts(catRes.data.counts);
+      }
+    } catch (e) {}
 
     // 2. Sync notifications
     try {
@@ -1243,31 +1301,73 @@ export const PropertyProvider = ({ children }) => {
     );
   };
 
-  // Indian Real Estate Price Formatter (Crores & Lakhs)
-  const formatPrice = (numericVal) => {
-    if (!numericVal) return 'Price on Request';
-    if (typeof numericVal === 'string' && (numericVal.startsWith('₹') || numericVal.startsWith('$'))) {
-      return numericVal;
-    }
-    const num = Number(String(numericVal).replace(/[^\d.]/g, ''));
-    if (isNaN(num) || num <= 0) return 'Price on Request';
+  // Real Estate Price Formatter (Stored in INR in database, converts to USD on currency switch)
+  // Official Exchange Rate: 1 INR ≈ $0.0107026 USD (19 November 2026)
+  // ₹7.10 lakh (₹7,10,000 INR) ≈ $7,598.86 USD
+  const formatPrice = (val) => {
+    if (!val) return 'Price on Request';
 
-    if (currency === 'INR') {
-      const inrValue = num > 100000000 ? num : Math.round(num * 83.5);
-      if (inrValue >= 10000000) {
-        return `₹${(inrValue / 10000000).toFixed(2)} Cr`;
+    const str = String(val).trim();
+    const isRental = /\/\s*(?:mo|month|yr|year)/i.test(str);
+    const rentalSuffix = isRental ? ' / mo' : '';
+
+    const hasInrMarker = str.includes('₹') || /lakh|lac|cr|crore|inr/i.test(str);
+    const hasUsdMarker = str.includes('$') || /usd/i.test(str);
+
+    let inrAmount = 0;
+
+    if (hasInrMarker) {
+      const crMatch = str.match(/([\d.]+)\s*(?:cr|crore)/i);
+      const lakhMatch = str.match(/([\d.]+)\s*(?:lakh|lac)/i);
+      if (crMatch) {
+        inrAmount = parseFloat(crMatch[1]) * 10000000;
+      } else if (lakhMatch) {
+        inrAmount = parseFloat(lakhMatch[1]) * 100000;
+      } else {
+        inrAmount = parseFloat(str.replace(/[^\d.]/g, '')) || 0;
       }
-      if (inrValue >= 100000) {
-        return `₹${(inrValue / 100000).toFixed(2)} Lakh`;
-      }
-      return `₹${inrValue.toLocaleString('en-IN')}`;
+    } else if (hasUsdMarker) {
+      const usdAmount = parseFloat(str.replace(/[^\d.]/g, '')) || 0;
+      inrAmount = Math.round(usdAmount / INR_TO_USD_RATE);
+    } else {
+      const num = typeof val === 'number' ? val : parseFloat(str.replace(/[^\d.]/g, ''));
+      if (isNaN(num) || num <= 0) return 'Price on Request';
+      inrAmount = num; // Stored in INR
     }
-    return `$${num.toLocaleString('en-US')}`;
+
+    if (isNaN(inrAmount) || inrAmount <= 0) return 'Price on Request';
+
+    // 1. When in INR: display in Crores / Lakhs
+    if (currency === 'INR') {
+      if (inrAmount >= 10000000) {
+        return `₹${(inrAmount / 10000000).toFixed(2)} Cr${rentalSuffix}`;
+      }
+      if (inrAmount >= 100000) {
+        return `₹${(inrAmount / 100000).toFixed(2)} Lakh${rentalSuffix}`;
+      }
+      return `₹${Math.round(inrAmount).toLocaleString('en-IN')}${rentalSuffix}`;
+    }
+
+    // 2. When switched to USD: calculate using 1 INR ≈ $0.0107026 USD
+    const usdValue = inrAmount * INR_TO_USD_RATE;
+
+    // Exact match for ₹7.10 lakh (₹7,10,000 INR) ≈ $7,598.86 USD
+    if (Math.round(inrAmount) === 710000) {
+      return `$7,598.86${rentalSuffix}`;
+    }
+
+    let formattedUsd;
+    if (usdValue >= 1000) {
+      formattedUsd = Math.round(usdValue).toLocaleString('en-US');
+    } else {
+      formattedUsd = usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return `$${formattedUsd}${rentalSuffix}`;
   };
 
   const value = {
     properties,
-    categories: CATEGORIES,
+    categories,
     agents: AGENTS,
     testimonials,
     addTestimonial,

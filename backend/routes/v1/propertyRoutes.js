@@ -6,6 +6,10 @@ const { authenticate, optionalAuthenticate, authorize } = require('../../middlew
 // Public listing & search (respects role if authenticated)
 router.get('/', optionalAuthenticate, propertyController.getProperties);
 
+// Category listing counts from database
+router.get('/categories/counts', propertyController.getCategoryCounts);
+router.get('/categories/count', propertyController.getCategoryCounts);
+
 // Logged-in user's own listings
 router.get('/my/listings', authenticate, propertyController.getMyProperties);
 

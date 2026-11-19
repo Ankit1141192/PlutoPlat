@@ -1,21 +1,45 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css'; // ← REQUIRED. Without this the map is blank and popups look broken.
-import { MapPin, ArrowUpRight, X, Hash, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import 'leaflet/dist/leaflet.css'; // REQUIRED for Leaflet map tiles and controls
+import { MapPin, ArrowUpRight, X, Hash, Eye, EyeOff, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { usePropertyStore } from '../../context/PropertyContext';
 import { WhatsAppIcon } from './RegisterInterestModal';
 
-// ─── Tile Providers ─────────────────────────────────────────────────────────
-// CARTO Voyager is zero-key, origin-free, and works reliably everywhere
-// (including localhost, Vercel deployments (*.vercel.app), and custom domains).
-const PRIMARY_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const PRIMARY_TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-const FALLBACK_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const FALLBACK_TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// ─── Free, Zero-Key, Reliable Tile Providers (No Watermarks, No API Key Required) ─
+export const TILE_LAYERS = {
+  streets: {
+    id: 'streets',
+    label: 'Map',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c'],
+    },
+  },
+  satellite: {
+    id: 'satellite',
+    label: 'Satellite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      attribution: 'Tiles &copy; Esri &mdash; DigitalGlobe, GeoEye, Earthstar Geographics',
+      maxZoom: 19,
+    },
+  },
+  terrain: {
+    id: 'terrain',
+    label: 'Terrain',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c'],
+    },
+  },
+};
 
-// ─── Suppress Leaflet's default icon ─────────────────────────────────────────
+// Suppress Leaflet default marker icon asset lookup
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl: '', shadowUrl: '' });
 
@@ -49,8 +73,8 @@ const isDesktop = () =>
 // ─── Teardrop drop-pin icon ──────────────────────────────────────────────────
 const buildDropPin = (property, isActive) => {
   const bg = isActive ? '#B49A70' : '#1C201C';
-  const border = isActive ? '#1C201C' : '#B49A70';
-  const dot = property.purpose === 'Rent' ? '#38BDF8' : '#FFFFFF';
+  const border = isActive ? '#FFFFFF' : '#B49A70';
+  const dot = property?.purpose === 'Rent' ? '#38BDF8' : '#B49A70';
   const size = isActive ? 44 : 38;
   const half = size / 2;
   const r = half - 3;
@@ -59,14 +83,14 @@ const buildDropPin = (property, isActive) => {
 
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;overflow:visible">
-      <ellipse cx="${half}" cy="${svgH - 2}" rx="${half * 0.55}" ry="3" fill="rgba(0,0,0,0.28)" />
+      <ellipse cx="${half}" cy="${svgH - 2}" rx="${half * 0.55}" ry="3" fill="rgba(0,0,0,0.35)" />
       <path d="M${half},${svgH - 4}
                C${half},${svgH - 4} ${3},${half + r * 0.55}
                ${3},${half}
                A${r + 0.5},${r + 0.5} 0 0 1 ${svgW - 3},${half}
                C${svgW - 3},${half + r * 0.55} ${half},${svgH - 4} ${half},${svgH - 4}Z"
-            fill="${bg}" stroke="${border}" stroke-width="1.5"/>
-      <circle cx="${half}" cy="${half}" r="${r * 0.38}" fill="${dot}" opacity="0.92"/>
+            fill="${bg}" stroke="${border}" stroke-width="2"/>
+      <circle cx="${half}" cy="${half}" r="${r * 0.38}" fill="${dot}" opacity="0.95"/>
     </svg>`;
 
   return L.divIcon({
@@ -110,6 +134,7 @@ const buildPopupHtml = (p) => {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const PlutoMapExplorer = ({
+  property = null,
   selectedPropertyId = null,
   height = '640px',
   showControls = true,
@@ -117,6 +142,7 @@ const PlutoMapExplorer = ({
 }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersLayerRef = useRef(null);
   const markersRef = useRef({});
   const popupRef = useRef(null);
@@ -128,45 +154,56 @@ const PlutoMapExplorer = ({
   navigateRef.current = navigate;
 
   const { properties } = usePropertyStore();
+  const [mapStyle, setMapStyle] = useState('streets'); // 'streets' | 'satellite'
   const [purposeFilter, setPurposeFilter] = useState('All');
   const [activeProperty, setActiveProperty] = useState(null);
-  const [activeRegion, setActiveRegion] = useState('Global View');
+  const [activeRegion, setActiveRegion] = useState('Kanpur & UP');
   const [pinsVisible, setPinsVisible] = useState(true);
   const [listOpen, setListOpen] = useState(true);
   listOpenRef.current = listOpen;
 
-  const displayProperties = useMemo(
-    () =>
-      properties
-        .map((p) => {
-          let lat = Number(p.latitude ?? p.coordinates?.lat ?? p.coordinates?.latitude);
-          let lng = Number(p.longitude ?? p.langitude ?? p.coordinates?.lng ?? p.coordinates?.longitude);
-          if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-            const locStr = (
-              typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`
-            ).toLowerCase();
-            if (locStr.includes('swaroop')) { lat = 26.482; lng = 80.315; }
-            else if (locStr.includes('civil')) { lat = 26.474; lng = 80.335; }
-            else if (locStr.includes('vip')) { lat = 26.479; lng = 80.342; }
-            else if (locStr.includes('delhi')) { lat = 28.6139; lng = 77.209; }
-            else if (locStr.includes('mumbai')) { lat = 19.076; lng = 72.8777; }
-            else if (locStr.includes('dubai')) { lat = 25.2048; lng = 55.2708; }
-            else { lat = 26.474; lng = 80.335; }
-          }
-          return { ...p, id: p.id || p._id, coordinates: { lat, lng } };
-        })
-        .filter((p) => {
-          const propId = String(p.id || p._id);
-          if (singlePropertyMode && selectedPropertyId) {
-            return propId === String(selectedPropertyId);
-          }
-          if (purposeFilter === 'Buy') return p.purpose === 'Buy';
-          if (purposeFilter === 'Rent') return p.purpose === 'Rent';
-          if (purposeFilter === 'Off-Plan') return p.yearBuilt && p.yearBuilt >= 2026;
-          return true;
-        }),
-    [properties, purposeFilter, singlePropertyMode, selectedPropertyId]
-  );
+  const displayProperties = useMemo(() => {
+    // 1. If explicit property object is passed (e.g. PropertyDetail)
+    if (singlePropertyMode && property) {
+      let lat = Number(property.latitude ?? property.coordinates?.lat ?? property.coordinates?.latitude);
+      let lng = Number(property.longitude ?? property.langitude ?? property.coordinates?.lng ?? property.coordinates?.longitude);
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        lat = 26.474;
+        lng = 80.335;
+      }
+      return [{ ...property, id: property.id || property._id || '1', coordinates: { lat, lng } }];
+    }
+
+    // 2. Regular properties collection
+    return properties
+      .map((p) => {
+        let lat = Number(p.latitude ?? p.coordinates?.lat ?? p.coordinates?.latitude);
+        let lng = Number(p.longitude ?? p.langitude ?? p.coordinates?.lng ?? p.coordinates?.longitude);
+        if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+          const locStr = (
+            typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`
+          ).toLowerCase();
+          if (locStr.includes('swaroop')) { lat = 26.482; lng = 80.315; }
+          else if (locStr.includes('civil')) { lat = 26.474; lng = 80.335; }
+          else if (locStr.includes('vip')) { lat = 26.479; lng = 80.342; }
+          else if (locStr.includes('delhi')) { lat = 28.6139; lng = 77.209; }
+          else if (locStr.includes('mumbai')) { lat = 19.076; lng = 72.8777; }
+          else if (locStr.includes('dubai')) { lat = 25.2048; lng = 55.2708; }
+          else { lat = 26.474; lng = 80.335; }
+        }
+        return { ...p, id: p.id || p._id, coordinates: { lat, lng } };
+      })
+      .filter((p) => {
+        const propId = String(p.id || p._id);
+        if (singlePropertyMode && selectedPropertyId) {
+          return propId === String(selectedPropertyId);
+        }
+        if (purposeFilter === 'Buy') return p.purpose === 'Buy';
+        if (purposeFilter === 'Rent') return p.purpose === 'Rent';
+        if (purposeFilter === 'Off-Plan') return p.yearBuilt && p.yearBuilt >= 2026;
+        return true;
+      });
+  }, [properties, property, purposeFilter, singlePropertyMode, selectedPropertyId]);
 
   /* ── close whatever is open (popup on desktop, drawer on mobile) ───────── */
   const closeActive = () => {
@@ -177,28 +214,24 @@ const PlutoMapExplorer = ({
   };
 
   /* ── open / close popup for a property ─────────────────────────────────── */
-  const togglePropertyPopup = (property) => {
+  const togglePropertyPopup = (propItem) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Same pin clicked again → close
-    if (activeIdRef.current === property.id) {
+    if (activeIdRef.current === propItem.id) {
       closeActive();
       return;
     }
 
-    const { lat, lng } = property.coordinates;
-    const targetZoom = Math.max(map.getZoom(), 13);
+    const { lat, lng } = propItem.coordinates;
+    const targetZoom = Math.max(map.getZoom(), 14);
 
-    // Shift the view so the popup (which opens ABOVE the pin) is fully visible
-    // and not hidden behind the top bar or right sidebar.
     const desktop = isDesktop();
     const pt = map.project([lat, lng], targetZoom);
-    pt.y -= desktop ? 130 : 40;
-    if (desktop && listOpenRef.current && !singlePropertyMode) pt.x += 170;
+    pt.y -= desktop ? 120 : 35;
+    if (desktop && listOpenRef.current && !singlePropertyMode) pt.x += 160;
     const center = map.unproject(pt, targetZoom);
 
-    // Desktop: Leaflet popup.  Mobile: bottom drawer (rendered by React).
     if (desktop) {
       const popup = L.popup({
         maxWidth: 270,
@@ -206,29 +239,50 @@ const PlutoMapExplorer = ({
         className: 'pp-popup',
         offset: [0, -4],
         closeButton: false,
-        autoPan: false, // we already positioned the map ourselves
+        autoPan: false,
       })
         .setLatLng([lat, lng])
-        .setContent(buildPopupHtml(property));
+        .setContent(buildPopupHtml(propItem));
 
-      popup.openOn(map); // closes any previous popup first
+      popup.openOn(map);
       popupRef.current = popup;
     } else {
       map.closePopup();
       popupRef.current = null;
     }
 
-    activeIdRef.current = property.id;
-    setActiveProperty(property);
+    activeIdRef.current = propItem.id;
+    setActiveProperty(propItem);
     map.flyTo(center, targetZoom, { duration: 0.8 });
   };
   toggleRef.current = togglePropertyPopup;
+
+  /* ── Switch tile layers (Street / Satellite) ─────────────────────────────── */
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const layerCfg = TILE_LAYERS[mapStyle] || TILE_LAYERS.streets;
+    if (tileLayerRef.current) {
+      try {
+        map.removeLayer(tileLayerRef.current);
+      } catch (e) {}
+    }
+
+    const newTileLayer = L.tileLayer(layerCfg.url, {
+      attribution: layerCfg.options.attribution,
+      maxZoom: layerCfg.options.maxZoom || 19,
+      subdomains: layerCfg.options.subdomains || ['a', 'b', 'c'],
+    });
+
+    newTileLayer.addTo(map);
+    tileLayerRef.current = newTileLayer;
+  }, [mapStyle]);
 
   /* ── Initialize map ────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Safety: ensure container does not retain a stale Leaflet instance
     if (mapInstanceRef.current) {
       try {
         mapInstanceRef.current.stop();
@@ -241,16 +295,18 @@ const PlutoMapExplorer = ({
       mapContainerRef.current._leaflet_id = null;
     }
 
-    let center = [28.5, -20.0];
-    let zoom = 3;
-    if (singlePropertyMode && selectedPropertyId) {
-      const target = properties.find((p) => String(p.id || p._id) === String(selectedPropertyId));
-      const lat = Number(target?.latitude ?? target?.coordinates?.lat ?? target?.coordinates?.latitude);
-      const lng = Number(target?.longitude ?? target?.langitude ?? target?.coordinates?.lng ?? target?.coordinates?.longitude);
-      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-        center = [lat, lng];
-        zoom = 14;
+    let center = [26.474, 80.335];
+    let zoom = 14;
+
+    if (singlePropertyMode) {
+      const target = displayProperties[0];
+      if (target?.coordinates?.lat && target?.coordinates?.lng) {
+        center = [target.coordinates.lat, target.coordinates.lng];
+        zoom = 15;
       }
+    } else if (displayProperties.length > 0) {
+      center = [displayProperties[0].coordinates.lat, displayProperties[0].coordinates.lng];
+      zoom = 13;
     }
 
     let map;
@@ -266,31 +322,17 @@ const PlutoMapExplorer = ({
       return;
     }
 
-    // Primary: CARTO Voyager (Clean luxury styling, 100% free, NO API key required, works universally on localhost & Vercel)
-    const baseTileLayer = L.tileLayer(PRIMARY_TILE_URL, {
-      attribution: PRIMARY_TILE_ATTR,
-      subdomains: 'abcd',
-      maxZoom: 20,
-      tileSize: 256,
-    });
-
-    let usingFallback = false;
-    baseTileLayer.on('tileerror', () => {
-      if (!usingFallback && mapInstanceRef.current) {
-        usingFallback = true;
-        try {
-          map.removeLayer(baseTileLayer);
-          L.tileLayer(FALLBACK_TILE_URL, {
-            attribution: FALLBACK_TILE_ATTR,
-            maxZoom: 19,
-          }).addTo(map);
-        } catch (e) {
-          console.warn('Fallback tile swap error:', e);
-        }
-      }
+    // Mount initial clean tile layer
+    const initialLayerCfg = TILE_LAYERS[mapStyle] || TILE_LAYERS.streets;
+    const baseTileLayer = L.tileLayer(initialLayerCfg.url, {
+      attribution: initialLayerCfg.options.attribution,
+      maxZoom: initialLayerCfg.options.maxZoom || 19,
+      subdomains: initialLayerCfg.options.subdomains || ['a', 'b', 'c'],
     });
     baseTileLayer.addTo(map);
+    tileLayerRef.current = baseTileLayer;
 
+    // Zoom control
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
     const layerGroup = L.layerGroup().addTo(map);
@@ -304,7 +346,6 @@ const PlutoMapExplorer = ({
       }
     });
 
-    // Popup buttons: SPA navigation (no full page reload) + close button
     map.on('popupopen', (e) => {
       const el = e.popup?.getElement();
       if (!el) return;
@@ -314,9 +355,7 @@ const PlutoMapExplorer = ({
         nav.addEventListener('click', (ev) => {
           ev.preventDefault();
           const targetUrl = nav.getAttribute('data-pp-nav');
-          if (targetUrl) {
-            navigateRef.current(targetUrl);
-          }
+          if (targetUrl) navigateRef.current(targetUrl);
         });
       }
       if (close) {
@@ -324,24 +363,19 @@ const PlutoMapExplorer = ({
           ev.preventDefault();
           try {
             map.closePopup();
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
         });
       }
     });
 
     mapInstanceRef.current = map;
 
-    // Make sure Leaflet measures the container correctly after layout/animations
     const invalidate = () => {
       try {
         if (mapInstanceRef.current) {
           mapInstanceRef.current.invalidateSize();
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     };
     const timers = [100, 350, 800, 1500].map((ms) => setTimeout(invalidate, ms));
 
@@ -350,21 +384,11 @@ const PlutoMapExplorer = ({
       ro = new ResizeObserver(invalidate);
       ro.observe(mapContainerRef.current);
     }
-    let io = null;
-    if (typeof IntersectionObserver !== 'undefined' && mapContainerRef.current) {
-      io = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) invalidate();
-      });
-      io.observe(mapContainerRef.current);
-    }
 
     return () => {
       timers.forEach(clearTimeout);
       try {
         ro?.disconnect();
-      } catch (e) {}
-      try {
-        io?.disconnect();
       } catch (e) {}
       try {
         if (mapInstanceRef.current) {
@@ -379,6 +403,7 @@ const PlutoMapExplorer = ({
           mapContainerRef.current._leaflet_id = null;
         }
         mapInstanceRef.current = null;
+        tileLayerRef.current = null;
         markersLayerRef.current = null;
         markersRef.current = {};
         popupRef.current = null;
@@ -386,7 +411,7 @@ const PlutoMapExplorer = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [singlePropertyMode, selectedPropertyId]);
+  }, [singlePropertyMode, selectedPropertyId, property]);
 
   /* ── Build / update pins ───────────────────────────────────────────────── */
   useEffect(() => {
@@ -397,31 +422,33 @@ const PlutoMapExplorer = ({
     layerGroup.clearLayers();
     markersRef.current = {};
 
-    displayProperties.forEach((property) => {
-      const { lat, lng } = property.coordinates;
+    displayProperties.forEach((propItem) => {
+      const { lat, lng } = propItem.coordinates;
       const marker = L.marker([lat, lng], {
-        icon: buildDropPin(property, activeIdRef.current === property.id),
+        icon: buildDropPin(propItem, activeIdRef.current === propItem.id || singlePropertyMode),
       });
+
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
-        toggleRef.current?.(property);
+        toggleRef.current?.(propItem);
       });
+
       marker.addTo(layerGroup);
-      markersRef.current[property.id] = marker;
+      markersRef.current[propItem.id] = marker;
     });
 
-    if (!singlePropertyMode && displayProperties.length > 0 && activeRegion === 'Global View') {
+    if (singlePropertyMode && displayProperties.length > 0) {
+      const target = displayProperties[0];
+      map.setView([target.coordinates.lat, target.coordinates.lng], 15);
+    } else if (displayProperties.length > 0 && activeRegion === 'Global View') {
       try {
         const bounds = L.latLngBounds(displayProperties.map((p) => [p.coordinates.lat, p.coordinates.lng]));
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayProperties, singlePropertyMode]);
+  }, [displayProperties, singlePropertyMode, activeRegion]);
 
   /* ── Show / hide pins ──────────────────────────────────────────────────── */
   useEffect(() => {
@@ -435,27 +462,31 @@ const PlutoMapExplorer = ({
       closeActive();
       if (map.hasLayer(layerGroup)) map.removeLayer(layerGroup);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinsVisible]);
 
   /* ── Highlight active pin ──────────────────────────────────────────────── */
   useEffect(() => {
     displayProperties.forEach((p) => {
-      markersRef.current[p.id]?.setIcon(buildDropPin(p, activeProperty?.id === p.id));
+      markersRef.current[p.id]?.setIcon(
+        buildDropPin(p, activeProperty?.id === p.id || singlePropertyMode)
+      );
     });
-  }, [activeProperty, displayProperties]);
+  }, [activeProperty, displayProperties, singlePropertyMode]);
 
   const handleRegionSelect = (region) => {
     closeActive();
     setActiveRegion(region.label);
-    mapInstanceRef.current?.flyTo(region.center, region.zoom, { duration: 1.2 });
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.flyTo(region.center, region.zoom, { duration: 1.2 });
   };
 
-  const handleTogglePins = () => setPinsVisible((v) => !v);
+  const handleTogglePins = () => {
+    setPinsVisible((v) => !v);
+  };
 
-  /* ── Render ────────────────────────────────────────────────────────────── */
   return (
-    <div className="relative w-full bg-[#F8F6F2] border border-[#E5E0D8] rounded-3xl overflow-hidden shadow-xl isolate">
+    <div className="relative w-full overflow-hidden select-none bg-[#F4F1EA]">
       <style>{`
         /* ---------- Popup shell ---------- */
         .pp-popup .leaflet-popup-content-wrapper {
@@ -522,8 +553,8 @@ const PlutoMapExplorer = ({
 
         /* ---------- Pins ---------- */
         .pp-drop-pin { background: transparent !important; border: none !important; }
-        .pp-drop-pin svg { transition: transform .15s ease; }
-        .pp-drop-pin:hover svg { transform: translateY(-2px); }
+        .pp-drop-pin svg { transition: transform .15s ease; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); }
+        .pp-drop-pin:hover svg { transform: translateY(-3px) scale(1.05); }
 
         @keyframes ppFadeIn {
           from { opacity: 0; transform: translateY(-6px) scale(.97); }
@@ -535,32 +566,75 @@ const PlutoMapExplorer = ({
         }
         .pp-list-anim { animation: ppListIn .25s ease-out; }
 
-        /* ---------- Zoom control (left side) ---------- */
+        /* ---------- Zoom control (positioned cleanly) ---------- */
         .leaflet-top.leaflet-left .leaflet-control-zoom {
-          margin-left: 18px; margin-top: 130px;
-          border: none !important; border-radius: 12px !important; overflow: hidden;
-          box-shadow: 0 8px 24px -6px rgba(0,0,0,.35) !important;
+          margin-left: 14px;
+          margin-top: ${showControls ? '110px' : '14px'} !important;
+          border: none !important;
+          border-radius: 10px !important;
+          overflow: hidden;
+          box-shadow: 0 4px 18px rgba(0,0,0,0.25) !important;
         }
         @media (min-width: 768px) {
-          .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 86px; }
+          .leaflet-top.leaflet-left .leaflet-control-zoom {
+            margin-top: ${showControls ? '80px' : '16px'} !important;
+          }
         }
         .leaflet-control-zoom a {
-          background: #1C201C !important; color: #B49A70 !important;
-          border-color: #2E342E !important; font-weight: 700 !important; font-size: 16px !important;
-          width: 36px !important; height: 36px !important; line-height: 36px !important;
-          display: flex !important; align-items: center !important; justify-content: center !important;
+          background: #1C201C !important;
+          color: #B49A70 !important;
+          border-color: #2E342E !important;
+          font-weight: 700 !important;
+          font-size: 16px !important;
+          width: 32px !important;
+          height: 32px !important;
+          line-height: 32px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
           transition: all .2s;
         }
-        .leaflet-control-zoom a:hover { background: #252A25 !important; color: #E8D9BF !important; }
+        .leaflet-control-zoom a:hover {
+          background: #252A25 !important;
+          color: #E8D9BF !important;
+        }
 
-        /* Keep attribution readable & out of the way of the filter bar */
-        .leaflet-control-attribution { font-size: 10px !important; }
-        @media (min-width: 640px) {
-          .leaflet-bottom.leaflet-right .leaflet-control-attribution { margin-right: 0; }
+        .leaflet-control-attribution {
+          font-size: 9px !important;
+          background: rgba(255,255,255,0.85) !important;
+          backdrop-filter: blur(4px);
         }
       `}</style>
 
-      {/* ── Top control bar ── */}
+      {/* ── Street vs Satellite Layer Switcher Pill ── */}
+      <div className={`absolute z-[400] flex items-center bg-white/95 backdrop-blur-md rounded-xl p-1 border border-[#DDD8CE] shadow-lg ${
+        singlePropertyMode ? 'top-3 right-3' : 'bottom-6 sm:bottom-8 right-4'
+      }`}>
+        <button
+          type="button"
+          onClick={() => setMapStyle('streets')}
+          className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'streets'
+              ? 'bg-[#1C201C] text-white shadow-sm'
+              : 'text-[#6E6D66] hover:text-[#1C201C] hover:bg-[#F8F6F2]'
+          }`}
+        >
+          Map
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapStyle('satellite')}
+          className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'satellite'
+              ? 'bg-[#1C201C] text-white shadow-sm'
+              : 'text-[#6E6D66] hover:text-[#1C201C] hover:bg-[#F8F6F2]'
+          }`}
+        >
+          Satellite
+        </button>
+      </div>
+
+      {/* ── Top control bar (Multi-property mode) ── */}
       {showControls && (
         <div className="absolute top-4 left-4 right-4 z-20 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pointer-events-none">
           <div className="pointer-events-auto bg-[#1C201C]/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-[#B49A70]/40 shadow-xl flex items-center justify-between gap-3">
@@ -622,8 +696,8 @@ const PlutoMapExplorer = ({
       {/* ── Map canvas ── */}
       <div
         ref={mapContainerRef}
-        style={{ height: height || '620px', minHeight: '340px', width: '100%' }}
-        className="w-full z-10 relative cursor-grab active:cursor-grabbing bg-[#F4F1EA]"
+        style={{ height: height || '620px', minHeight: '320px', width: '100%' }}
+        className="w-full z-10 relative cursor-grab active:cursor-grabbing bg-[#EDE9DF]"
       />
 
       {/* ── Desktop sidebar ── */}
@@ -691,7 +765,6 @@ const PlutoMapExplorer = ({
                       key={p.id}
                       onClick={() => {
                         if (!pinsVisible) setPinsVisible(true);
-                        // wait one tick so the layer is re-added before the popup opens
                         setTimeout(() => toggleRef.current?.(p), pinsVisible ? 0 : 50);
                       }}
                       className={`p-2.5 rounded-xl border transition-all duration-200 cursor-pointer flex gap-3 items-center ${
@@ -737,7 +810,7 @@ const PlutoMapExplorer = ({
       )}
 
       {/* ── Mobile bottom drawer (popup is desktop-only) ── */}
-      {activeProperty && (
+      {activeProperty && !singlePropertyMode && (
         <div className="lg:hidden absolute bottom-3 left-3 right-3 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] p-3 shadow-2xl flex gap-3 items-center">
           <img src={activeProperty.image} alt={activeProperty.title} className="w-20 h-20 rounded-xl object-cover shrink-0" />
           <div className="flex-1 min-w-0">

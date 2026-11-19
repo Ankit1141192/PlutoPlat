@@ -123,7 +123,7 @@ const HeroSection = () => {
                   style={{ fontSize: 'clamp(1.75rem, min(7vw, 7vh), 4.75rem)' }}
                   className="font-serif font-normal leading-[1.1] tracking-tight mb-2 sm:mb-6 max-w-5xl mx-auto drop-shadow-md"
                 >
-                  Find a Place That <span className="italic font-light text-[#E8D9BF]">Feels Like Home</span>.
+                  Find Your Dream Property With Pluto<span className="text-[#B49A70]" >Plat</span><span className="text-[#B49A70]">.</span>
                 </motion.h1>
 
         {/* Subtitle */}

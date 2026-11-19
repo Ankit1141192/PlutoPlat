@@ -4,6 +4,7 @@ import {
   Menu, X, Heart, Search, Bell, User, Globe, ArrowUpRight, LogOut, FileText,
   ChevronDown, Sparkles, Calendar, Clock, Users, KeyRound, TrendingUp, ChevronRight,
 } from 'lucide-react';
+import logo from '../../assets/logo.png';
 import { usePropertyStore } from '../../context/PropertyContext';
 
 const navLinks = [
@@ -19,7 +20,7 @@ const navLinks = [
 
 const currencies = [
   { code: 'INR', label: 'INR (₹)' },
-  { code: 'AED', label: 'AED (د.إ)' },
+  // { code: 'AED', label: 'AED (د.إ)' },
   { code: 'USD', label: 'USD ($)' },
 ];
 
@@ -111,11 +112,10 @@ const Navbar = () => {
     gold: 'bg-[#B49A70]/20 text-[#8C7146]',
   };
 
-  const iconBtn = `relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-    isTransparent
+  const iconBtn = `relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${isTransparent
       ? 'text-white hover:bg-white/15'
       : 'text-[#1C201C] hover:bg-[#F1EDE3] hover:text-[#9A7F52]'
-  }`;
+    }`;
 
   const Avatar = ({ size = 'h-8 w-8', text = 'text-xs' }) =>
     user?.avatar ? (
@@ -129,15 +129,26 @@ const Navbar = () => {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          isTransparent
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isTransparent
             ? 'border-b border-white/10 bg-gradient-to-b from-black/40 to-transparent py-3 lg:py-4'
             : 'border-b border-[#E4DFD4] bg-white/90 py-2.5 shadow-[0_8px_30px_-18px_rgba(28,32,28,0.35)] backdrop-blur-xl lg:py-3'
-        }`}
+          }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           {/* Logo */}
-          <Link to="/" className="shrink-0 focus:outline-none" aria-label="PlutoPlat Home">
+          <Link
+            to="/"
+            className="shrink-0 focus:outline-none flex items-center"
+            aria-label="PlutoPlat Home"
+          >
+            <img
+              src={logo}
+              alt="PlutoPlat Logo"
+              className="h-11 w-auto scale-210 origin-left object-contain"
+            />
+          </Link>
+
+          {/* <Link to="/" className="shrink-0 focus:outline-none" aria-label="PlutoPlat Home">
             <span
               className={`font-serif text-[26px] font-normal tracking-tight transition-colors md:text-3xl ${
                 isTransparent ? 'text-white' : 'text-[#1C201C]'
@@ -146,7 +157,7 @@ const Navbar = () => {
               Pluto<span className="text-[#B49A70]">Plat</span>
               <span className="text-[#B49A70]">.</span>
             </span>
-          </Link>
+          </Link> */}
 
           {/* Desktop links */}
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
@@ -156,23 +167,21 @@ const Navbar = () => {
                 <NavLink
                   key={item.label}
                   to={item.path}
-                  className={`group relative px-3.5 py-2 text-sm font-medium transition-colors ${
-                    isTransparent
+                  className={`group relative px-3.5 py-2 text-sm font-medium transition-colors ${isTransparent
                       ? active
                         ? 'font-semibold text-white'
                         : 'text-white/80 hover:text-white'
                       : active
-                      ? 'font-semibold text-[#1C201C]'
-                      : 'text-[#6E6D66] hover:text-[#1C201C]'
-                  }`}
+                        ? 'font-semibold text-[#1C201C]'
+                        : 'text-[#6E6D66] hover:text-[#1C201C]'
+                    }`}
                 >
                   <span>{item.label}</span>
                   <span
-                    className={`absolute bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${
-                      active
+                    className={`absolute bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${active
                         ? 'scale-x-100 opacity-100'
                         : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100 group-active:scale-x-100 group-active:opacity-100'
-                    }`}
+                      }`}
                   />
                 </NavLink>
               );
@@ -183,9 +192,8 @@ const Navbar = () => {
           <div className="hidden items-center gap-1.5 lg:flex">
             {/* Currency */}
             <label
-              className={`mr-1 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
-                isTransparent ? 'border-white/25 text-white' : 'border-[#E4DFD4] text-[#222522]'
-              }`}
+              className={`mr-1 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${isTransparent ? 'border-white/25 text-white' : 'border-[#E4DFD4] text-[#222522]'
+                }`}
             >
               <Globe size={14} className={isTransparent ? 'text-white/70' : 'text-[#9A7F52]'} />
               <select
@@ -230,11 +238,10 @@ const Navbar = () => {
                   onClick={() => setUserMenuOpen((o) => !o)}
                   aria-haspopup="menu"
                   aria-expanded={userMenuOpen}
-                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 transition-colors ${
-                    isTransparent
+                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 transition-colors ${isTransparent
                       ? 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                       : 'border-[#E4DFD4] bg-[#F8F6F2] text-[#1C201C] hover:bg-white'
-                  }`}
+                    }`}
                 >
                   <Avatar />
                   <span className="hidden max-w-[90px] truncate text-sm font-semibold xl:inline">
@@ -307,9 +314,8 @@ const Navbar = () => {
               <div className="ml-1 flex items-center gap-2">
                 <Link
                   to="/login"
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    isTransparent ? 'text-white hover:bg-white/15' : 'text-[#1C201C] hover:bg-[#F1EDE3]'
-                  }`}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${isTransparent ? 'text-white hover:bg-white/15' : 'text-[#1C201C] hover:bg-[#F1EDE3]'
+                    }`}
                 >
                   Sign in
                 </Link>
@@ -357,16 +363,14 @@ const Navbar = () => {
         {/* backdrop */}
         <div
           onClick={() => setMobileMenuOpen(false)}
-          className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-            mobileMenuOpen ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'
+            }`}
         />
 
         {/* panel */}
         <aside
-          className={`absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-[#F8F6F2] shadow-2xl transition-transform duration-300 ease-out ${
-            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-[#F8F6F2] shadow-2xl transition-transform duration-300 ease-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           {/* top bar */}
           <div className="flex items-center justify-between px-5 py-4">
@@ -409,24 +413,21 @@ const Navbar = () => {
                     key={item.label}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`group flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${
-                      active ? 'bg-white text-[#1C201C] shadow-sm' : 'text-[#3F433E] active:bg-white'
-                    }`}
+                    className={`group flex min-h-12 items-center justify-between rounded-xl px-4 font-serif text-lg transition-colors ${active ? 'bg-white text-[#1C201C] shadow-sm' : 'text-[#3F433E] active:bg-white'
+                      }`}
                   >
                     <span className="flex items-center gap-3">
                       <span
-                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                          active ? 'bg-gradient-to-r from-[#C9B287] to-[#B49A70]' : 'bg-transparent'
-                        }`}
+                        className={`h-1.5 w-1.5 rounded-full transition-colors ${active ? 'bg-gradient-to-r from-[#C9B287] to-[#B49A70]' : 'bg-transparent'
+                          }`}
                       />
                       <span className="relative">
                         {item.label}
                         <span
-                          className={`absolute -bottom-0.5 left-0 right-0 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${
-                            active
+                          className={`absolute -bottom-0.5 left-0 right-0 h-[2px] rounded-full bg-gradient-to-r from-[#C9B287] to-[#B49A70] transition-all duration-300 ease-out origin-left ${active
                               ? 'scale-x-100 opacity-100'
                               : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100 group-active:scale-x-100 group-active:opacity-100'
-                          }`}
+                            }`}
                         />
                       </span>
                     </span>
@@ -476,9 +477,8 @@ const Navbar = () => {
                     key={c.code}
                     type="button"
                     onClick={() => setCurrency(c.code)}
-                    className={`h-10 rounded-lg text-sm font-semibold transition-all ${
-                      currency === c.code ? 'bg-white text-[#1C201C] shadow' : 'text-[#6E6D66]'
-                    }`}
+                    className={`h-10 rounded-lg text-sm font-semibold transition-all ${currency === c.code ? 'bg-white text-[#1C201C] shadow' : 'text-[#6E6D66]'
+                      }`}
                   >
                     {c.code}
                   </button>

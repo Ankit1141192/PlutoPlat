@@ -3,7 +3,7 @@
  * Handles all network requests for the Admin & Broker workstation.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v2';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://my-node-backend.ankit2914978.workers.dev/api/v2';
 
 // Use sessionStorage so closing tab automatically expires session and logs out
 const getToken = () => sessionStorage.getItem('pluto_admin_token');

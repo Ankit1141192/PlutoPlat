@@ -305,9 +305,10 @@ const PropertyDetail = () => {
 
               <div className="rounded-2xl overflow-hidden border border-[#E5E0D8] shadow-md">
                 <PlutoMapExplorer
+                  property={property}
                   selectedPropertyId={propId}
                   singlePropertyMode={true}
-                  height="360px"
+                  height="380px"
                   showControls={false}
                 />
               </div>

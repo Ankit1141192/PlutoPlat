@@ -336,6 +336,34 @@ const getProperties = async (req, res, next) => {
 };
 
 /**
+ * Get category listing counts from database
+ * GET /api/v1/properties/categories/counts
+ */
+const getCategoryCounts = async (req, res, next) => {
+  try {
+    const rawProperties = await Property.find({ status: { $nin: ['rejected', 'archived'] } }).select('type propertyType');
+    const counts = {
+      plots: 0,
+      homes: 0,
+      villas: 0,
+      apartments: 0,
+    };
+
+    rawProperties.forEach((p) => {
+      const t = String(p.type || p.propertyType || '').toLowerCase().trim();
+      if (t === 'villas' || t === 'villa') counts.villas += 1;
+      else if (t === 'homes' || t === 'home' || t === 'house') counts.homes += 1;
+      else if (t === 'plots' || t === 'plot' || t === 'land') counts.plots += 1;
+      else if (t === 'apartments' || t === 'apartment' || t === 'penthouses' || t === 'penthouse') counts.apartments += 1;
+    });
+
+    return ApiResponse.success(res, 'Category counts retrieved.', { counts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get single property by ID
  * GET /api/v1/properties/:id
  */
@@ -563,6 +591,7 @@ const deleteProperty = async (req, res, next) => {
 module.exports = {
   createProperty,
   getProperties,
+  getCategoryCounts,
   getPropertyById,
   getMyProperties,
   moderateProperty,
