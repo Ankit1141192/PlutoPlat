@@ -3,7 +3,7 @@
  * Handles executive control requests: User management, Property moderation, System audit logs.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://my-node-backend.ankit2914978.workers.dev/api/v3';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://plutoplat.onrender.com/api/v3';
 
 // Use sessionStorage with fallback to localStorage
 const getToken = () => sessionStorage.getItem('pluto_superadmin_token') || localStorage.getItem('pluto_superadmin_token');

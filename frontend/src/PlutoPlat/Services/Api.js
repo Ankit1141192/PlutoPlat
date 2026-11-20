@@ -2,7 +2,7 @@
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  'https://my-node-backend.ankit2914978.workers.dev/api/v1';
+  'https://plutoplat.onrender.com/api/v1';
 
 const TOKEN_KEY = 'pluto_token';
 
