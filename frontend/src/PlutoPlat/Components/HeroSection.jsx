@@ -104,38 +104,50 @@ const HeroSection = () => {
       <div className="relative z-10 w-full max-w-6xl mx-auto px-3.5 sm:px-6 text-center text-white">
         {/* Prestige Tag */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-2 sm:mb-6">
-           <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-3 py-1 sm:px-4 sm:py-2 text-[11px] font-medium text-[#EBE7DF] shadow-xl backdrop-blur-md sm:text-[13px]"
-        >
-          <Sparkles size={12} className="text-[#C9B287] sm:w-[14px] sm:h-[14px]" />
-          <span>Kanpur, Uttar Pradesh &middot; Sovereign Collection</span>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C9B287]/40 bg-white/5 px-3 py-1 sm:px-4 sm:py-2 text-[11px] font-medium text-[#EBE7DF] shadow-xl backdrop-blur-md sm:text-[13px]"
+          >
+            <Sparkles size={12} className="text-[#C9B287] sm:w-[14px] sm:h-[14px]" />
+            <span>Kanpur, Uttar Pradesh &middot; Sovereign Collection</span>
+          </motion.div>
         </div>
 
         {/* Headline */}
         <motion.h1
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.9, delay: 0.15 }}
-                  style={{ fontSize: 'clamp(1.75rem, min(7vw, 7vh), 4.75rem)' }}
-                  className="font-serif font-normal leading-[1.1] tracking-tight mb-2 sm:mb-6 max-w-5xl mx-auto drop-shadow-md"
-                >
-                  Find Your Dream Property With Pluto<span className="text-[#B49A70]" >Plat</span><span className="text-[#B49A70]">.</span>
-                </motion.h1>
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.15 }}
+          style={{ fontSize: 'clamp(1.75rem, min(7vw, 7vh), 4.75rem)' }}
+          className="font-serif font-normal leading-[1.1] tracking-tight mb-2 sm:mb-6 max-w-5xl mx-auto drop-shadow-md"
+        >
+          Find Your Dream Property With Pluto<span className="text-[#B49A70]">Plat</span><span className="text-[#B49A70]">.</span>
+        </motion.h1>
 
-        {/* Subtitle */}
-         <motion.p
+        {/* Updated Subtitle & Tagline */}
+        <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.25 }}
-          className="mx-auto mb-4 mt-2 sm:mb-10 sm:mt-5 max-w-2xl text-xs sm:text-base lg:text-lg font-light leading-relaxed text-[#E5E1D8] drop-shadow px-2"
+          className="mx-auto mb-5 mt-2 sm:mb-10 sm:mt-4 max-w-2xl px-2 space-y-1.5 sm:space-y-2 drop-shadow"
         >
-          Colonial manors, quiet Ganges-side sanctuaries and prestigious estates across Kanpur, Uttar Pradesh and
-          beyond.
-        </motion.p>
+          <p className="text-sm sm:text-xl lg:text-2xl font-semibold tracking-wide text-white flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-3">
+            <span>Buy</span>
+            <span className="text-[#B49A70]">&bull;</span>
+            <span>Sell</span>
+            <span className="text-[#B49A70]">&bull;</span>
+            <span>Rent</span>
+            <span className="text-[#B49A70]">&bull;</span>
+            <span>Verify</span>
+            <span className="text-[#B49A70]">&bull;</span>
+            <span>Design</span>
+          </p>
+          <p className="text-xs sm:text-base lg:text-lg font-light tracking-wide text-[#E5E1D8]">
+            Smart Search. Trusted Deals. Better Living.
+          </p>
+        </motion.div>
 
         {/* Floating Search Console */}
         <motion.div

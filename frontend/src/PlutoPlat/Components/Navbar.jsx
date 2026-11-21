@@ -4,7 +4,7 @@ import {
   Menu, X, Heart, Search, Bell, User, Globe, ArrowUpRight, LogOut, FileText,
   ChevronDown, Sparkles, Calendar, Clock, Users, KeyRound, TrendingUp, ChevronRight,
 } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/websitelogo1.png';
 import { usePropertyStore } from '../../context/PropertyContext';
 
 const navLinks = [
@@ -144,7 +144,7 @@ const Navbar = () => {
             <img
               src={logo}
               alt="PlutoPlat Logo"
-              className="h-11 w-auto scale-210 origin-left object-contain"
+              className="h-13 w-auto scale-270 origin-left object-contain"
             />
           </Link>
 

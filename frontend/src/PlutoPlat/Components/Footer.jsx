@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Mail, MapPin, Phone, ShieldCheck, ArrowUp, Clock } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/websitelogo1.png';
 
 // Clean SVG social icons matching Lucide styling
 const XTwitterIcon = ({ size = 16, className = '' }) => (
@@ -100,7 +100,7 @@ const Footer = () => {
                 <img
                   src={logo}
                   alt="PlutoPlat Logo"
-                  className="h-9 sm:h-11 w-auto scale-175 sm:scale-210 origin-left object-contain"
+                  className="h-13 w-auto scale-270 origin-left object-contain"
                 />
               </Link>
               <div className="sm:hidden inline-flex items-center gap-1.5 rounded-full border border-[#2F352F] bg-[#171B17] px-2.5 py-1 text-[11px] text-[#B9B5AA] shrink-0">
