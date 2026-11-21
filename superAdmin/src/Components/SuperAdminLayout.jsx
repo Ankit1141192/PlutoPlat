@@ -20,8 +20,8 @@ import {
 import { useSuperAdminStore } from '../context/SuperAdminContext';
 
 // Set these in .env (VITE_AGENT_URL, VITE_BUYER_SITE_URL); the localhost values are dev fallbacks
-const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'http://localhost:5174';
-const BUYER_SITE_URL = import.meta.env.VITE_BUYER_SITE_URL || 'http://localhost:5173';
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'https://admin.plutoplot.in/';
+const BUYER_SITE_URL = import.meta.env.VITE_BUYER_SITE_URL || 'https://www.plutoplot.in/';
 
 const SuperAdminLayout = ({ children, title = 'SuperAdmin Control Panel' }) => {
   const location = useLocation();

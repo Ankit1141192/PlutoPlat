@@ -7,14 +7,38 @@ import {
   Phone,
   Building2,
   MapPin,
+  Eye,
+  EyeOff,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  Loader2,
-  ShieldCheck
+  Loader2
 } from 'lucide-react';
 import { AdminApi } from '../services/Api';
 import { useAdminStore } from '../context/AdminContext';
+import logo from '../assets/logo1.png';
+
+const focusRing =
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B49A70]';
+
+const inputClass =
+  'w-full rounded-xl border border-[#DEDAD1] bg-white py-3.5 pl-11 pr-4 text-sm text-[#1C201C] placeholder:text-[#9E9B91] transition-colors focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/25';
+
+const labelClass = 'mb-2 block text-sm font-medium text-[#1C201C]';
+const iconClass = 'pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8E8B82]';
+
+const Brand = ({ dark = false }) => (
+  <Link to="/login" className={`inline-flex items-center gap-2 rounded-lg ${focusRing}`}>
+    <img src={logo} alt="" className="h-12 w-12 shrink-0 object-contain" />
+    <span
+      className={`whitespace-nowrap font-serif text-2xl font-semibold leading-none tracking-tight ${
+        dark ? 'text-white' : 'text-[#1C201C]'
+      }`}
+    >
+      Pluto<span className="text-[#B49A70]">Plat</span>
+    </span>
+  </Link>
+);
 
 const Register = () => {
   const navigate = useNavigate();
@@ -30,10 +54,13 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const set = (key) => (e) => setFormData({ ...formData, [key]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,7 +68,7 @@ const Register = () => {
     setSuccess('');
 
     if (formData.password.length < 8) {
-      setError('Password must contain at least 8 characters.');
+      setError('Password must be at least 8 characters.');
       return;
     }
 
@@ -62,187 +89,217 @@ const Register = () => {
         location: { city: formData.city.trim(), state: 'Uttar Pradesh', country: 'India' },
       });
 
-      setSuccess('Agent account registered successfully! You can now sign in to your workstation.');
-      showToast('Agent account registered! Redirecting to sign in…', 'success');
+      setSuccess('Account created. Taking you to sign in…');
+      showToast('Account created. Redirecting to sign in…', 'success');
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
-      setError(err.message || 'Registration failed. Please check your information and try again.');
+      setError(err.message || 'Could not create your account. Check your details and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2] flex flex-col justify-between selection:bg-[#B49A70] selection:text-white">
-      {/* Header */}
-      <header className="px-6 py-6 border-b border-[#DEDAD1]/60 bg-[#F8F6F2]/80 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-sm bg-[#1C201C] flex items-center justify-center text-[#B49A70] font-serif font-bold text-xl shadow-md">
-            P
-          </div>
-          <div>
-            <div className="font-serif text-lg tracking-[0.2em] font-bold text-[#1C201C] leading-none uppercase">
-              PlutoPlat
-            </div>
-            <div className="text-[10px] tracking-[0.25em] font-sans text-[#B49A70] font-semibold uppercase mt-0.5">
-              Agent Onboarding Desk
-            </div>
-          </div>
-        </div>
-        <Link to="/login" className="text-xs font-semibold text-[#1C201C] hover:text-[#B49A70]">
-          Already registered? Sign In
-        </Link>
-      </header>
+    <div className="grid min-h-screen bg-[#F8F6F2] selection:bg-[#B49A70] selection:text-white lg:grid-cols-[1.05fr_1fr]">
+      {/* Brand panel */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#101411] p-12 text-[#F7F5F0] lg:flex">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(#B49A70_1px,transparent_1px)] [background-size:20px_20px]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-[#B49A70]/20 blur-3xl"
+        />
 
-      {/* Main Body */}
-      <div className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-xl bg-white border border-[#DEDAD1] rounded-xs shadow-xl p-8 sm:p-10">
-          <div className="mb-6">
-            <h1 className="font-serif text-2xl font-semibold text-[#1C201C]">
-              Apply for Broker Workstation Access
-            </h1>
-            <p className="text-xs text-[#6E6D66] mt-1.5 leading-relaxed">
-              Register your details to submit verified property listings and receive pre-qualified buyer inquiries.
-            </p>
+        <div className="relative">
+          <Brand dark />
+        </div>
+
+        <div className="relative max-w-md">
+          <h2 className="font-serif text-5xl font-normal leading-[1.1] tracking-tight">
+            List your properties and meet serious buyers.
+          </h2>
+          <ul className="mt-10 space-y-4 text-[#D5CFBF]">
+            {['Free to apply', 'Add listings in minutes', 'Get inquiries directly'].map((t) => (
+              <li key={t} className="flex items-center gap-3 text-base">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#B49A70]" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-sm text-[#8E8B82]">© 2026 PlutoPlat</p>
+      </aside>
+
+      {/* Form */}
+      <main className="flex flex-col justify-center px-6 py-10 sm:px-12">
+        <div className="mx-auto w-full max-w-xl">
+          <div className="mb-10 lg:hidden">
+            <Brand />
           </div>
+
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#1C201C]">Create your account</h1>
+          <p className="mt-2 text-base text-[#6E6D66]">Apply for a partner account.</p>
 
           {error && (
-            <div className="mb-5 p-3.5 rounded-xs bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 mt-0.5" />
-              <span>{error}</span>
+            <div
+              role="alert"
+              className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            >
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+              <p className="font-medium">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="mb-5 p-3.5 rounded-xs bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600 mt-0.5" />
-              <span>{success}</span>
+            <div
+              role="status"
+              className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+            >
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              <p className="font-medium">{success}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                Full Legal Name
-              </label>
+              <label htmlFor="name" className={labelClass}>Full name</label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                <User className={iconClass} />
                 <input
+                  id="name"
                   type="text"
+                  autoComplete="name"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Michael Sharma"
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                  onChange={set('name')}
+                  placeholder="Michael Sharma"
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Email Address
-                </label>
+                <label htmlFor="email" className={labelClass}>Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <Mail className={iconClass} />
                   <input
+                    id="email"
                     type="email"
+                    autoComplete="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="broker@agency.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    onChange={set('email')}
+                    placeholder="you@example.com"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Mobile Number
-                </label>
+                <label htmlFor="phone" className={labelClass}>Mobile number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <Phone className={iconClass} />
                   <input
+                    id="phone"
                     type="tel"
+                    autoComplete="tel"
                     required
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={set('phone')}
                     placeholder="+91 98210 33445"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Operating City
-                </label>
+                <label htmlFor="city" className={labelClass}>City</label>
                 <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <MapPin className={iconClass} />
                   <input
+                    id="city"
                     type="text"
                     required
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Kanpur, UP"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    onChange={set('city')}
+                    placeholder="Kanpur, UP"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Realty Agency / Firm
-                </label>
+                <label htmlFor="agency" className={labelClass}>Agency (optional)</label>
                 <div className="relative">
-                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <Building2 className={iconClass} />
                   <input
+                    id="agency"
                     type="text"
                     value={formData.agency}
-                    onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
-                    placeholder="e.g. Heritage Realty"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    onChange={set('agency')}
+                    placeholder="Heritage Realty"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Password (Min. 8)
-                </label>
+                <label htmlFor="password" className={labelClass}>Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <Lock className={iconClass} />
                   <input
-                    type="password"
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     required
                     minLength={8}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    onChange={set('password')}
+                    placeholder="At least 8 characters"
+                    className={`${inputClass} pr-12`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#8E8B82] hover:text-[#1C201C] ${focusRing}`}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#1C201C] mb-1.5">
-                  Confirm Password
-                </label>
+                <label htmlFor="confirmPassword" className={labelClass}>Confirm password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6D66]" />
+                  <Lock className={iconClass} />
                   <input
-                    type="password"
+                    id="confirmPassword"
+                    type={showConfirm ? 'text' : 'password'}
+                    autoComplete="new-password"
                     required
                     minLength={8}
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F6F2]/50 border border-[#DEDAD1] rounded-xs text-xs text-[#1C201C] focus:bg-white focus:outline-none focus:border-[#B49A70]"
+                    onChange={set('confirmPassword')}
+                    placeholder="Re-enter password"
+                    className={`${inputClass} pr-12`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((s) => !s)}
+                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#8E8B82] hover:text-[#1C201C] ${focusRing}`}
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -250,31 +307,33 @@ const Register = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-6 bg-[#1C201C] hover:bg-[#B49A70] hover:text-[#121612] text-white rounded-xs text-xs font-semibold tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1C201C] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-black/10 transition-colors hover:bg-[#B49A70] hover:text-[#121612] disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating account…
+                </>
               ) : (
                 <>
-                  Submit Application
-                  <ArrowRight className="w-4 h-4" />
+                  Create account
+                  <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
           </form>
 
-          <p className="mt-5 text-center text-xs text-[#6E6D66]">
-            Already have verified broker access?{' '}
-            <Link to="/login" className="font-semibold text-[#1C201C] underline hover:text-[#B49A70]">
-              Sign in to Workstation
+          <p className="mt-8 text-center text-sm text-[#6E6D66]">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className={`rounded font-semibold text-[#1C201C] underline decoration-[#B49A70] underline-offset-4 hover:text-[#8F7648] ${focusRing}`}
+            >
+              Sign in
             </Link>
           </p>
         </div>
-      </div>
-
-      <footer className="px-6 py-4 text-center text-xs text-[#6E6D66] border-t border-[#DEDAD1]/60">
-        © 2026 PlutoPlat Global Real Estate Network. Authorized agent access only.
-      </footer>
+      </main>
     </div>
   );
 };

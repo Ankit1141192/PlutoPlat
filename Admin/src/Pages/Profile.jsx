@@ -171,7 +171,7 @@ const Profile = () => {
             </div>
 
             {/* Form Fields Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gapa-4">
               <div>
                 <label className="block text-[12px] font-medium text-[#3F433E] mb-1.5">
                   Full Legal Name

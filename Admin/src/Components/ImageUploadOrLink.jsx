@@ -87,8 +87,8 @@ const ImageUploadOrLink = ({
             <input
               type="url"
               required={required && !value}
-              placeholder="https://images.unsplash.com/... or any image link"
-              value={value || ''}
+              placeholder=" any image link"
+              // value={value || ''}
               onChange={(e) => onChange?.(e.target.value)}
               className="h-11 w-full rounded-xl border border-[#DDD8CE] bg-[#FBFAF7] pr-9 pl-3.5 text-xs text-[#1C201C] transition focus:border-[#B49A70] focus:outline-none focus:ring-2 focus:ring-[#B49A70]/20"
             />
@@ -99,7 +99,7 @@ const ImageUploadOrLink = ({
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#9A978C] hover:text-[#1C201C] cursor-pointer"
                 title="Clear image"
               >
-                <X size={15} />
+                {/* <X size={15} /> */}
               </button>
             )}
           </div>
@@ -131,37 +131,7 @@ const ImageUploadOrLink = ({
         </div>
       )}
 
-      {/* Live Preview Thumbnail if an image is provided */}
-      {value && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#EAE6DE] bg-white p-2.5 shadow-2xs">
-          <img
-            src={value}
-            alt="Preview"
-            className="h-14 w-20 rounded-lg border border-[#DDD8CE] object-cover shrink-0"
-            onError={(e) => {
-              e.currentTarget.src =
-                'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=200&q=80';
-            }}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-              <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-              <span>Image loaded successfully</span>
-            </div>
-            <p className="text-[11px] text-[#77766E] truncate mt-0.5">
-              {isDataUrl ? 'Direct device file upload (Base64)' : value}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="rounded-lg border border-[#DDD8CE] p-1.5 text-[#888] hover:bg-[#FAF8F5] hover:text-red-600 transition-colors cursor-pointer"
-            title="Remove image"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      
 
       {helperText && !value && <p className="text-[11px] text-[#8A887F]">{helperText}</p>}
     </div>
