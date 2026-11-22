@@ -27,6 +27,13 @@ const Testimonials = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [ratingFilter, setRatingFilter] = useState('all'); // all, 5, 4
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(() => {
+    try {
+      return localStorage.getItem('pluto_user_feedback_submitted') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Review Form State
   const [clientName, setClientName] = useState(user?.name || '');
@@ -90,6 +97,12 @@ const Testimonials = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (alreadySubmitted) {
+      showToast?.('You have already submitted your feedback. Only one submission is permitted per user.', 'info');
+      setIsModalOpen(false);
+      return;
+    }
+
     if (!clientName.trim() || !message.trim()) {
       showToast?.('Please enter your name and review message.', 'error');
       return;
@@ -101,6 +114,8 @@ const Testimonials = () => {
         await addTestimonial({
           name: clientName.trim(),
           client: clientName.trim(),
+          userEmail: user?.email || '',
+          email: user?.email || '',
           role: role.trim() || 'Private Investor',
           company: property.trim() || 'Trophy Estate Acquisition',
           property: property.trim() || 'Trophy Estate Acquisition',
@@ -111,11 +126,19 @@ const Testimonials = () => {
           imageUrl: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
         });
       }
+      setAlreadySubmitted(true);
+      try {
+        localStorage.setItem('pluto_user_feedback_submitted', 'true');
+      } catch {}
       setIsModalOpen(false);
       setMessage('');
       setCurrentPage(1);
     } catch (err) {
-      console.warn('Testimonial submission error:', err);
+      console.warn('Testimonial submission notice:', err);
+      if (err.message && err.message.includes('already submitted')) {
+        setAlreadySubmitted(true);
+        setIsModalOpen(false);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -163,13 +186,20 @@ const Testimonials = () => {
               <span className="text-xs text-[#77766E]">({testimonials.length} reviews)</span>
             </div>
 
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1C201C] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-sm transition hover:bg-black active:scale-95 cursor-pointer"
-            >
-              <Plus size={15} className="text-[#B49A70]" />
-              <span>Share Experience</span>
-            </button>
+            {alreadySubmitted ? (
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#EAE6DE] px-5 py-3 text-xs font-semibold text-[#6E6D66] border border-[#DDD8CE]">
+                <CheckCircle2 size={15} className="text-[#10B981]" />
+                <span>Feedback Submitted (Awaiting Approval)</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-[#1C201C] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-sm transition hover:bg-black active:scale-95 cursor-pointer"
+              >
+                <Plus size={15} className="text-[#B49A70]" />
+                <span>Share Experience</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -440,8 +470,8 @@ const Testimonials = () => {
                   <span>Client Experience</span>
                 </span>
                 <h3 className="mt-1 font-serif text-2xl text-[#1C201C]">Share Your Experience</h3>
-                <p className="text-xs text-[#6E6D66]">
-                  Your review will be authenticated and published across the PlutoPlat verified testimonials portal.
+                <p className="text-xs text-[#6E6D66] mt-1">
+                  Each client may submit feedback once. Your review will be reviewed and approved by SuperAdmin before going live on the platform.
                 </p>
               </div>
 

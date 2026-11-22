@@ -111,6 +111,7 @@ const buildPopupHtml = (p) => {
   const meta = [p.beds ? `${escapeHtml(p.beds)} Beds` : '', p.sqft ? `${escapeHtml(p.sqft)} sq.ft` : '']
     .filter(Boolean)
     .join(' &bull; ');
+  const mapLink = p.mapUrl ? `<a class="pp-map-link" href="${escapeHtml(p.mapUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:4px;font-size:11px;color:#B49A70;text-decoration:underline;">📍 Open in Google Maps ↗</a>` : '';
 
   return `
   <div class="pp-card">
@@ -125,6 +126,7 @@ const buildPopupHtml = (p) => {
       <div class="pp-title" title="${title}">${title}</div>
       <div class="pp-loc">📍 ${location}</div>
       ${meta ? `<div class="pp-meta">${meta}</div>` : ''}
+      ${mapLink}
       <a class="pp-cta" href="/property/${encodeURIComponent(pId)}" data-pp-nav="/property/${encodeURIComponent(pId)}">
         View Property &rarr;
       </a>
@@ -162,36 +164,55 @@ const PlutoMapExplorer = ({
   const [listOpen, setListOpen] = useState(true);
   listOpenRef.current = listOpen;
 
+  const extractCoords = (p) => {
+    let lat = Number(p.latitude ?? p.coordinates?.lat ?? p.coordinates?.latitude);
+    let lng = Number(p.longitude ?? p.langitude ?? p.coordinates?.lng ?? p.coordinates?.longitude);
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+    // Check mapUrl or location string for Google Maps coordinates
+    const testStr = p.mapUrl || (typeof p.location === 'string' ? p.location : '');
+    if (testStr) {
+      const pinRegex = /!3d(-?\d+(?:\.\d+)?)(?:.*?)[!&]4d(-?\d+(?:\.\d+)?)/g;
+      let lastMatch = null, m;
+      while ((m = pinRegex.exec(testStr)) !== null) lastMatch = m;
+      if (lastMatch) {
+        const pLat = parseFloat(lastMatch[1]), pLng = parseFloat(lastMatch[2]);
+        if (!isNaN(pLat) && !isNaN(pLng)) return { lat: pLat, lng: pLng };
+      }
+      const qMatch = testStr.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i);
+      if (qMatch) {
+        const pLat = parseFloat(qMatch[1]), pLng = parseFloat(qMatch[2]);
+        if (!isNaN(pLat) && !isNaN(pLng)) return { lat: pLat, lng: pLng };
+      }
+      const atMatch = testStr.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+      if (atMatch) {
+        const pLat = parseFloat(atMatch[1]), pLng = parseFloat(atMatch[2]);
+        if (!isNaN(pLat) && !isNaN(pLng)) return { lat: pLat, lng: pLng };
+      }
+    }
+    const locStr = (typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`).toLowerCase();
+    if (locStr.includes('swaroop')) return { lat: 26.482, lng: 80.315 };
+    if (locStr.includes('civil')) return { lat: 26.474, lng: 80.335 };
+    if (locStr.includes('vip')) return { lat: 26.479, lng: 80.342 };
+    if (locStr.includes('delhi')) return { lat: 28.6139, lng: 77.209 };
+    if (locStr.includes('mumbai')) return { lat: 19.076, lng: 72.8777 };
+    if (locStr.includes('dubai')) return { lat: 25.2048, lng: 55.2708 };
+    return { lat: 26.474, lng: 80.335 };
+  };
+
   const displayProperties = useMemo(() => {
     // 1. If explicit property object is passed (e.g. PropertyDetail)
     if (singlePropertyMode && property) {
-      let lat = Number(property.latitude ?? property.coordinates?.lat ?? property.coordinates?.latitude);
-      let lng = Number(property.longitude ?? property.langitude ?? property.coordinates?.lng ?? property.coordinates?.longitude);
-      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-        lat = 26.474;
-        lng = 80.335;
-      }
-      return [{ ...property, id: property.id || property._id || '1', coordinates: { lat, lng } }];
+      const coords = extractCoords(property);
+      return [{ ...property, id: property.id || property._id || '1', coordinates: coords, latitude: coords.lat, longitude: coords.lng }];
     }
 
     // 2. Regular properties collection
     return properties
       .map((p) => {
-        let lat = Number(p.latitude ?? p.coordinates?.lat ?? p.coordinates?.latitude);
-        let lng = Number(p.longitude ?? p.langitude ?? p.coordinates?.lng ?? p.coordinates?.longitude);
-        if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-          const locStr = (
-            typeof p.location === 'string' ? p.location : `${p.location?.city || ''}`
-          ).toLowerCase();
-          if (locStr.includes('swaroop')) { lat = 26.482; lng = 80.315; }
-          else if (locStr.includes('civil')) { lat = 26.474; lng = 80.335; }
-          else if (locStr.includes('vip')) { lat = 26.479; lng = 80.342; }
-          else if (locStr.includes('delhi')) { lat = 28.6139; lng = 77.209; }
-          else if (locStr.includes('mumbai')) { lat = 19.076; lng = 72.8777; }
-          else if (locStr.includes('dubai')) { lat = 25.2048; lng = 55.2708; }
-          else { lat = 26.474; lng = 80.335; }
-        }
-        return { ...p, id: p.id || p._id, coordinates: { lat, lng } };
+        const coords = extractCoords(p);
+        return { ...p, id: p.id || p._id, coordinates: coords, latitude: coords.lat, longitude: coords.lng };
       })
       .filter((p) => {
         const propId = String(p.id || p._id);

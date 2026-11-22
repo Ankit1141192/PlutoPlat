@@ -20,6 +20,47 @@ import AdminLayout from '../Components/AdminLayout';
 import ImageUploadOrLink from '../Components/ImageUploadOrLink';
 import { useAdminStore } from '../context/AdminContext';
 
+function parseGoogleMapsCoords(input) {
+  if (!input || typeof input !== 'string') return null;
+  const str = input.trim();
+  // 1. Place pin !3d... !4d... (take last match for destination pin)
+  const pinRegex = /!3d(-?\d+(?:\.\d+)?)(?:.*?)[!&]4d(-?\d+(?:\.\d+)?)/g;
+  let lastPinMatch = null;
+  let m;
+  while ((m = pinRegex.exec(str)) !== null) {
+    lastPinMatch = m;
+  }
+  if (lastPinMatch) {
+    const lat = parseFloat(lastPinMatch[1]);
+    const lng = parseFloat(lastPinMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+  // 2. Query param q / query / ll
+  const qMatch = str.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i);
+  if (qMatch) {
+    const lat = parseFloat(qMatch[1]);
+    const lng = parseFloat(qMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+  // 3. Viewport @lat,lng
+  const atMatch = str.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if (atMatch) {
+    const lat = parseFloat(atMatch[1]);
+    const lng = parseFloat(atMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+  // 4. Comma-separated coordinates
+  const commaMatch = str.match(/(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/);
+  if (commaMatch) {
+    const lat = parseFloat(commaMatch[1]);
+    const lng = parseFloat(commaMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+
 const PropertyList = () => {
   const { user, properties, addProperty, updateProperty, deleteProperty } = useAdminStore();
 
@@ -36,6 +77,7 @@ const PropertyList = () => {
     numericPrice: 8500000,
     location: 'Civil Lines, Kanpur',
     address: 'Mall Road, Civil Lines',
+    mapUrl: '',
     beds: 4,
     baths: 4,
     sqft: '5,200',
@@ -44,6 +86,20 @@ const PropertyList = () => {
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
     description: '',
   });
+
+  const handleMapUrlChange = (val) => {
+    const coords = parseGoogleMapsCoords(val);
+    if (coords) {
+      setForm((prev) => ({
+        ...prev,
+        mapUrl: val,
+        latitude: coords.lat,
+        longitude: coords.lng,
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, mapUrl: val }));
+    }
+  };
 
   // Filter to properties belonging to this agent (or platform properties if none authored yet)
   const myProperties = useMemo(() => {
@@ -80,6 +136,7 @@ const PropertyList = () => {
       numericPrice: 8500000,
       location: 'Civil Lines, Kanpur',
       address: 'Mall Road, Civil Lines',
+      mapUrl: '',
       beds: 4,
       baths: 4,
       sqft: '5,200',
@@ -101,6 +158,7 @@ const PropertyList = () => {
       numericPrice: numPrice,
       location: prop.location || 'Civil Lines, Kanpur',
       address: prop.address || prop.location || 'Mall Road, Civil Lines',
+      mapUrl: prop.mapUrl || '',
       beds: prop.beds || 4,
       baths: prop.baths || 4,
       sqft: prop.sqft ? String(prop.sqft) : '5,200',
@@ -126,6 +184,7 @@ const PropertyList = () => {
 
     const payload = {
       ...form,
+      mapUrl: form.mapUrl || '',
       numericPrice: numPrice,
       price: formattedPrice,
       latitude: lat,
@@ -135,14 +194,20 @@ const PropertyList = () => {
     };
 
     if (editingId) {
-      updateProperty(editingId, payload);
+      updateProperty(editingId, {
+        ...payload,
+        status: 'pending',
+        verified: false,
+        isVerified: false,
+      });
     } else {
       addProperty({
         ...payload,
         ownerEmail: user?.email || 'm.sharma@plutoplat.com',
         ownerName: user?.name || 'Michael Sharma',
-        verified: true,
-        status: 'approved',
+        verified: false,
+        isVerified: false,
+        status: 'pending',
       });
     }
 
@@ -437,37 +502,55 @@ const PropertyList = () => {
                   </div>
                 </div>
 
-                {/* Map Coordinates: Latitude & Longitude */}
-                <div className="grid grid-cols-2 gap-3.5 p-3 rounded-xl bg-[#FAF8F5] border border-[#E8E3D8]">
+                {/* Map Coordinates: Google Maps Link or Latitude & Longitude */}
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E8E3D8] space-y-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
-                      Latitude (Map Position) <span className="text-red-500">*</span>
+                      Google Maps Location URL (Paste link to auto-fill GPS)
                     </label>
                     <input
-                      type="number"
-                      step="any"
-                      required
-                      placeholder="e.g. 26.4740"
-                      value={form.latitude}
-                      onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-                      className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
+                      type="text"
+                      placeholder="e.g. https://www.google.com/maps/place/Atal+Ghat/@26.4712... or coordinates"
+                      value={form.mapUrl || ''}
+                      onChange={(e) => handleMapUrlChange(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none placeholder:text-[#999]"
                     />
+                    <p className="text-[10px] text-[#8A887F] mt-1">
+                      Paste any Google Maps place or pin link; coordinates are extracted automatically!
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
-                      Longitude (Map Position) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      placeholder="e.g. 80.3350"
-                      value={form.longitude}
-                      onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-                      className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
-                    />
+
+                  <div className="grid grid-cols-2 gap-3.5 pt-1 border-t border-[#EAE6DE]">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
+                        Latitude (Map Position) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="e.g. 26.5024868"
+                        value={form.latitude}
+                        onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1C201C] mb-1">
+                        Longitude (Map Position) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="e.g. 80.318637"
+                        value={form.longitude}
+                        onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-[#DDD8CE] bg-white px-3 text-xs text-[#1C201C] focus:border-[#B49A70] focus:outline-none"
+                      />
+                    </div>
                   </div>
-                  <p className="col-span-2 text-[10px] text-[#8A887F]">
+                  <p className="text-[10px] text-[#8A887F]">
                     Used to pinpoint exact residence pin markers on the interactive Leaflet map.
                   </p>
                 </div>

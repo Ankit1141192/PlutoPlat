@@ -25,13 +25,17 @@ const normalizeTestimonial = (item) => {
     company: prop,
     rating: Number(t.rating) || 5,
     role: t.role || 'Private Investor',
+    status: t.status || (t.isApproved ? 'approved' : 'pending'),
+    isApproved: Boolean(t.isApproved || t.status === 'approved'),
+    userId: t.userId || (t.user ? t.user.toString() : ''),
+    userEmail: t.userEmail || '',
   };
 };
 
 // CREATE TESTIMONIAL
 exports.createTestimonial = async (req, res) => {
   try {
-    const { name, client, rating, imageUrl, avatar, company, property, role, message, content } = req.body;
+    const { name, client, rating, imageUrl, avatar, company, property, role, message, content, email, userEmail } = req.body;
 
     const author = (name || client || '').trim();
     const text = (message || content || '').trim();
@@ -42,6 +46,40 @@ exports.createTestimonial = async (req, res) => {
         message: 'Client name and testimonial message are required.',
       });
     }
+
+    const isSuperAdmin = req.user && req.user.role === 'super_admin';
+
+    // REQUIREMENT: Regular users can only submit feedback ONCE. No duplicate submissions or updates by users.
+    if (!isSuperAdmin) {
+      const userCheckCriteria = [];
+      if (req.user?._id) {
+        userCheckCriteria.push({ user: req.user._id });
+        userCheckCriteria.push({ userId: req.user._id.toString() });
+      }
+      if (req.user?.email) {
+        userCheckCriteria.push({ userEmail: req.user.email.toLowerCase() });
+      }
+      const clientEmail = (userEmail || email || '').trim().toLowerCase();
+      if (clientEmail) {
+        userCheckCriteria.push({ userEmail: clientEmail });
+      }
+
+      if (userCheckCriteria.length > 0) {
+        const existing = await Testimonial.findOne({ $or: userCheckCriteria });
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: 'You have already submitted your feedback. Only one submission is permitted, and user editing is disabled. SuperAdmin handles any adjustments.',
+            alreadySubmitted: true,
+          });
+        }
+      }
+    }
+
+    // SuperAdmin submissions are approved immediately; regular user submissions start as pending
+    const status = isSuperAdmin ? 'approved' : 'pending';
+    const isApproved = isSuperAdmin;
+    const resolvedEmail = (req.user?.email || userEmail || email || '').trim().toLowerCase();
 
     const testimonial = await Testimonial.create({
       name: author,
@@ -54,28 +92,42 @@ exports.createTestimonial = async (req, res) => {
       role: (role || 'Private Investor').trim(),
       message: text,
       content: text,
-    });
-
-    // Notify SuperAdmins and broadcast to community
-    await sendNotification({
-      recipientRole: 'super_admin',
-      title: 'New Client Testimonial Received',
-      message: `${author} left a ${rating || 5}★ review: "${text.substring(0, 70)}..."`,
-      type: 'testimonial',
-      category: 'General',
+      status,
+      isApproved,
+      user: req.user?._id || null,
+      userId: req.user?._id ? req.user._id.toString() : '',
+      userEmail: resolvedEmail,
     });
 
     const normalized = normalizeTestimonial(testimonial);
 
-    try {
-      emitTestimonialEvent('testimonial_created', normalized);
-    } catch (socketErr) {
-      console.warn('[Socket.IO] Testimonial broadcast notice:', socketErr.message);
+    // Notify SuperAdmins of submission
+    await sendNotification({
+      recipientRole: 'super_admin',
+      title: isSuperAdmin ? 'New Verified Testimonial Added' : 'New Client Testimonial Pending Approval',
+      message: isSuperAdmin
+        ? `${author} review was published by SuperAdmin.`
+        : `${author} left a ${rating || 5}★ review: "${text.substring(0, 70)}..." Awaiting SuperAdmin verification.`,
+      type: 'testimonial',
+      category: 'General',
+    });
+
+    // If approved, notify live sockets
+    if (isApproved) {
+      try {
+        emitTestimonialEvent('testimonial_created', normalized);
+      } catch (socketErr) {
+        console.warn('[Socket.IO] Testimonial broadcast notice:', socketErr.message);
+      }
     }
+
+    const responseMessage = isSuperAdmin
+      ? 'Testimonial created and published successfully.'
+      : 'Thank you for your feedback! Your review has been submitted and will appear on the platform once approved by our SuperAdmin.';
 
     return res.status(201).json({
       success: true,
-      message: 'Testimonial created successfully',
+      message: responseMessage,
       data: normalized,
     });
   } catch (error) {
@@ -90,30 +142,60 @@ exports.createTestimonial = async (req, res) => {
 // GET ALL TESTIMONIALS
 exports.getAllTestimonials = async (req, res) => {
   try {
-    const { search, page, limit } = req.query;
+    const { search, page, limit, status, all } = req.query;
+    const isSuperAdmin = req.user && req.user.role === 'super_admin';
 
     let filter = {};
+
+    // Search query
     if (search && search.trim()) {
       const term = search.trim();
       const regex = new RegExp(term, 'i');
-      filter = {
+      filter.$or = [
+        { name: regex },
+        { client: regex },
+        { message: regex },
+        { content: regex },
+      ];
+    }
+
+    // RBAC Moderation filtering:
+    // If SuperAdmin (or all=true from SuperAdmin portal), show all or requested status
+    if (isSuperAdmin || all === 'true') {
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+    } else {
+      // PUBLIC USER PANEL: ONLY return approved testimonials (hide pending and rejected)
+      const approvedCondition = {
+        status: { $nin: ['pending', 'rejected'] },
         $or: [
-          { name: regex },
-          { client: regex },
-          { message: regex },
-          { content: regex },
+          { status: 'approved' },
+          { isApproved: true },
+          { status: { $exists: false } },
         ],
       };
+
+      if (filter.$or) {
+        filter = { $and: [{ $or: filter.$or }, approvedCondition] };
+      } else {
+        filter = { ...filter, ...approvedCondition };
+      }
     }
 
     let total = await Testimonial.countDocuments(filter);
 
-    // Auto-seed initial verified testimonials into database if collection is empty
+    // Auto-seed initial verified testimonials into database if collection is completely empty
     if (total === 0 && (!search || !search.trim())) {
       try {
         const { INITIAL_TESTIMONIALS } = require('../utils/seedData');
         if (INITIAL_TESTIMONIALS && INITIAL_TESTIMONIALS.length > 0) {
-          await Testimonial.insertMany(INITIAL_TESTIMONIALS);
+          const seeded = INITIAL_TESTIMONIALS.map((item) => ({
+            ...item,
+            status: 'approved',
+            isApproved: true,
+          }));
+          await Testimonial.insertMany(seeded);
           total = await Testimonial.countDocuments(filter);
         }
       } catch (seedErr) {
@@ -182,10 +264,74 @@ exports.getTestimonialById = async (req, res) => {
   }
 };
 
-// UPDATE TESTIMONIAL
+// MODERATE / APPROVE TESTIMONIAL (SuperAdmin only)
+exports.moderateTestimonial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status = 'approved' } = req.body;
+
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Allowed values: 'approved', 'rejected', 'pending'.",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid testimonial ID',
+      });
+    }
+
+    const isApproved = status === 'approved';
+    const testimonial = await Testimonial.findByIdAndUpdate(
+      id,
+      { status, isApproved },
+      { new: true, runValidators: true }
+    );
+
+    if (!testimonial) {
+      return res.status(404).json({
+        success: false,
+        message: 'Testimonial not found',
+      });
+    }
+
+    const normalized = normalizeTestimonial(testimonial);
+
+    try {
+      emitTestimonialEvent(isApproved ? 'testimonial_created' : 'testimonial_updated', normalized);
+    } catch (socketErr) {
+      console.warn('[Socket.IO] Testimonial broadcast notice:', socketErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Testimonial status updated to ${status}.`,
+      data: normalized,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to moderate testimonial',
+      error: error.message,
+    });
+  }
+};
+
+// UPDATE TESTIMONIAL (SuperAdmin only)
 exports.updateTestimonial = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // REQUIREMENT: Regular users cannot edit or update feedback. Only SuperAdmin can do things.
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Regular users cannot modify testimonials. Only SuperAdmin can edit client feedback.',
+      });
+    }
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
@@ -203,6 +349,9 @@ exports.updateTestimonial = async (req, res) => {
     if (updates.imageUrl && !updates.avatar) updates.avatar = updates.imageUrl;
     if (updates.property && !updates.company) updates.company = updates.property;
     if (updates.company && !updates.property) updates.property = updates.company;
+
+    if (updates.status === 'approved') updates.isApproved = true;
+    if (updates.status === 'rejected') updates.isApproved = false;
 
     const testimonial = await Testimonial.findByIdAndUpdate(
       id,
@@ -242,10 +391,18 @@ exports.updateTestimonial = async (req, res) => {
   }
 };
 
-// DELETE TESTIMONIAL
+// DELETE TESTIMONIAL (SuperAdmin only)
 exports.deleteTestimonial = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // REQUIREMENT: Regular users cannot delete feedback. Only SuperAdmin can.
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Regular users cannot delete testimonials. Only SuperAdmin can remove reviews.',
+      });
+    }
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({

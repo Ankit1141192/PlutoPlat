@@ -214,6 +214,10 @@ export const SuperAdminApi = {
     return request('PUT', `/testimonials/${id}`, { body: payload, auth: true });
   },
 
+  async moderateTestimonial(id, status = 'approved') {
+    return request('PATCH', `/testimonials/${id}/moderate`, { body: { status }, auth: true });
+  },
+
   async deleteTestimonial(id) {
     return request('DELETE', `/testimonials/${id}`, { auth: true });
   }

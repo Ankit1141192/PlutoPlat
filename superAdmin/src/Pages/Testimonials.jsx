@@ -34,6 +34,7 @@ const Testimonials = () => {
   });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusTab, setStatusTab] = useState('all'); // 'all' | 'pending' | 'approved'
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -51,7 +52,7 @@ const Testimonials = () => {
   const fetchTestimonials = async () => {
     try {
       setLoading(true);
-      const res = await SuperAdminApi.getTestimonials();
+      const res = await SuperAdminApi.getTestimonials({ all: 'true' });
       if (res?.data && Array.isArray(res.data)) {
         setTestimonials(res.data);
         try {
@@ -182,7 +183,26 @@ const Testimonials = () => {
     }
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await SuperAdminApi.moderateTestimonial(id, 'approved');
+      setTestimonials((prev) =>
+        prev.map((t) => (t._id === id || t.id === id ? { ...t, status: 'approved', isApproved: true } : t))
+      );
+      showToast('Testimonial approved and published to User panel!', 'success');
+      fetchTestimonials();
+    } catch (err) {
+      showToast(err.message || 'Failed to approve testimonial.', 'error');
+    }
+  };
+
+  const pendingCount = testimonials.filter((t) => t.status === 'pending' || !t.isApproved).length;
+
   const filtered = testimonials.filter((t) => {
+    // Status filter
+    if (statusTab === 'pending' && t.status !== 'pending' && t.isApproved) return false;
+    if (statusTab === 'approved' && t.status !== 'approved' && !t.isApproved) return false;
+
     const q = searchQuery.toLowerCase();
     const nameMatch = (t.client || t.name || '').toLowerCase().includes(q);
     const contentMatch = (t.content || t.message || '').toLowerCase().includes(q);
@@ -211,22 +231,59 @@ const Testimonials = () => {
           </button>
         </div>
 
-        {/* Filter bar */}
-        <div className="bg-white border border-[#E8E3D8] rounded-xl p-3 flex items-center justify-between shadow-xs">
-          <div className="relative flex-1 max-w-md">
+        {/* Filter bar & Tabs */}
+        <div className="bg-white border border-[#E8E3D8] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setStatusTab('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                statusTab === 'all'
+                  ? 'bg-[#1C201C] text-white shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#6E6D66] hover:bg-[#F0ECE2]'
+              }`}
+            >
+              All ({testimonials.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('pending')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                statusTab === 'pending'
+                  ? 'bg-amber-800 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+              }`}
+            >
+              Pending Approval
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-200 text-amber-900 font-bold">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('approved')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                statusTab === 'approved'
+                  ? 'bg-emerald-800 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              Approved ({testimonials.length - pendingCount})
+            </button>
+          </div>
+
+          <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A887F]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by client name, transaction, or quote..."
+              placeholder="Search by client or text..."
               className="w-full pl-9 pr-3 py-1.5 bg-[#FAF8F5] border border-[#DDD8CE] rounded-lg text-xs text-[#1C201C] placeholder:text-[#999] focus:outline-none focus:border-[#B49A70]"
             />
           </div>
-
-          <span className="text-xs text-[#8A887F] font-mono">
-            {filtered.length} total review(s)
-          </span>
         </div>
 
         {/* Grid of Testimonials */}
@@ -252,22 +309,37 @@ const Testimonials = () => {
               const prop = item.property || item.company || 'Trophy Acquisition';
               const rating = Number(item.rating) || 5;
 
+              const isPending = item.status === 'pending' || !item.isApproved;
+
               return (
                 <div
                   key={id}
-                  className="bg-white border border-[#E8E3D8] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow relative group"
+                  className={`bg-white border rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow relative group ${
+                    isPending ? 'border-amber-300 ring-1 ring-amber-200/50' : 'border-[#E8E3D8]'
+                  }`}
                 >
                   <div>
-                    {/* Stars, edit & delete */}
+                    {/* Header: Status badge & Stars & Actions */}
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            size={14}
-                            className={i < rating ? 'text-[#B49A70] fill-[#B49A70]' : 'text-gray-200'}
-                          />
-                        ))}
+                      <div className="flex items-center gap-2">
+                        {isPending ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                            Pending Approval
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 size={10} /> Live
+                          </span>
+                        )}
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              size={12}
+                              className={i < rating ? 'text-[#B49A70] fill-[#B49A70]' : 'text-gray-200'}
+                            />
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -293,19 +365,35 @@ const Testimonials = () => {
                     </p>
                   </div>
 
-                  <div className="pt-3 border-t border-[#F0ECE2] flex items-center gap-3">
-                    <img
-                      src={photo}
-                      alt={author}
-                      className="w-10 h-10 rounded-full object-cover border border-[#DDD8CE]"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-[#1C201C] truncate">{author}</h4>
-                      <p className="text-[11px] text-[#B49A70] font-medium truncate">{role}</p>
-                      <p className="text-[10px] text-[#8A887F] truncate">{prop}</p>
+                  <div>
+                    {isPending && (
+                      <div className="mb-3 pt-2 border-t border-amber-100 flex items-center justify-between">
+                        <span className="text-[11px] text-amber-800 font-medium">Needs SuperAdmin review</span>
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(id)}
+                          className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold rounded-lg shadow-xs transition cursor-pointer flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={12} />
+                          Approve for Users
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t border-[#F0ECE2] flex items-center gap-3">
+                      <img
+                        src={photo}
+                        alt={author}
+                        className="w-10 h-10 rounded-full object-cover border border-[#DDD8CE]"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+                        }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-[#1C201C] truncate">{author}</h4>
+                        <p className="text-[11px] text-[#B49A70] font-medium truncate">{role}</p>
+                        <p className="text-[10px] text-[#8A887F] truncate">{prop}</p>
+                      </div>
                     </div>
                   </div>
                 </div>

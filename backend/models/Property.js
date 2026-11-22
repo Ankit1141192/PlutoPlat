@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { resolveCoordinates, parseCoordinates } = require('../utils/geoParser');
 
 const propertySchema = new mongoose.Schema(
   {
@@ -107,6 +108,13 @@ const propertySchema = new mongoose.Schema(
       }),
     },
 
+    // Optional Google Maps URL / location link
+    mapUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     // Geo Coordinates for Leaflet Map
     latitude: {
       type: Number,
@@ -171,13 +179,13 @@ const propertySchema = new mongoose.Schema(
 
     isVerified: {
       type: Boolean,
-      default: true,
+      default: false,
     },
 
     status: {
       type: String,
       enum: ['draft', 'pending', 'active', 'approved', 'rejected'],
-      default: 'active',
+      default: 'pending',
       index: true,
     },
 
@@ -236,12 +244,19 @@ propertySchema.pre('save', function (next) {
     }
   }
 
-  // Sync coordinates & latitude/longitude
-  const lat = Number(this.latitude !== undefined ? this.latitude : (this.coordinates?.lat || 26.474)) || 26.474;
-  const lng = Number(this.longitude !== undefined ? this.longitude : (this.coordinates?.lng || this.langitude || 80.335)) || 80.335;
-  this.latitude = lat;
-  this.longitude = lng;
-  this.coordinates = { lat, lng };
+  // Sync coordinates deterministically using geoParser (supports Google Maps URL, etc.)
+  const resolved = resolveCoordinates({
+    mapUrl: this.mapUrl,
+    location: this.location,
+    coordinates: this.coordinates,
+    latitude: this.latitude,
+    longitude: this.longitude,
+    langitude: this.langitude,
+  });
+
+  this.latitude = resolved.lat;
+  this.longitude = resolved.lng;
+  this.coordinates = resolved;
 
   // Sync numericPrice
   if (typeof this.price === 'number') {
@@ -257,6 +272,7 @@ propertySchema.pre('save', function (next) {
   if (this.isFeatured) this.featured = true;
 
   if (this.status === 'approved') this.status = 'active';
+  if (this.status === 'active') this.isVerified = true;
 
   if (typeof next === 'function') {
     return next();
@@ -274,6 +290,7 @@ propertySchema.methods.toJSON = function () {
   obj.longitude = lng;
   obj.langitude = lng;
   obj.coordinates = { lat, lng };
+  obj.mapUrl = obj.mapUrl || '';
 
   // Ensure location string for frontend components that expect string
   if (typeof obj.location === 'object' && obj.location !== null) {

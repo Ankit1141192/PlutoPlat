@@ -1121,28 +1121,39 @@ export const PropertyProvider = ({ children }) => {
   const addTestimonial = async (data) => {
     try {
       const res = await Api.createTestimonial(data);
-      const created = res?.data || { id: Date.now(), ...data };
-      setTestimonials((prev) => {
-        const next = [created, ...prev.filter((t) => (t._id || t.id) !== (created._id || created.id))];
-        try {
-          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-      showToast('Thank you! Your testimonial has been saved and published.', 'success');
+      const created = res?.data || { id: Date.now(), ...data, status: 'pending', isApproved: false };
+
+      // Mark that user has submitted feedback (only 1 submission allowed)
+      try {
+        localStorage.setItem('pluto_user_feedback_submitted', 'true');
+        if (data.name) localStorage.setItem('pluto_feedback_author', data.name);
+      } catch {}
+
+      // If approved (e.g. by superadmin), add to public list; otherwise it awaits approval
+      if (created.isApproved || created.status === 'approved') {
+        setTestimonials((prev) => {
+          const next = [created, ...prev.filter((t) => (t._id || t.id) !== (created._id || created.id))];
+          try {
+            localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        showToast('Thank you! Your testimonial has been published.', 'success');
+      } else {
+        showToast('Thank you! Your review has been submitted and is awaiting SuperAdmin approval.', 'success');
+      }
       return created;
     } catch (err) {
       console.warn('Backend testimonial submission notice:', err.message);
-      const fallback = { id: Date.now(), ...data };
-      setTestimonials((prev) => {
-        const next = [fallback, ...prev];
-        try {
-          localStorage.setItem('pluto_testimonials_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-      showToast('Testimonial recorded.', 'info');
-      return fallback;
+      if (err.message && (err.message.includes('already submitted') || err.message.includes('Only one'))) {
+        showToast(err.message, 'error');
+        throw err;
+      }
+      showToast(err.message || 'Thank you! Your feedback has been recorded for SuperAdmin approval.', 'info');
+      try {
+        localStorage.setItem('pluto_user_feedback_submitted', 'true');
+      } catch {}
+      return { id: Date.now(), ...data, status: 'pending', isApproved: false };
     }
   };
 

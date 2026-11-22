@@ -449,12 +449,12 @@ export const AdminProvider = ({ children }) => {
   const addProperty = async (newProp) => {
     try {
       const res = await AdminApi.createProperty(newProp);
-      const created = res?.data?.property || { ...newProp, id: Date.now(), _id: String(Date.now()), status: 'approved', verified: true };
+      const created = res?.data?.property || { ...newProp, id: Date.now(), _id: String(Date.now()), status: 'pending', verified: false, isVerified: false };
       if (created._id) unmarkDeletedProperty(created._id);
       if (created.id) unmarkDeletedProperty(created.id);
       if (created.title) unmarkDeletedProperty(created.title);
       setProperties(prev => [created, ...prev.filter(p => (p._id || p.id) !== (created._id || created.id))]);
-      showToast('Property published and live on user panel!', 'success');
+      showToast('Property listing submitted! Pending SuperAdmin approval before going live on user portal.', 'success');
       return created;
     } catch (err) {
       console.warn('Backend property publish notice:', err.message);
@@ -462,14 +462,15 @@ export const AdminProvider = ({ children }) => {
         ...newProp,
         id: Date.now(),
         _id: String(Date.now()),
-        verified: true,
-        status: 'approved',
+        verified: false,
+        isVerified: false,
+        status: 'pending',
         ownerEmail: user?.email || 'agent@plutoplat.com',
         ownerName: user?.name || 'Authorized Agent',
         createdAt: new Date().toISOString()
       };
       setProperties(prev => [fallbackProp, ...prev]);
-      showToast('Property recorded and published.', 'success');
+      showToast('Property listing submitted! Awaiting SuperAdmin verification.', 'info');
       return fallbackProp;
     }
   };

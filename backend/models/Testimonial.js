@@ -63,6 +63,40 @@ const testimonialSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+      index: true,
+    },
+
+    isApproved: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+
+    userId: {
+      type: String,
+      trim: true,
+      index: true,
+      default: '',
+    },
+
+    userEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      index: true,
+      default: '',
+    },
   },
   {
     timestamps: true,
@@ -95,6 +129,14 @@ testimonialSchema.pre('save', function (next) {
   this.property = affiliation;
   this.company = affiliation;
 
+  if (this.status === 'approved') {
+    this.isApproved = true;
+  } else if (this.isApproved) {
+    this.status = 'approved';
+  } else if (this.status === 'rejected') {
+    this.isApproved = false;
+  }
+
   if (typeof next === 'function') {
     return next();
   }
@@ -112,6 +154,10 @@ testimonialSchema.methods.toJSON = function () {
   obj.imageUrl = obj.imageUrl || obj.avatar;
   obj.property = obj.property || obj.company;
   obj.company = obj.company || obj.property;
+  obj.status = obj.status || (obj.isApproved ? 'approved' : 'pending');
+  obj.isApproved = Boolean(obj.isApproved || obj.status === 'approved');
+  obj.userId = obj.userId || (obj.user ? obj.user.toString() : '');
+  obj.userEmail = obj.userEmail || '';
   return obj;
 };
 

@@ -3,67 +3,7 @@ const ApiResponse = require('../utils/apiResponse');
 const { logAudit } = require('../utils/auditLogger');
 const { sendNotification } = require('../utils/notificationService');
 const { emitPropertyEvent } = require('../utils/socketService');
-
-const KNOWN_GEO = {
-  'civil lines': { lat: 26.4740, lng: 80.3350 },
-  'swaroop nagar': { lat: 26.4820, lng: 80.3150 },
-  'vip road': { lat: 26.4790, lng: 80.3420 },
-  'tilak nagar': { lat: 26.4710, lng: 80.3200 },
-  'kanpur': { lat: 26.4499, lng: 80.3319 },
-  'delhi': { lat: 28.6139, lng: 77.2090 },
-  'new delhi': { lat: 28.6015, lng: 77.2285 },
-  'golf links': { lat: 28.5990, lng: 77.2340 },
-  'mumbai': { lat: 19.0760, lng: 72.8777 },
-  'worli': { lat: 19.0178, lng: 72.8178 },
-  'bandra': { lat: 19.0596, lng: 72.8295 },
-  'dubai': { lat: 25.2048, lng: 55.2708 },
-  'palm jumeirah': { lat: 25.1124, lng: 55.1390 },
-  'marina': { lat: 25.0805, lng: 55.1403 },
-  'hyderabad': { lat: 17.3850, lng: 78.4867 },
-  'jubilee hills': { lat: 17.4319, lng: 78.4073 },
-  'goa': { lat: 15.2993, lng: 74.1240 },
-  'bangalore': { lat: 12.9716, lng: 77.5946 },
-  'bengaluru': { lat: 12.9716, lng: 77.5946 },
-  'california': { lat: 34.0522, lng: -118.2437 },
-  'beverly hills': { lat: 34.0736, lng: -118.4004 },
-  'new york': { lat: 40.7128, lng: -74.0060 },
-  'manhattan': { lat: 40.7831, lng: -73.9712 },
-  'miami': { lat: 25.7617, lng: -80.1918 },
-  'miami beach': { lat: 25.7907, lng: -80.1300 },
-  'aspen': { lat: 39.1911, lng: -106.8175 },
-};
-
-const resolveCoordinates = (location, explicitCoords) => {
-  if (explicitCoords && typeof explicitCoords === 'object') {
-    const lat = Number(explicitCoords.lat !== undefined ? explicitCoords.lat : explicitCoords.latitude);
-    const lng = Number(explicitCoords.lng !== undefined ? explicitCoords.lng : (explicitCoords.longitude !== undefined ? explicitCoords.longitude : explicitCoords.langitude));
-    if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
-      return { lat, lng };
-    }
-  }
-  const locStr = (
-    typeof location === 'string'
-      ? location
-      : `${location?.city || ''} ${location?.address || ''} ${location?.state || ''}`
-  ).toLowerCase();
-
-  for (const [key, coords] of Object.entries(KNOWN_GEO)) {
-    if (locStr.includes(key)) {
-      const jitterLat = (Math.random() - 0.5) * 0.008;
-      const jitterLng = (Math.random() - 0.5) * 0.008;
-      return {
-        lat: Number((coords.lat + jitterLat).toFixed(6)),
-        lng: Number((coords.lng + jitterLng).toFixed(6)),
-      };
-    }
-  }
-  const jitterLat = (Math.random() - 0.5) * 0.015;
-  const jitterLng = (Math.random() - 0.5) * 0.015;
-  return {
-    lat: Number((26.474 + jitterLat).toFixed(6)),
-    lng: Number((80.335 + jitterLng).toFixed(6)),
-  };
-};
+const { resolveCoordinates, parseCoordinates } = require('../utils/geoParser');
 
 /**
  * Format property document for clean frontend consumption
@@ -81,9 +21,13 @@ const normalizeProperty = (prop) => {
   }
 
   const primaryImage = p.image || (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
-  const coords = resolveCoordinates(p.location, {
-    lat: p.latitude !== undefined ? p.latitude : p.coordinates?.lat,
-    lng: p.longitude !== undefined ? p.longitude : (p.langitude !== undefined ? p.langitude : p.coordinates?.lng),
+  const coords = resolveCoordinates({
+    mapUrl: p.mapUrl,
+    location: p.location,
+    coordinates: p.coordinates,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    langitude: p.langitude,
   });
 
   return {
@@ -92,6 +36,7 @@ const normalizeProperty = (prop) => {
     _id: id,
     location: locStr,
     locationDetails: p.location,
+    mapUrl: p.mapUrl || '',
     latitude: coords.lat,
     longitude: coords.lng,
     langitude: coords.lng,
@@ -103,7 +48,8 @@ const normalizeProperty = (prop) => {
     numericPrice: p.numericPrice || (typeof p.price === 'number' ? p.price : 8500000),
     price: p.price || (p.numericPrice ? `₹${(p.numericPrice / 10000000).toFixed(2)} Cr` : 'Price on Request'),
     featured: p.featured || p.isFeatured || false,
-    verified: p.verified !== undefined ? p.verified : (p.isVerified !== undefined ? p.isVerified : true),
+    verified: p.verified !== undefined ? p.verified : (p.isVerified !== undefined ? p.isVerified : false),
+    isVerified: p.isVerified !== undefined ? p.isVerified : (p.verified !== undefined ? p.verified : false),
   };
 };
 
@@ -124,16 +70,30 @@ const createProperty = async (req, res, next) => {
     }
 
     const isSuperAdmin = userRole === 'super_admin';
-    const status = isSuperAdmin ? (req.body.status || 'active') : (req.body.status || 'approved');
-    const isVerified = isSuperAdmin ? (req.body.isVerified !== undefined ? req.body.isVerified : true) : true;
-    const coordinates = resolveCoordinates(req.body.location, req.body.coordinates);
+    // Admin uploads start as 'pending' and require SuperAdmin approval before appearing on user panel
+    const status = isSuperAdmin ? (req.body.status || 'active') : 'pending';
+    const isVerified = isSuperAdmin ? (req.body.isVerified !== undefined ? req.body.isVerified : true) : false;
+
+    const mapUrl = req.body.mapUrl || req.body.googleMapsUrl || req.body.mapLocation || '';
+    const coordinates = resolveCoordinates({
+      mapUrl,
+      location: req.body.location,
+      coordinates: req.body.coordinates,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      langitude: req.body.langitude,
+    });
 
     const propertyData = {
       ...req.body,
+      mapUrl,
       owner: req.user._id,
       postedBy: req.user._id,
       status,
       isVerified,
+      verified: isVerified,
+      latitude: coordinates.lat,
+      longitude: coordinates.lng,
       coordinates,
     };
 
@@ -158,28 +118,33 @@ const createProperty = async (req, res, next) => {
     // Dispatch notifications
     await sendNotification({
       recipientRole: 'super_admin',
-      title: 'New Listing Added to Platform',
-      message: `${req.user.name} (${userRole}) added "${property.title}" in ${locText}.`,
+      title: isSuperAdmin ? 'New Listing Added to Platform' : 'New Listing Pending Verification',
+      message: `${req.user.name} (${userRole}) added "${property.title}" in ${locText}.${!isSuperAdmin ? ' Awaiting SuperAdmin approval.' : ''}`,
       type: 'property',
       category: 'Listing Updates',
       link: `/properties`,
     });
 
-    await sendNotification({
-      recipientRole: 'user',
-      title: 'New Property Available',
-      message: `"${property.title}" in ${locText} is now published and open for viewing.`,
-      type: 'property',
-      category: 'Off-Market',
-      link: `/property/${property._id}`,
-    });
+    // Notify public users ONLY if property is active / published
+    if (status === 'active' || status === 'approved') {
+      await sendNotification({
+        recipientRole: 'user',
+        title: 'New Property Available',
+        message: `"${property.title}" in ${locText} is now published and open for viewing.`,
+        type: 'property',
+        category: 'Off-Market',
+        link: `/property/${property._id}`,
+      });
+    }
 
     // Broadcast property_created over Socket.IO to update catalogs dynamically
     try {
       emitPropertyEvent('property_created', normalized);
     } catch (e) {}
 
-    const message = 'Property created and published successfully. Visible on the public portal.';
+    const message = isSuperAdmin
+      ? 'Property created and published successfully. Visible on the public portal.'
+      : 'Property listing submitted successfully! It is now pending SuperAdmin approval before being displayed on the public user portal.';
 
     return ApiResponse.success(res, message, { property: normalized }, 201);
   } catch (error) {
@@ -223,14 +188,14 @@ const getProperties = async (req, res, next) => {
       if (owner) {
         query.owner = owner;
       }
-    } else if (isAdmin && owner && req.user._id.toString() === owner) {
-      query.owner = req.user._id;
+    } else if (isAdmin && (owner && req.user._id.toString() === owner || req.query.adminView === 'true')) {
+      if (owner) query.owner = owner;
       if (status && status !== 'all') {
         query.status = status;
       }
     } else {
-      // Default public: show all active/approved/listed properties (hide only rejected/archived)
-      query.status = { $nin: ['rejected', 'archived'] };
+      // Public User Panel: ONLY show active/approved properties (hide pending, rejected, archived)
+      query.status = { $in: ['active', 'approved'] };
     }
 
     // Property Type filter
@@ -437,6 +402,22 @@ const moderateProperty = async (req, res, next) => {
 
     await property.save();
 
+    // If property was approved by SuperAdmin, notify users that new property is available
+    if (finalStatus === 'active') {
+      const locText = typeof property.location === 'string'
+        ? property.location
+        : property.location?.city || 'Kanpur, UP';
+
+      await sendNotification({
+        recipientRole: 'user',
+        title: 'New Property Available',
+        message: `"${property.title}" in ${locText} is now published and open for viewing.`,
+        type: 'property',
+        category: 'Off-Market',
+        link: `/property/${property._id}`,
+      });
+    }
+
     await logAudit({
       actor: req.user._id,
       actorRole: req.user.role,
@@ -480,23 +461,26 @@ const updateProperty = async (req, res, next) => {
       return ApiResponse.error(res, 'Forbidden: You can only edit your own listings.', 403);
     }
 
-    if (!isSuperAdmin && !isAdmin) {
+    // Non-superadmin cannot unilaterally publish
+    if (!isSuperAdmin) {
       req.body.status = 'pending';
       req.body.isVerified = false;
       req.body.verified = false;
     }
 
-    // Sync explicit coordinates or latitude/longitude
-    if (req.body.latitude !== undefined || req.body.longitude !== undefined || req.body.langitude !== undefined) {
-      const lat = Number(req.body.latitude !== undefined ? req.body.latitude : (property.latitude || property.coordinates?.lat)) || 26.474;
-      const lng = Number(req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : (property.longitude || property.coordinates?.lng))) || 80.335;
-      req.body.latitude = lat;
-      req.body.longitude = lng;
-      req.body.coordinates = { lat, lng };
-    } else if (req.body.location || req.body.coordinates) {
-      property.coordinates = resolveCoordinates(req.body.location || property.location, req.body.coordinates);
-      req.body.latitude = property.coordinates.lat;
-      req.body.longitude = property.coordinates.lng;
+    const mapUrl = req.body.mapUrl !== undefined ? req.body.mapUrl : (req.body.googleMapsUrl || property.mapUrl || '');
+    if (mapUrl || req.body.latitude !== undefined || req.body.longitude !== undefined || req.body.langitude !== undefined || req.body.coordinates || req.body.location) {
+      const resolved = resolveCoordinates({
+        mapUrl: mapUrl || property.mapUrl,
+        location: req.body.location || property.location,
+        coordinates: req.body.coordinates || property.coordinates,
+        latitude: req.body.latitude !== undefined ? req.body.latitude : property.latitude,
+        longitude: req.body.longitude !== undefined ? req.body.longitude : (req.body.langitude !== undefined ? req.body.langitude : property.longitude),
+      });
+      req.body.latitude = resolved.lat;
+      req.body.longitude = resolved.lng;
+      req.body.coordinates = resolved;
+      if (mapUrl) req.body.mapUrl = mapUrl;
     }
 
     Object.assign(property, req.body);

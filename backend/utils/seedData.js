@@ -320,11 +320,22 @@ const seedInitialData = async () => {
       }
     }
 
-    // 5. Seed Testimonials if none exist
+    // 5. Seed Testimonials if none exist, or ensure existing have status
     const testimonialCount = await Testimonial.countDocuments();
     if (testimonialCount === 0) {
-      await Testimonial.insertMany(INITIAL_TESTIMONIALS);
+      const seeded = INITIAL_TESTIMONIALS.map((item) => ({
+        ...item,
+        status: 'approved',
+        isApproved: true,
+      }));
+      await Testimonial.insertMany(seeded);
       console.log(`[Seed] Seeded ${INITIAL_TESTIMONIALS.length} client testimonials to MongoDB.`);
+    } else {
+      // Ensure existing initial testimonials have status approved
+      await Testimonial.updateMany(
+        { status: { $exists: false } },
+        { $set: { status: 'approved', isApproved: true } }
+      ).catch(() => {});
     }
 
     // 6. Notifications - Clean up any default mock notifications; start with empty notification feed
